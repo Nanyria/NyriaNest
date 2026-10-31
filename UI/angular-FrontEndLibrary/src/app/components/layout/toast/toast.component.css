@@ -1,0 +1,98 @@
+/* Bottom right, above the page; on phones it spans the width */
+.toast-stack {
+  position: fixed;
+  right: var(--nn-space-5);
+  bottom: var(--nn-space-5);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--nn-space-2);
+  pointer-events: none; /* only the toasts themselves take clicks */
+}
+
+/* Parchment card with the thin gold inner line used on the ornate panels */
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  min-width: 280px;
+  max-width: 420px;
+  padding: 10px 8px 10px 12px;
+  border: 1px solid var(--nn-border-strong);
+  border-radius: var(--nn-radius);
+  background-color: var(--nn-surface);
+  box-shadow: inset 0 0 0 3px var(--nn-surface), inset 0 0 0 4px var(--nn-gold-soft), var(--nn-shadow-raised);
+  color: var(--nn-ink-strong);
+  font-family: var(--nn-font-body);
+  font-size: 1.05rem;
+  animation: toast-in 220ms ease-out;
+}
+
+/* Dark green seal with a gold rim, like the active Admin button */
+.toast__seal {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--nn-primary);
+  box-shadow: 0 0 0 2px var(--nn-surface), 0 0 0 3px var(--nn-gold);
+  color: var(--nn-on-primary);
+  font-size: 0.95rem;
+}
+
+.toast__message {
+  flex: 1;
+}
+
+.toast__close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--nn-radius-sm);
+  background: none;
+  color: var(--nn-ink-muted);
+  cursor: pointer;
+}
+
+.toast__close:hover {
+  background-color: var(--nn-surface-hover);
+  color: var(--nn-ink-strong);
+}
+
+.toast__close:focus-visible {
+  outline: none;
+  box-shadow: var(--nn-focus);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-stack {
+    left: var(--nn-space-4);
+    right: var(--nn-space-4);
+    bottom: var(--nn-space-4);
+    align-items: stretch;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
+}
