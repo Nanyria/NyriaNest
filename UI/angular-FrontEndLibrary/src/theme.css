@@ -234,6 +234,17 @@ body:has(.nn-theme) > app-root {
   background-color: var(--nn-primary-hover);
 }
 
+/* Destructive actions, e.g. Delete in a confirm dialog */
+.nn-btn--danger {
+  background-color: var(--nn-accent);
+  border-color: var(--nn-accent-hover);
+  color: var(--nn-on-primary);
+}
+
+.nn-btn--danger:hover:not(:disabled) {
+  background-color: var(--nn-accent-hover);
+}
+
 .nn-btn--outline {
   background-color: transparent;
   border-color: var(--nn-gold);
@@ -287,6 +298,21 @@ body:has(.nn-theme) > app-root {
 
 .nn-btn--ornate::after {
   right: -5px;
+}
+
+/* Red version, e.g. Delete in a confirm dialog */
+.nn-btn--ornate.nn-btn--danger {
+  border-color: #5c1210;
+  box-shadow: inset 0 0 0 3px var(--nn-accent), inset 0 0 0 4px var(--nn-gold), var(--nn-shadow);
+}
+
+.nn-btn--ornate.nn-btn--danger:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 3px var(--nn-accent-hover), inset 0 0 0 4px var(--nn-gold), var(--nn-shadow);
+}
+
+.nn-btn--ornate.nn-btn--danger::before,
+.nn-btn--ornate.nn-btn--danger::after {
+  border-color: #5c1210;
 }
 
 .nn-btn--block {

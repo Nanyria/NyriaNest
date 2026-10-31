@@ -21,6 +21,7 @@ import {
 } from 'rxjs/operators';
 import { BookService } from '../../../Services/book.services';
 import { ToastService } from '../../../Services/toast.service';
+import { ConfirmService } from '../../../Services/confirm.service';
 import {
   AdminBook,
   CatalogueQuery,
@@ -75,6 +76,7 @@ export class ManageBooksComponent {
   private router = inject(Router);
   private bookService = inject(BookService);
   private toast = inject(ToastService);
+  private confirmDialog = inject(ConfirmService);
   private refresh$ = new BehaviorSubject<void>(undefined);
 
   // "All" means no filter, which the empty option already covers
@@ -266,10 +268,15 @@ export class ManageBooksComponent {
     );
   }
 
-  delete(b: AdminBook) {
-    // TODO: swap confirm() for a styled dialog (guide step 5.2)
-    const extra = b.hasEpub ? ' Its EPUB file will be deleted too.' : '';
-    if (!confirm(`Delete "${b.title}" permanently?${extra}`)) return;
+  async delete(b: AdminBook) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: `Delete "${b.title}"?`,
+      message: b.hasEpub ? "This can't be undone. Its EPUB file will be deleted too." : "This can't be undone.",
+      confirmLabel: 'Delete',
+      danger: true,
+      icon: 'trash3',
+    });
+    if (!confirmed) return;
     this.run(
       this.bookService.deleteBook(String(b.bookId)),
       { message: `"${b.title}" was deleted.`, icon: 'trash3' },
@@ -277,16 +284,20 @@ export class ManageBooksComponent {
     );
   }
 
-  private confirmAdminStatus(b: AdminBook, status: BookStatusEnum.Lost | BookStatusEnum.Removed) {
-    // TODO: swap confirm() for a styled dialog (guide step 5.2)
+  // Not shown as dangerous: Restore undoes it
+  private async confirmAdminStatus(b: AdminBook, status: BookStatusEnum.Lost | BookStatusEnum.Removed) {
     const label = status === BookStatusEnum.Lost ? 'lost' : 'removed';
-    if (!confirm(`Mark "${b.title}" as ${label}? It can't be borrowed or reserved until restored.`)) return;
+    const icon = status === BookStatusEnum.Lost ? 'question-circle' : 'archive';
+    const confirmed = await this.confirmDialog.confirm({
+      title: `Mark "${b.title}" as ${label}?`,
+      message: "It can't be borrowed or reserved until you restore it.",
+      confirmLabel: `Mark as ${label}`,
+      icon,
+    });
+    if (!confirmed) return;
     this.run(
       this.bookService.setAdminStatus(b.bookId, status),
-      {
-        message: `"${b.title}" was marked as ${label}.`,
-        icon: status === BookStatusEnum.Lost ? 'question-circle' : 'archive',
-      },
+      { message: `"${b.title}" was marked as ${label}.`, icon },
       `Couldn't mark "${b.title}" as ${label}.`,
     );
   }

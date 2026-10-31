@@ -1,0 +1,161 @@
+/* Paper sheet (nn-parchment) with a gold edge, laid over the page */
+.confirm {
+  --frame-inset: 10px;
+  --frame-gap: 30px; /* half the break in the top and bottom lines, for the star */
+
+  position: relative;
+  width: min(460px, calc(100vw - 2 * var(--nn-space-4)));
+  padding: 0;
+  border: 1px solid var(--nn-gold);
+  border-radius: var(--nn-radius-lg);
+  box-shadow: inset 0 0 0 1px rgba(255, 252, 246, 0.6), var(--nn-shadow-raised);
+  color: var(--nn-ink);
+  font-family: var(--nn-font-body);
+  overflow: visible;
+}
+
+.confirm[open] {
+  animation: confirm-in 180ms ease-out;
+}
+
+.confirm::backdrop {
+  background-color: rgba(42, 22, 14, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+/* ---------- Frame ----------
+   Side lines are borders; the top and bottom lines are gradients that leave a
+   gap in the middle for the star. Corners and stars keep a fixed size, so only
+   the lines stretch with the dialog. */
+.confirm__frame {
+  position: absolute;
+  inset: var(--frame-inset);
+  pointer-events: none;
+  border-inline: 1px solid var(--nn-gold);
+  --line: linear-gradient(
+    to right,
+    var(--nn-gold) calc(50% - var(--frame-gap)),
+    transparent calc(50% - var(--frame-gap)) calc(50% + var(--frame-gap)),
+    var(--nn-gold) calc(50% + var(--frame-gap))
+  );
+  background: var(--line) top / 100% 1px no-repeat, var(--line) bottom / 100% 1px no-repeat;
+}
+
+.confirm__corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+}
+
+.confirm__corner--tl { top: 0; left: 0; }
+.confirm__corner--tr { top: 0; right: 0; transform: scaleX(-1); }
+.confirm__corner--bl { bottom: 0; left: 0; transform: scaleY(-1); }
+.confirm__corner--br { bottom: 0; right: 0; transform: scale(-1); }
+
+.confirm__mark {
+  position: absolute;
+  left: 50%;
+  width: 44px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+}
+
+.confirm__mark--top { top: 0; }
+.confirm__mark--bottom { top: 100%; }
+
+.confirm__line {
+  fill: none;
+  stroke: var(--nn-gold);
+  stroke-width: 1;
+}
+
+.confirm__fill {
+  fill: var(--nn-gold);
+}
+
+/* ---------- Content ---------- */
+.confirm__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--nn-space-2);
+  padding: 34px 36px 30px;
+  text-align: center;
+}
+
+/* A diamond like the logo and the active nav button's ends; the icon stays upright */
+.confirm__seal {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: 6px 0 10px;
+  background-color: var(--nn-primary);
+  box-shadow: 0 0 0 2px var(--nn-surface), 0 0 0 3px var(--nn-gold), var(--nn-shadow);
+  transform: rotate(45deg);
+  color: var(--nn-on-primary);
+}
+
+.confirm__seal > .bi {
+  transform: rotate(-45deg);
+  font-size: 1.1rem;
+}
+
+.confirm__seal.is-danger {
+  background-color: var(--nn-accent);
+}
+
+.confirm__title {
+  margin: 0;
+  font-family: var(--nn-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--nn-ink-strong);
+}
+
+/* The theme's divider, narrower than the dialog */
+.confirm__divider {
+  width: min(220px, 70%);
+  margin: 2px 0 4px;
+}
+
+.confirm__message {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--nn-ink);
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--nn-space-3);
+  margin-top: var(--nn-space-3);
+}
+
+/* Same height and text size for both buttons; the ornate one is bigger by default */
+.confirm__actions .nn-btn {
+  min-width: 120px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 1.05rem;
+}
+
+.confirm__actions .nn-btn--outline {
+  background-color: var(--nn-field);
+}
+
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm[open] {
+    animation: none;
+  }
+}

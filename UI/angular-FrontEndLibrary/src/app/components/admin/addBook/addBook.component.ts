@@ -13,6 +13,7 @@ import { Observable } from 'rxjs';
 import { BookService } from '../../../Services/book.services';
 import { HasUnsavedChanges } from '../../../Services/unsaved-changes.guard';
 import { ToastService } from '../../../Services/toast.service';
+import { ConfirmService } from '../../../Services/confirm.service';
 import { Book, SlimBookDto } from '../../../Models/interfaces';
 import {
   GenreEnums,
@@ -95,6 +96,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     private router: Router,
     private route: ActivatedRoute,
     private toast: ToastService,
+    private confirmDialog: ConfirmService,
   ) {}
 
   ngOnInit(): void {
@@ -319,16 +321,22 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   // ---------- Save ----------
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     if (this.addBookForm.invalid || this.isSaving) {
       this.addBookForm.markAllAsTouched();
       return;
     }
 
-    // TODO: swap confirm() for a styled dialog (guide step 5.2)
     if (this.epubWillBeDeleted) {
       const typeName = BookTypeDisplayNames[this.storedBookType!].toLowerCase();
-      if (!confirm(`This will delete the attached ${typeName} file. Are you sure you want to proceed?`)) return;
+      const confirmed = await this.confirmDialog.confirm({
+        title: `Delete the attached ${typeName} file?`,
+        message: `Saving this book as ${BookTypeDisplayNames[this.bookType!]} will delete its EPUB file. Are you sure you want to proceed?`,
+        confirmLabel: 'Delete file and save',
+        danger: true,
+        icon: 'trash3',
+      });
+      if (!confirmed) return;
     }
 
     const value = this.addBookForm.value;
