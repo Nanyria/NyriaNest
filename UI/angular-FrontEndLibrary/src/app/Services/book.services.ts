@@ -46,6 +46,17 @@ export class BookService {
     return this.http.put<any>(`${this.apiUrl}/${bookID}`, updatedBook);
   }
 
+  // Adds an EPUB to an existing e-book, or replaces the one it has
+  uploadEpub(bookID: string, file: File): Observable<ApiResponse<string>> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    return this.http.post<ApiResponse<string>>(`${this.apiUrl}/${bookID}/epub`, formData);
+  }
+
+  deleteEpub(bookID: string): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.apiUrl}/${bookID}/epub`);
+  }
+
   // Admin catalogue: search, filters, sorting and paging all happen on the server.
   // Empty values are left out so the URL only carries what's set.
   getCatalogue(query: CatalogueQuery): Observable<ApiResponse<PagedResult<AdminBook>>> {

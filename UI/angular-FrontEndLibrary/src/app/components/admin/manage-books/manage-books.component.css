@@ -182,28 +182,20 @@
 }
 
 /* ---------- ⋯ menu ---------- */
-.mb-menu {
-  position: relative;
-}
-
-.mb-menu > summary {
-  list-style: none;
-  cursor: pointer;
-}
-
-.mb-menu > summary::-webkit-details-marker {
-  display: none;
-}
-
+/* A popover in the top layer; placeMenu() sets top/bottom and right.
+   inset and margin undo the browser's default centring of popovers. */
 .mb-menu__list {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 5;
-  display: flex;
+  position: fixed;
+  inset: auto;
+  margin: 0;
   flex-direction: column;
   min-width: 190px;
   padding: 6px;
+}
+
+/* display only while open, or it would override the popover's hidden state */
+.mb-menu__list:popover-open {
+  display: flex;
 }
 
 .mb-menu__list button {

@@ -552,6 +552,35 @@
   color: var(--nn-accent);
 }
 
+/* Edit mode: the stored EPUB is marked for removal but not yet deleted */
+.add-book__removed-note {
+  font-size: 0.85rem;
+  color: var(--nn-accent);
+}
+
+/* Edit mode: changing an e-book to another type deletes its file */
+.add-book__warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--nn-accent);
+  font-size: 0.9rem;
+}
+
+/* Edit mode: loading or load error, in place of the form */
+.add-book__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nn-space-3);
+  margin: 0;
+}
+
+.add-book__state p {
+  margin: 0;
+}
+
 /* ---------- Server errors and actions ---------- */
 .add-book__banner {
   display: flex;

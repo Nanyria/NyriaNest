@@ -415,16 +415,40 @@ namespace NyriaNest.Api.Services
                 var existingBook = await _bookRepo.GetByIdAsync(id);
                 if (existingBook != null)
                 {
-                    existingBook.Title = updatedBook.Title ?? existingBook.Title;
-                    existingBook.Author = updatedBook.Author ?? existingBook.Author;
-                    existingBook.Genre = updatedBook.Genre != default ? updatedBook.Genre : existingBook.Genre;
-                    existingBook.Language = updatedBook.Language != default ? updatedBook.Language : existingBook.Language;
-                    existingBook.PublicationYear = updatedBook.PublicationYear != default ? updatedBook.PublicationYear : existingBook.PublicationYear;
-                    existingBook.BookDescription = updatedBook.BookDescription ?? existingBook.BookDescription;
-                    existingBook.BookType = updatedBook.BookType != default ? updatedBook.BookType : existingBook.BookType;
-                    existingBook.CoverImagePath = updatedBook.CoverImagePath ?? existingBook.CoverImagePath;
+                    // The edit page always sends every field, so assign them as they are.
+                    // That way a description or cover can be cleared.
+                    existingBook.Title = updatedBook.Title.Trim();
+                    existingBook.Author = updatedBook.Author.Trim();
+                    existingBook.Genre = updatedBook.Genre;
+                    existingBook.Language = updatedBook.Language;
+                    existingBook.PublicationYear = updatedBook.PublicationYear;
+                    existingBook.BookDescription = string.IsNullOrWhiteSpace(updatedBook.BookDescription) ? null : updatedBook.BookDescription.Trim();
+                    existingBook.BookType = updatedBook.BookType;
+                    existingBook.CoverImagePath = string.IsNullOrWhiteSpace(updatedBook.CoverImagePath) ? null : updatedBook.CoverImagePath.Trim();
+
+                    // Only e-books can have an EPUB, so changing the type drops the file.
+                    // The edit page warns the admin before saving.
+                    string? droppedEpubKey = null;
+                    if (existingBook.BookType != BookTypeEnums.EBook && existingBook.EpubFileKey is not null)
+                    {
+                        droppedEpubKey = existingBook.EpubFileKey;
+                        existingBook.EpubFileKey = null;
+                    }
 
                     await _bookRepo.SaveAsync();
+
+                    // As in DeleteBookAsync: remove the file only once the database no longer points at it
+                    if (droppedEpubKey is not null)
+                    {
+                        try
+                        {
+                            await _fileStorage.DeleteAsync(droppedEpubKey);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Could not delete EPUB {Key} after book {BookId} stopped being an e-book.", droppedEpubKey, id);
+                        }
+                    }
 
                     response.Result = existingBook;
                     response.IsSuccess = true;

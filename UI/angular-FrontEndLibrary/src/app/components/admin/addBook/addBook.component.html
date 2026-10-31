@@ -11,251 +11,300 @@
     <span class="nn-admin-header__compass" aria-hidden="true"></span>
     <div class="nn-admin-header__heading">
       <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">
-        <a routerLink="/admin/manage-books">Admin / Books</a> / Add book
+        <a routerLink="/admin/manage-books">Admin / Books</a> / {{ isEdit ? 'Edit book' : 'Add book' }}
       </nav>
-      <h1 class="nn-admin-header__title">Add a new book</h1>
+      <h1 class="nn-admin-header__title">{{ isEdit ? 'Edit book' : 'Add a new book' }}</h1>
     </div>
     <span class="nn-admin-header__divider" aria-hidden="true"></span>
   </header>
 
-  <!-- Format: physical/digital first, then the matching types -->
-  <section class="nn-panel add-book__panel add-book__format" aria-labelledby="format-label">
-    <div class="add-book__format-head">
-      <h2 id="format-label" class="add-book__format-title">
-        <i class="bi bi-layers" aria-hidden="true"></i><span>Format<span class="nn-required" aria-hidden="true">*</span></span>
-      </h2>
-      <p class="add-book__help">Select what type of book this is. Additional fields will appear based on your selection.</p>
+  <!-- Edit mode loads the book first -->
+  @if (loadState === 'loading') {
+    <p class="nn-panel add-book__panel add-book__state" aria-busy="true">Loading book…</p>
+  } @else if (loadState === 'error') {
+    <div class="nn-panel add-book__panel add-book__state" role="alert">
+      <p>Couldn't load this book. It may have been deleted.</p>
+      <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Back to Manage books</a>
     </div>
-
-    <div class="add-book__format-options">
-      <div class="add-book__options" role="group" aria-label="Physical or digital">
-        <button type="button" class="add-book__option" [class.is-active]="format === 'physical'" [attr.aria-pressed]="format === 'physical'" (click)="setFormat('physical')">
-          <i class="bi bi-book" aria-hidden="true"></i>Physical
-        </button>
-        <button type="button" class="add-book__option" [class.is-active]="format === 'digital'" [attr.aria-pressed]="format === 'digital'" (click)="setFormat('digital')">
-          <i class="bi bi-laptop" aria-hidden="true"></i>Digital
-        </button>
+  } @else {
+    <!-- Format: physical/digital first, then the matching types -->
+    <section class="nn-panel add-book__panel add-book__format" aria-labelledby="format-label">
+      <div class="add-book__format-head">
+        <h2 id="format-label" class="add-book__format-title">
+          <i class="bi bi-layers" aria-hidden="true"></i><span>Format<span class="nn-required" aria-hidden="true">*</span></span>
+        </h2>
+        <p class="add-book__help">Select what type of book this is. Additional fields will appear based on your selection.</p>
       </div>
 
-      @if (format === 'physical') {
-        <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
-        <div class="add-book__options" role="group" aria-label="Physical type">
-          <button type="button" class="add-book__option" [class.is-active]="bookType === BookTypeEnums.Hardcover" [attr.aria-pressed]="bookType === BookTypeEnums.Hardcover" (click)="setBookType(BookTypeEnums.Hardcover)">
-            <i class="bi bi-journal" aria-hidden="true"></i>Hardcover
+      <div class="add-book__format-options">
+        <div class="add-book__options" role="group" aria-label="Physical or digital">
+          <button type="button" class="add-book__option" [class.is-active]="format === 'physical'" [attr.aria-pressed]="format === 'physical'" (click)="setFormat('physical')">
+            <i class="bi bi-book" aria-hidden="true"></i>Physical
           </button>
-          <button type="button" class="add-book__option" [class.is-active]="bookType === BookTypeEnums.Paperback" [attr.aria-pressed]="bookType === BookTypeEnums.Paperback" (click)="setBookType(BookTypeEnums.Paperback)">
-            <i class="bi bi-book-half" aria-hidden="true"></i>Paperback
-          </button>
-        </div>
-      } @else if (format === 'digital') {
-        <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
-        <div class="add-book__options" role="group" aria-label="Digital type">
-          <button type="button" class="add-book__option" [class.is-active]="isEbook" [attr.aria-pressed]="isEbook" (click)="setBookType(BookTypeEnums.EBook)">
-            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>E-book
-          </button>
-          <button type="button" class="add-book__option" disabled title="Coming soon">
-            <i class="bi bi-headphones" aria-hidden="true"></i>Audiobook <span class="add-book__soon">Soon</span>
+          <button type="button" class="add-book__option" [class.is-active]="format === 'digital'" [attr.aria-pressed]="format === 'digital'" (click)="setFormat('digital')">
+            <i class="bi bi-laptop" aria-hidden="true"></i>Digital
           </button>
         </div>
+
+        @if (format === 'physical') {
+          <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
+          <div class="add-book__options" role="group" aria-label="Physical type">
+            <button type="button" class="add-book__option" [class.is-active]="bookType === BookTypeEnums.Hardcover" [attr.aria-pressed]="bookType === BookTypeEnums.Hardcover" (click)="setBookType(BookTypeEnums.Hardcover)">
+              <i class="bi bi-journal" aria-hidden="true"></i>Hardcover
+            </button>
+            <button type="button" class="add-book__option" [class.is-active]="bookType === BookTypeEnums.Paperback" [attr.aria-pressed]="bookType === BookTypeEnums.Paperback" (click)="setBookType(BookTypeEnums.Paperback)">
+              <i class="bi bi-book-half" aria-hidden="true"></i>Paperback
+            </button>
+          </div>
+        } @else if (format === 'digital') {
+          <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
+          <div class="add-book__options" role="group" aria-label="Digital type">
+            <button type="button" class="add-book__option" [class.is-active]="isEbook" [attr.aria-pressed]="isEbook" (click)="setBookType(BookTypeEnums.EBook)">
+              <i class="bi bi-file-earmark-text" aria-hidden="true"></i>E-book
+            </button>
+            <button type="button" class="add-book__option" disabled title="Coming soon">
+              <i class="bi bi-headphones" aria-hidden="true"></i>Audiobook <span class="add-book__soon">Soon</span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Edit mode: only e-books keep their EPUB file -->
+      @if (epubWillBeDeleted) {
+        <p class="add-book__warning" role="status">
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+          This book has an EPUB file. Saving it as another type will delete the file.
+        </p>
       }
-    </div>
-  </section>
-
-  <div class="add-book__columns">
-    <!-- Left: what the admin types -->
-    <section class="nn-panel add-book__panel add-book__details" aria-labelledby="details-title">
-      <h2 id="details-title" class="nn-section-title">
-        <i class="bi bi-book" aria-hidden="true"></i>Book details
-        <span class="nn-section-title__rule" aria-hidden="true"></span>
-      </h2>
-
-      <div class="add-book__row">
-        <div class="add-book__field add-book__field--title">
-          <label class="nn-field-label" for="title">Title<span class="nn-required" aria-hidden="true">*</span></label>
-          <input id="title" class="nn-input" formControlName="title" placeholder="Enter book title" maxlength="100" required />
-          @if (showError('title')) {
-            <span class="add-book__error">Title is required.</span>
-          }
-        </div>
-        <div class="add-book__field add-book__field--author">
-          <label class="nn-field-label" for="author">Author<span class="nn-required" aria-hidden="true">*</span></label>
-          <input id="author" class="nn-input" formControlName="author" placeholder="Enter author name" maxlength="75" required />
-          @if (showError('author')) {
-            <span class="add-book__error">Author is required.</span>
-          }
-        </div>
-      </div>
-
-      <div class="add-book__row">
-        <div class="add-book__field add-book__field--year">
-          <label class="nn-field-label" for="publicationYear">Publication year<span class="nn-required" aria-hidden="true">*</span></label>
-          <input id="publicationYear" class="nn-input" formControlName="publicationYear" placeholder="YYYY" inputmode="numeric" maxlength="4" required />
-          @if (showError('publicationYear')) {
-            <span class="add-book__error">Enter a four-digit year.</span>
-          }
-        </div>
-        <div class="add-book__field add-book__field--select">
-          <label class="nn-field-label" for="genre">Genre<span class="nn-required" aria-hidden="true">*</span></label>
-          <select id="genre" class="nn-select nn-select--plain add-book__select" formControlName="genre" required>
-            <option [ngValue]="null" disabled>Select genre</option>
-            @for (genre of genreOptions; track genre) {
-              <option [ngValue]="genre">{{ GenreDisplayNames[genre] }}</option>
-            }
-          </select>
-          @if (showError('genre')) {
-            <span class="add-book__error">Choose a genre.</span>
-          }
-        </div>
-        <div class="add-book__field add-book__field--select">
-          <label class="nn-field-label" for="language">Language<span class="nn-required" aria-hidden="true">*</span></label>
-          <select id="language" class="nn-select nn-select--plain add-book__select" formControlName="language" required>
-            @for (language of languageOptions; track language) {
-              <option [ngValue]="language">{{ LanguageDisplayNames[language] }}</option>
-            }
-          </select>
-        </div>
-      </div>
-
-      <div class="add-book__field add-book__field--grow">
-        <label class="nn-field-label" for="bookDescription">Description</label>
-        <textarea id="bookDescription" class="nn-input add-book__textarea" formControlName="bookDescription" rows="4" placeholder="Write a description of the book…"></textarea>
-      </div>
     </section>
 
-    <!-- Right: cover and files -->
-    <!-- E-books also need the EPUB field, so the cover gets a compact layout to keep the page short -->
-    <section class="nn-panel add-book__panel add-book__files" [class.add-book__files--compact]="isEbook" aria-labelledby="files-title">
-      <h2 id="files-title" class="nn-section-title">
-        <i class="bi bi-file-earmark" aria-hidden="true"></i>Files and cover
-        <span class="nn-section-title__rule" aria-hidden="true"></span>
-      </h2>
+    <div class="add-book__columns">
+      <!-- Left: what the admin types -->
+      <section class="nn-panel add-book__panel add-book__details" aria-labelledby="details-title">
+        <h2 id="details-title" class="nn-section-title">
+          <i class="bi bi-book" aria-hidden="true"></i>Book details
+          <span class="nn-section-title__rule" aria-hidden="true"></span>
+        </h2>
 
-      <div class="add-book__field">
-        <span class="nn-field-label">Cover image <span class="add-book__optional">· optional</span></span>
-        <div class="add-book__cover-row">
-          @if (coverUrl && !coverPreviewFailed) {
-            <img class="add-book__cover" [src]="coverUrl" alt="Cover preview" (error)="coverPreviewFailed = true" />
-          } @else {
-            <!-- Framed landscape placeholder until a cover is set -->
-            <div class="add-book__cover add-book__cover--empty" aria-hidden="true">
-              <svg viewBox="0 0 48 72" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
-                <rect x="3" y="3" width="42" height="66" rx="2"></rect>
-                <rect x="7" y="7" width="34" height="58" rx="1"></rect>
-                <path d="M33 21a4 4 0 1 1-3.6-5.6 3.2 3.2 0 0 0 3.6 5.6z"></path>
-                <path d="M15 22.5h.01M19 17h.01" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M7 55l10-14 7 9 6-7 11 12"></path>
-                <path d="M7 65V58l9-5 9 4 8-3 8 4v7"></path>
-              </svg>
-            </div>
-          }
-          <div class="add-book__cover-side">
-            <!-- Cover upload needs a backend endpoint; until then only a URL can be used -->
-            <div class="add-book__drop add-book__drop--disabled" aria-disabled="true" title="Coming soon">
-              <i class="bi bi-image" aria-hidden="true"></i>
-              <span class="add-book__drop-text">
-                <span class="add-book__drop-title">Drag an image here or <span class="add-book__browse">browse</span> <span class="add-book__soon">Soon</span></span>
-                <span class="add-book__drop-hint">JPG, PNG or WebP, max 5 MB</span>
-              </span>
-            </div>
-            <div class="add-book__url">
-              <label for="coverImagePath">or paste a URL</label>
-              <input id="coverImagePath" class="nn-input" formControlName="coverImagePath" placeholder="https://…" />
-            </div>
+        <div class="add-book__row">
+          <div class="add-book__field add-book__field--title">
+            <label class="nn-field-label" for="title">Title<span class="nn-required" aria-hidden="true">*</span></label>
+            <input id="title" class="nn-input" formControlName="title" placeholder="Enter book title" maxlength="100" required />
+            @if (showError('title')) {
+              <span class="add-book__error">Title is required.</span>
+            }
+          </div>
+          <div class="add-book__field add-book__field--author">
+            <label class="nn-field-label" for="author">Author<span class="nn-required" aria-hidden="true">*</span></label>
+            <input id="author" class="nn-input" formControlName="author" placeholder="Enter author name" maxlength="75" required />
+            @if (showError('author')) {
+              <span class="add-book__error">Author is required.</span>
+            }
           </div>
         </div>
-        @if (coverUrl && coverPreviewFailed) {
-          <span class="add-book__error">The image could not be loaded. Check the URL.</span>
-        }
-      </div>
 
-      @if (isEbook) {
+        <div class="add-book__row">
+          <div class="add-book__field add-book__field--year">
+            <label class="nn-field-label" for="publicationYear">Publication year<span class="nn-required" aria-hidden="true">*</span></label>
+            <input id="publicationYear" class="nn-input" formControlName="publicationYear" placeholder="YYYY" inputmode="numeric" maxlength="4" required />
+            @if (showError('publicationYear')) {
+              <span class="add-book__error">Enter a four-digit year.</span>
+            }
+          </div>
+          <div class="add-book__field add-book__field--select">
+            <label class="nn-field-label" for="genre">Genre<span class="nn-required" aria-hidden="true">*</span></label>
+            <select id="genre" class="nn-select nn-select--plain add-book__select" formControlName="genre" required>
+              <option [ngValue]="null" disabled>Select genre</option>
+              @for (genre of genreOptions; track genre) {
+                <option [ngValue]="genre">{{ GenreDisplayNames[genre] }}</option>
+              }
+            </select>
+            @if (showError('genre')) {
+              <span class="add-book__error">Choose a genre.</span>
+            }
+          </div>
+          <div class="add-book__field add-book__field--select">
+            <label class="nn-field-label" for="language">Language<span class="nn-required" aria-hidden="true">*</span></label>
+            <select id="language" class="nn-select nn-select--plain add-book__select" formControlName="language" required>
+              @for (language of languageOptions; track language) {
+                <option [ngValue]="language">{{ LanguageDisplayNames[language] }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="add-book__field add-book__field--grow">
+          <label class="nn-field-label" for="bookDescription">Description</label>
+          <textarea id="bookDescription" class="nn-input add-book__textarea" formControlName="bookDescription" rows="4" placeholder="Write a description of the book…"></textarea>
+        </div>
+      </section>
+
+      <!-- Right: cover and files -->
+      <!-- E-books also need the EPUB field, so the cover gets a compact layout to keep the page short -->
+      <section class="nn-panel add-book__panel add-book__files" [class.add-book__files--compact]="isEbook" aria-labelledby="files-title">
+        <h2 id="files-title" class="nn-section-title">
+          <i class="bi bi-file-earmark" aria-hidden="true"></i>Files and cover
+          <span class="nn-section-title__rule" aria-hidden="true"></span>
+        </h2>
+
         <div class="add-book__field">
-          <span class="nn-field-label">EPUB file<span class="nn-required" aria-hidden="true">*</span></span>
-
-          <!-- Chosen or rejected file: one card, with its buttons inside -->
-          @if (epubFile) {
-            <div class="add-book__file" (dragover)="onEpubDragOver($event)" (dragleave)="onEpubDragLeave()" (drop)="onEpubDrop($event)">
-              <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-              <span class="add-book__file-text">
-                <span class="add-book__file-name">
-                  <strong>{{ epubFile.name }}</strong>
-                  <i class="bi bi-check-circle-fill add-book__file-check" aria-hidden="true"></i>
+          <span class="nn-field-label">Cover image <span class="add-book__optional">· optional</span></span>
+          <div class="add-book__cover-row">
+            @if (coverUrl && !coverPreviewFailed) {
+              <img class="add-book__cover" [src]="coverUrl" alt="Cover preview" (error)="coverPreviewFailed = true" />
+            } @else {
+              <!-- Framed landscape placeholder until a cover is set -->
+              <div class="add-book__cover add-book__cover--empty" aria-hidden="true">
+                <svg viewBox="0 0 48 72" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
+                  <rect x="3" y="3" width="42" height="66" rx="2"></rect>
+                  <rect x="7" y="7" width="34" height="58" rx="1"></rect>
+                  <path d="M33 21a4 4 0 1 1-3.6-5.6 3.2 3.2 0 0 0 3.6 5.6z"></path>
+                  <path d="M15 22.5h.01M19 17h.01" stroke-width="1.8" stroke-linecap="round"></path>
+                  <path d="M7 55l10-14 7 9 6-7 11 12"></path>
+                  <path d="M7 65V58l9-5 9 4 8-3 8 4v7"></path>
+                </svg>
+              </div>
+            }
+            <div class="add-book__cover-side">
+              <!-- Cover upload needs a backend endpoint; until then only a URL can be used -->
+              <div class="add-book__drop add-book__drop--disabled" aria-disabled="true" title="Coming soon">
+                <i class="bi bi-image" aria-hidden="true"></i>
+                <span class="add-book__drop-text">
+                  <span class="add-book__drop-title">Drag an image here or <span class="add-book__browse">browse</span> <span class="add-book__soon">Soon</span></span>
+                  <span class="add-book__drop-hint">JPG, PNG or WebP, max 5 MB</span>
                 </span>
-                <span>{{ formatSize(epubFile.size) }} · EPUB</span>
-              </span>
-              <!-- Labels hide on narrower screens so the buttons stay on the same row -->
-              <span class="add-book__file-actions">
-                <label class="nn-btn nn-btn--outline add-book__file-btn" title="Replace file">
-                  <i class="bi bi-arrow-repeat" aria-hidden="true"></i><span class="add-book__btn-label">Replace</span>
-                  <input type="file" accept=".epub" class="add-book__file-input" aria-label="Replace EPUB file" (change)="onEpubSelected($event)" />
-                </label>
-                <button type="button" class="nn-btn nn-btn--outline add-book__file-btn add-book__file-btn--remove" title="Remove file" aria-label="Remove EPUB file" (click)="removeEpub()">
-                  <i class="bi bi-trash3" aria-hidden="true"></i><span class="add-book__btn-label">Remove</span>
-                </button>
-              </span>
+              </div>
+              <div class="add-book__url">
+                <label for="coverImagePath">or paste a URL</label>
+                <input id="coverImagePath" class="nn-input" formControlName="coverImagePath" placeholder="https://…" />
+              </div>
             </div>
-          } @else if (epubError) {
-            <div class="add-book__file add-book__file--error" role="alert" (dragover)="onEpubDragOver($event)" (dragleave)="onEpubDragLeave()" (drop)="onEpubDrop($event)">
-              <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-              <span class="add-book__file-text">
-                <strong>{{ epubError }}</strong>
-                <span>{{ rejectedEpubName }}</span>
-              </span>
-              <span class="add-book__file-actions">
-                <label class="nn-btn nn-btn--outline add-book__file-btn">
-                  <i class="bi bi-arrow-repeat" aria-hidden="true"></i>Choose another
-                  <input type="file" accept=".epub" class="add-book__file-input" (change)="onEpubSelected($event)" />
-                </label>
-              </span>
-            </div>
-          } @else {
-            <label
-              class="add-book__drop add-book__drop--row"
-              [class.add-book__drop--active]="isDraggingEpub"
-              (dragover)="onEpubDragOver($event)"
-              (dragleave)="onEpubDragLeave()"
-              (drop)="onEpubDrop($event)"
-            >
-              <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
-              <span class="add-book__drop-text">
-                @if (isDraggingEpub) {
-                  <span class="add-book__drop-title">Drop to add file</span>
-                } @else {
-                  <span class="add-book__drop-title">Drag an EPUB file here or <span class="add-book__browse">browse</span></span>
-                }
-                <span class="add-book__drop-hint">.epub, max 100 MB · required for e-books</span>
-              </span>
-              <input type="file" accept=".epub" class="add-book__file-input" aria-label="EPUB file" (change)="onEpubSelected($event)" />
-            </label>
+          </div>
+          @if (coverUrl && coverPreviewFailed) {
+            <span class="add-book__error">The image could not be loaded. Check the URL.</span>
           }
         </div>
-      }
-    </section>
-  </div>
 
-  @if (serverErrors.length) {
-    <div class="add-book__banner" role="alert">
-      <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-      <span>
-        <strong>The book could not be saved.</strong>
-        @for (message of serverErrors; track $index) {
-          {{ message }}
+        @if (isEbook) {
+          <div class="add-book__field">
+            <!-- Required for new e-books only; an edited book can be saved without one -->
+            <span class="nn-field-label">EPUB file@if (!isEdit) {<span class="nn-required" aria-hidden="true">*</span>}</span>
+
+            <!-- Chosen or rejected file: one card, with its buttons inside -->
+            @if (epubFile) {
+              <div class="add-book__file" (dragover)="onEpubDragOver($event)" (dragleave)="onEpubDragLeave()" (drop)="onEpubDrop($event)">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                <span class="add-book__file-text">
+                  <span class="add-book__file-name">
+                    <strong>{{ epubFile.name }}</strong>
+                    <i class="bi bi-check-circle-fill add-book__file-check" aria-hidden="true"></i>
+                  </span>
+                  <span>{{ formatSize(epubFile.size) }} · EPUB{{ hasStoredEpub ? ' · replaces the current file' : '' }}</span>
+                </span>
+                <!-- Labels hide on narrower screens so the buttons stay on the same row -->
+                <span class="add-book__file-actions">
+                  <label class="nn-btn nn-btn--outline add-book__file-btn" title="Replace file">
+                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i><span class="add-book__btn-label">Replace</span>
+                    <input type="file" accept=".epub" class="add-book__file-input" aria-label="Replace EPUB file" (change)="onEpubSelected($event)" />
+                  </label>
+                  <button type="button" class="nn-btn nn-btn--outline add-book__file-btn add-book__file-btn--remove" title="Remove file" aria-label="Remove EPUB file" (click)="removeEpub()">
+                    <i class="bi bi-trash3" aria-hidden="true"></i><span class="add-book__btn-label">Remove</span>
+                  </button>
+                </span>
+              </div>
+            } @else if (epubError) {
+              <div class="add-book__file add-book__file--error" role="alert" (dragover)="onEpubDragOver($event)" (dragleave)="onEpubDragLeave()" (drop)="onEpubDrop($event)">
+                <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                <span class="add-book__file-text">
+                  <strong>{{ epubError }}</strong>
+                  <span>{{ rejectedEpubName }}</span>
+                </span>
+                <span class="add-book__file-actions">
+                  <label class="nn-btn nn-btn--outline add-book__file-btn">
+                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i>Choose another
+                    <input type="file" accept=".epub" class="add-book__file-input" (change)="onEpubSelected($event)" />
+                  </label>
+                </span>
+              </div>
+            } @else if (hasStoredEpub && !removeStoredEpub) {
+              <!-- Edit mode: the file the book already has -->
+              <div class="add-book__file" (dragover)="onEpubDragOver($event)" (dragleave)="onEpubDragLeave()" (drop)="onEpubDrop($event)">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                <span class="add-book__file-text">
+                  <span class="add-book__file-name">
+                    <strong>Current EPUB file</strong>
+                    <i class="bi bi-check-circle-fill add-book__file-check" aria-hidden="true"></i>
+                  </span>
+                  <span>Attached · EPUB</span>
+                </span>
+                <span class="add-book__file-actions">
+                  <label class="nn-btn nn-btn--outline add-book__file-btn" title="Replace file">
+                    <i class="bi bi-arrow-repeat" aria-hidden="true"></i><span class="add-book__btn-label">Replace</span>
+                    <input type="file" accept=".epub" class="add-book__file-input" aria-label="Replace EPUB file" (change)="onEpubSelected($event)" />
+                  </label>
+                  <button type="button" class="nn-btn nn-btn--outline add-book__file-btn add-book__file-btn--remove" title="Remove file" aria-label="Remove EPUB file" (click)="setRemoveStoredEpub(true)">
+                    <i class="bi bi-trash3" aria-hidden="true"></i><span class="add-book__btn-label">Remove</span>
+                  </button>
+                </span>
+              </div>
+            } @else {
+              <label
+                class="add-book__drop add-book__drop--row"
+                [class.add-book__drop--active]="isDraggingEpub"
+                (dragover)="onEpubDragOver($event)"
+                (dragleave)="onEpubDragLeave()"
+                (drop)="onEpubDrop($event)"
+              >
+                <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+                <span class="add-book__drop-text">
+                  @if (isDraggingEpub) {
+                    <span class="add-book__drop-title">Drop to add file</span>
+                  } @else {
+                    <span class="add-book__drop-title">Drag an EPUB file here or <span class="add-book__browse">browse</span></span>
+                  }
+                  <span class="add-book__drop-hint">.epub, max 100 MB{{ isEdit ? '' : ' · required for e-books' }}</span>
+                </span>
+                <input type="file" accept=".epub" class="add-book__file-input" aria-label="EPUB file" (change)="onEpubSelected($event)" />
+              </label>
+            }
+
+            <!-- Nothing is deleted until Save, so the admin can change their mind -->
+            @if (hasStoredEpub && removeStoredEpub && !epubFile) {
+              <span class="add-book__removed-note">
+                The current file will be deleted when you save.
+                <button type="button" class="nn-link-button" (click)="setRemoveStoredEpub(false)">Undo</button>
+              </span>
+            }
+          </div>
         }
-      </span>
+      </section>
+    </div>
+
+    @if (serverErrors.length) {
+      <div class="add-book__banner" role="alert">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+        <span>
+          <strong>{{ bannerTitle }}</strong>
+          @for (message of serverErrors; track $index) {
+            {{ message }}
+          }
+        </span>
+      </div>
+    }
+
+    <!-- The bar is the sticky container; the row inside only gets a background while stuck -->
+    <div class="add-book__actions-bar">
+      <div class="add-book__actions">
+        @if (saveHint) {
+          <span class="add-book__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>{{ saveHint }}</span>
+        }
+        <!-- Leaving with unsaved changes asks first (unsavedChangesGuard) -->
+        <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Cancel</a>
+        <button type="submit" class="nn-btn nn-btn--primary add-book__submit" [disabled]="addBookForm.invalid || isSaving || (isEdit && addBookForm.pristine)">
+          <i class="bi" [class.bi-plus-lg]="!isSaving && !isEdit" [class.bi-check-lg]="!isSaving && isEdit" [class.bi-hourglass-split]="isSaving" aria-hidden="true"></i>
+          {{ isSaving ? 'Saving…' : isEdit ? 'Save changes' : 'Add book' }}
+        </button>
+      </div>
     </div>
   }
-
-  <!-- The bar is the sticky container; the row inside only gets a background while stuck -->
-  <div class="add-book__actions-bar">
-    <div class="add-book__actions">
-      @if (saveHint) {
-        <span class="add-book__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>{{ saveHint }}</span>
-      }
-      <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Cancel</a>
-      <button type="submit" class="nn-btn nn-btn--primary add-book__submit" [disabled]="addBookForm.invalid || isSaving">
-        <i class="bi" [class.bi-plus-lg]="!isSaving" [class.bi-hourglass-split]="isSaving" aria-hidden="true"></i>
-        {{ isSaving ? 'Saving…' : 'Add book' }}
-      </button>
-    </div>
-  </div>
 </form>

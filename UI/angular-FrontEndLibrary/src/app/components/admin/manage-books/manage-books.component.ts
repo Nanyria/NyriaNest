@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  HostListener,
   computed,
   inject,
   signal,
@@ -19,6 +20,7 @@ import {
   switchMap,
 } from 'rxjs/operators';
 import { BookService } from '../../../Services/book.services';
+import { ToastService } from '../../../Services/toast.service';
 import {
   AdminBook,
   CatalogueQuery,
@@ -72,6 +74,7 @@ export class ManageBooksComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private bookService = inject(BookService);
+  private toast = inject(ToastService);
   private refresh$ = new BehaviorSubject<void>(undefined);
 
   // "All" means no filter, which the empty option already covers
@@ -172,7 +175,6 @@ export class ManageBooksComponent {
   retry() {
     this.refresh$.next();
   }
-
   // Status badge text. Overdue isn't a stored status: it's a checked-out book past its due date.
   statusLabel(b: AdminBook): string {
     switch (b.bookStatus) {
@@ -223,9 +225,29 @@ export class ManageBooksComponent {
     return b.bookStatus === BookStatusEnum.Lost || b.bookStatus === BookStatusEnum.Removed;
   }
 
-  // The ⋯ menu is a <details>; close it once an action is picked
+  // The ⋯ menu is a popover: it opens in the browser's top layer, so the
+  // table's scroll area can't clip it or make the page scroll. Place it under
+  // its button, or above it when the button is near the bottom of the window.
+  placeMenu(event: Event, button: HTMLElement) {
+    if ((event as ToggleEvent).newState !== 'open') return;
+    const menu = event.target as HTMLElement;
+    const r = button.getBoundingClientRect();
+    const openUp = r.bottom > window.innerHeight - 180;
+    menu.style.right = `${document.documentElement.clientWidth - r.right}px`;
+    menu.style.top = openUp ? 'auto' : `${r.bottom + 4}px`;
+    menu.style.bottom = openUp ? `${window.innerHeight - r.top + 4}px` : 'auto';
+  }
+
+  // Close once an action is picked
   closeMenu(event: Event) {
-    (event.target as HTMLElement).closest('details')?.removeAttribute('open');
+    (event.currentTarget as HTMLElement).hidePopover();
+  }
+
+  // The menu is fixed to the window, so it would drift away from its button
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  closeOpenMenus() {
+    document.querySelectorAll<HTMLElement>('.mb-menu__list:popover-open').forEach((m) => m.hidePopover());
   }
 
   markLost(b: AdminBook) {
@@ -237,29 +259,52 @@ export class ManageBooksComponent {
   }
 
   restore(b: AdminBook) {
-    this.run(this.bookService.clearAdminStatus(b.bookId), `Couldn't restore "${b.title}".`);
+    this.run(
+      this.bookService.clearAdminStatus(b.bookId),
+      { message: `"${b.title}" was restored.`, icon: 'arrow-counterclockwise' },
+      `Couldn't restore "${b.title}".`,
+    );
   }
 
   delete(b: AdminBook) {
     // TODO: swap confirm() for a styled dialog (guide step 5.2)
     const extra = b.hasEpub ? ' Its EPUB file will be deleted too.' : '';
     if (!confirm(`Delete "${b.title}" permanently?${extra}`)) return;
-    this.run(this.bookService.deleteBook(String(b.bookId)), `Couldn't delete "${b.title}".`);
+    this.run(
+      this.bookService.deleteBook(String(b.bookId)),
+      { message: `"${b.title}" was deleted.`, icon: 'trash3' },
+      `Couldn't delete "${b.title}".`,
+    );
   }
 
   private confirmAdminStatus(b: AdminBook, status: BookStatusEnum.Lost | BookStatusEnum.Removed) {
     // TODO: swap confirm() for a styled dialog (guide step 5.2)
     const label = status === BookStatusEnum.Lost ? 'lost' : 'removed';
     if (!confirm(`Mark "${b.title}" as ${label}? It can't be borrowed or reserved until restored.`)) return;
-    this.run(this.bookService.setAdminStatus(b.bookId, status), `Couldn't mark "${b.title}" as ${label}.`);
+    this.run(
+      this.bookService.setAdminStatus(b.bookId, status),
+      {
+        message: `"${b.title}" was marked as ${label}.`,
+        icon: status === BookStatusEnum.Lost ? 'question-circle' : 'archive',
+      },
+      `Couldn't mark "${b.title}" as ${label}.`,
+    );
   }
 
-  // Runs an action, then reloads the list. On failure, shows the API's own
-  // message if there is one (e.g. "Return this book before deleting it.").
-  private run(action: Observable<unknown>, fallbackMessage: string) {
+  // Runs an action, reloads the list and shows a toast. On failure, shows the
+  // API's own message if there is one (e.g. "Return this book before deleting it.").
+  // The toast icon matches the menu item's icon.
+  private run(
+    action: Observable<unknown>,
+    success: { message: string; icon: string },
+    fallbackMessage: string,
+  ) {
     this.actionError.set(null);
     action.subscribe({
-      next: () => this.refresh$.next(),
+      next: () => {
+        this.toast.success(success.message, success.icon);
+        this.refresh$.next();
+      },
       error: (err) => this.actionError.set(err?.error?.errorMessages?.[0] ?? fallbackMessage),
     });
   }

@@ -188,22 +188,32 @@
                   </td>
                   <td class="mb-cell-actions">
                     <div class="mb-actions">
-                      <!-- The edit page comes in guide step 5.1 -->
-                      <button
-                        type="button"
+                      <a
                         class="nn-btn nn-btn--outline nn-btn--icon"
-                        disabled
-                        title="Editing comes soon"
-                        [attr.aria-label]="'Edit ' + b.title + ' (coming soon)'"
+                        [routerLink]="['/admin/books', b.bookId, 'edit']"
+                        title="Edit"
+                        [attr.aria-label]="'Edit ' + b.title"
                       >
                         <i class="bi bi-pencil" aria-hidden="true"></i>
-                      </button>
+                      </a>
 
-                      <details class="mb-menu">
-                        <summary class="nn-btn nn-btn--outline nn-btn--icon" [attr.aria-label]="'More actions for ' + b.title">
-                          <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-                        </summary>
-                        <div class="mb-menu__list nn-panel" (click)="closeMenu($event)">
+                      <button
+                        #menuButton
+                        type="button"
+                        class="nn-btn nn-btn--outline nn-btn--icon"
+                        [attr.popovertarget]="'mb-menu-' + b.bookId"
+                        [attr.aria-label]="'More actions for ' + b.title"
+                      >
+                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                      </button>
+                      <!-- Popover: closes on Esc or a click outside -->
+                      <div
+                        class="mb-menu__list nn-panel"
+                        popover
+                        [id]="'mb-menu-' + b.bookId"
+                        (beforetoggle)="placeMenu($event, menuButton)"
+                        (click)="closeMenu($event)"
+                      >
                           @if (isWithdrawn(b)) {
                             <button type="button" (click)="restore(b)">
                               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore
@@ -226,8 +236,7 @@
                           >
                             <i class="bi bi-trash3" aria-hidden="true"></i> Delete
                           </button>
-                        </div>
-                      </details>
+                      </div>
                     </div>
                   </td>
                 </tr>
