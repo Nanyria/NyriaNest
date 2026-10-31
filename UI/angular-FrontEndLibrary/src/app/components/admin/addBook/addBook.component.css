@@ -297,6 +297,12 @@
   font-size: 0.9rem;
 }
 
+/* After a save attempt with no format chosen. Two classes, to beat .nn-panel.
+   (The EPUB drop area's version is with the drop styles.) */
+.nn-panel.add-book__panel--invalid {
+  border-color: #d99a93;
+}
+
 /* ---------- Cover ----------
    Preview on the left; drop area and URL field stacked beside it.
    Physical books get a larger cover; e-books a compact one (see --compact). */
@@ -397,6 +403,17 @@
   border-style: solid;
   border-color: var(--nn-primary);
   background-color: #e6ece3;
+}
+
+/* No EPUB for a new e-book, after a save attempt. After :focus-within so it
+   stays red when the save jumps here; the ring still shows the focus. */
+.add-book__drop--invalid:not(.add-book__drop--active) {
+  border-color: #d99a93;
+  background-color: #fbf1ee;
+}
+
+.add-book__drop--invalid:not(.add-book__drop--active):focus-within {
+  box-shadow: 0 0 0 3px rgba(142, 31, 28, 0.18);
 }
 
 .add-book__drop-text {
@@ -631,7 +648,7 @@
   background-color: var(--nn-field);
 }
 
-/* The hint explains why it is disabled, so it doesn't need to look faded out */
+/* Only disabled while saving or when an edit has no changes; the hint says why */
 .add-book__submit:disabled {
   opacity: 0.75;
 }
@@ -642,4 +659,8 @@
   gap: 6px;
   color: var(--nn-ink-muted);
   font-size: 0.95rem;
+}
+
+.add-book__hint--error {
+  color: var(--nn-accent);
 }

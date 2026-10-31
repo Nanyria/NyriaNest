@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -47,6 +47,23 @@ function epubFileValidator(control: AbstractControl): ValidationErrors | null {
   return error ? { epubFile: error } : null;
 }
 
+// A required field: the form controls behind it, and what to focus when it's wrong
+interface FieldRef {
+  controls: string[];
+  focus: string;
+}
+
+// In page order. Format and type count as one field, since one choice fixes both.
+const FIELDS: FieldRef[] = [
+  { controls: ['format', 'bookType'], focus: '.add-book__format .add-book__option' },
+  { controls: ['title'], focus: '#title' },
+  { controls: ['author'], focus: '#author' },
+  { controls: ['publicationYear'], focus: '#publicationYear' },
+  { controls: ['genre'], focus: '#genre' },
+  { controls: ['language'], focus: '#language' },
+  { controls: ['epubFile'], focus: '.add-book__files .add-book__file-input' },
+];
+
 // One page for both /add-book and /admin/manage-books/:id/edit; the route decides the mode
 @Component({
   selector: 'app-addbook',
@@ -75,6 +92,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   ).filter((l) => l !== LanguageEnums.Undefined);
 
   isSaving = false;
+  submitAttempted = false;
   serverErrors: string[] = [];
   bannerTitle = '';
   private saved = false; // lets the page close without the unsaved-changes question
@@ -97,6 +115,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     private route: ActivatedRoute,
     private toast: ToastService,
     private confirmDialog: ConfirmService,
+    private host: ElementRef<HTMLElement>,
   ) {}
 
   ngOnInit(): void {
@@ -218,13 +237,30 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     return (this.addBookForm.get('coverImagePath')!.value ?? '').trim();
   }
 
-  // Shown next to the save button so the admin knows why it is disabled
+  // The fields that block saving, in page order. Each field's own message
+  // explains what's wrong; this drives the summary and the jump to the first one.
+  get invalidFields(): FieldRef[] {
+    return FIELDS.filter((f) => f.controls.some((name) => this.addBookForm.get(name)!.invalid));
+  }
+
+  // Format and type are picked with buttons, which never mark the controls as
+  // touched, so their message only appears after a save attempt
+  get showFormatError(): boolean {
+    return this.showError('format') || this.showError('bookType');
+  }
+
+  // A save was tried and something still blocks it
+  get hasBlockingErrors(): boolean {
+    return this.submitAttempted && this.invalidFields.length > 0;
+  }
+
+  // Next to the save button. The button stays clickable (except when nothing
+  // changed in edit mode), so this only sums up what a save attempt found.
   get saveHint(): string {
-    if (!this.format) return 'Choose a format to continue.';
-    if (!this.isEdit && this.isEbook && !this.epubFile) return 'Add an EPUB file to continue.';
-    if (this.addBookForm.invalid) return 'Fill in the required fields.';
     if (this.isEdit && this.addBookForm.pristine) return 'No changes to save yet.';
-    return '';
+    if (!this.hasBlockingErrors) return '';
+    const count = this.invalidFields.length;
+    return count === 1 ? '1 field needs attention.' : `${count} fields need attention.`;
   }
 
   // Picking a format preselects its first type.
@@ -322,8 +358,11 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // ---------- Save ----------
 
   async onSubmit(): Promise<void> {
-    if (this.addBookForm.invalid || this.isSaving) {
+    if (this.isSaving) return;
+    if (this.addBookForm.invalid) {
+      this.submitAttempted = true;
       this.addBookForm.markAllAsTouched();
+      this.focusFirstInvalid();
       return;
     }
 
@@ -366,6 +405,18 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     request.subscribe({
       next: () => this.finish(`"${book.title}" was added.`),
       error: (err) => this.showServerErrors(err, 'The book could not be saved.'),
+    });
+  }
+
+  // Scrolls the first problem into view and puts the cursor there.
+  // After a tick, so the error messages are rendered and the layout is final.
+  private focusFirstInvalid(): void {
+    const first = this.invalidFields[0];
+    if (!first) return;
+    setTimeout(() => {
+      const target = this.host.nativeElement.querySelector<HTMLElement>(first.focus);
+      target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      target?.focus({ preventScroll: true });
     });
   }
 

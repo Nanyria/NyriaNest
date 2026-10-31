@@ -28,7 +28,7 @@
     </div>
   } @else {
     <!-- Format: physical/digital first, then the matching types -->
-    <section class="nn-panel add-book__panel add-book__format" aria-labelledby="format-label">
+    <section class="nn-panel add-book__panel add-book__format" [class.add-book__panel--invalid]="showFormatError" aria-labelledby="format-label">
       <div class="add-book__format-head">
         <h2 id="format-label" class="add-book__format-title">
           <i class="bi bi-layers" aria-hidden="true"></i><span>Format<span class="nn-required" aria-hidden="true">*</span></span>
@@ -68,6 +68,10 @@
           </div>
         }
       </div>
+
+      @if (showFormatError) {
+        <span class="add-book__error">Choose a format and type.</span>
+      }
 
       <!-- Edit mode: only e-books keep their EPUB file -->
       @if (epubWillBeDeleted) {
@@ -130,6 +134,9 @@
                 <option [ngValue]="language">{{ LanguageDisplayNames[language] }}</option>
               }
             </select>
+            @if (showError('language')) {
+              <span class="add-book__error">Choose a language.</span>
+            }
           </div>
         </div>
 
@@ -251,6 +258,7 @@
               <label
                 class="add-book__drop add-book__drop--row"
                 [class.add-book__drop--active]="isDraggingEpub"
+                [class.add-book__drop--invalid]="showError('epubFile')"
                 (dragover)="onEpubDragOver($event)"
                 (dragleave)="onEpubDragLeave()"
                 (drop)="onEpubDrop($event)"
@@ -266,6 +274,9 @@
                 </span>
                 <input type="file" accept=".epub" class="add-book__file-input" aria-label="EPUB file" (change)="onEpubSelected($event)" />
               </label>
+              @if (showError('epubFile')) {
+                <span class="add-book__error">Add an EPUB file.</span>
+              }
             }
 
             <!-- Nothing is deleted until Save, so the admin can change their mind -->
@@ -295,12 +306,19 @@
     <!-- The bar is the sticky container; the row inside only gets a background while stuck -->
     <div class="add-book__actions-bar">
       <div class="add-book__actions">
-        @if (saveHint) {
-          <span class="add-book__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>{{ saveHint }}</span>
-        }
+        <!-- Read out when it appears after a save attempt -->
+        <span class="add-book__hint-slot" role="status">
+          @if (saveHint) {
+            <span class="add-book__hint" [class.add-book__hint--error]="hasBlockingErrors">
+              <i class="bi" [class]="hasBlockingErrors ? 'bi-exclamation-circle' : 'bi-info-circle'" aria-hidden="true"></i>{{ saveHint }}
+            </span>
+          }
+        </span>
         <!-- Leaving with unsaved changes asks first (unsavedChangesGuard) -->
         <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Cancel</a>
-        <button type="submit" class="nn-btn nn-btn--primary add-book__submit" [disabled]="addBookForm.invalid || isSaving || (isEdit && addBookForm.pristine)">
+        <!-- Clickable even with gaps: a click shows what's missing and jumps to it.
+             Only an unchanged edit has nothing to save. -->
+        <button type="submit" class="nn-btn nn-btn--primary add-book__submit" [disabled]="isSaving || (isEdit && addBookForm.pristine)">
           <i class="bi" [class.bi-plus-lg]="!isSaving && !isEdit" [class.bi-check-lg]="!isSaving && isEdit" [class.bi-hourglass-split]="isSaving" aria-hidden="true"></i>
           {{ isSaving ? 'Saving…' : isEdit ? 'Save changes' : 'Add book' }}
         </button>
