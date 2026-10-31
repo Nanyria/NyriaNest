@@ -17,8 +17,6 @@ namespace NyriaNest.Api.Services
     {
         Task<APIResponse<List<Book>>> GetAllBooksAsync();
         Task<APIResponse<Book>> GetBookByIdAsync(int id);
-        Task<APIResponse<List<Book>>> GetBooksByTitleAsync(string title);
-        Task<APIResponse<List<Book>>> GetBooksByAuthorAsync(string author);
         // Accept optional userId of the actor who adds the book
         Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
         Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, IFormFile file, CancellationToken ct = default);
@@ -27,7 +25,6 @@ namespace NyriaNest.Api.Services
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId);
-        Task<APIResponse<List<Book>>> GetBooksByGenreAsync(GenreEnums genre, string sortBy = "Title", bool ascending = true);
         Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync (int bookId);
         void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
@@ -100,66 +97,6 @@ namespace NyriaNest.Api.Services
                 {
                     response.IsSuccess = false;
                     response.ErrorMessages.Add("Book not found.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-
-            return response;
-        }
-        public async Task<APIResponse<List<Book>>> GetBooksByTitleAsync(string title)
-        {
-            var response = new APIResponse<List<Book>>();
-
-            try
-            {
-                var books = await _bookRepo.GetByTitleAsync(title);
-                if (books.Any())
-                {
-
-                    response.Result = books.ToList();
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("No books found with the provided title.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-
-            return response;
-        }
-        public async Task<APIResponse<List<Book>>> GetBooksByAuthorAsync(string author)
-        {
-            var response = new APIResponse<List<Book>>();
-
-            try
-            {
-                var books = await _bookRepo.GetByAuthorAsync(author);
-                if (books.Any())
-                {
-
-                    response.Result = books.ToList();
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("No books found with the provided author.");
                     response.StatusCode = HttpStatusCode.NotFound;
                 }
             }
@@ -631,51 +568,6 @@ namespace NyriaNest.Api.Services
             {
                 response.ErrorMessages.Add("User not found.");
                 response.StatusCode = HttpStatusCode.NotFound;
-            }
-            return response;
-        }
-
-        public async Task<APIResponse<List<Book>>> GetBooksByGenreAsync(
-            GenreEnums genre,
-            string sortBy = "Title",
-            bool ascending = true)
-        {
-            var response = new APIResponse<List<Book>>();
-            try
-            {
-                var books = await _bookRepo.GetByGenreAsync(genre);
-
-                // Sorting logic
-                IEnumerable<Book> sortedBooks = sortBy.ToLower() switch
-                {
-                    "title" => ascending ? books.OrderBy(b => b.Title) : books.OrderByDescending(b => b.Title),
-                    "author" => ascending ? books.OrderBy(b => b.Author) : books.OrderByDescending(b => b.Author),
-                    "publishedyear" => ascending ? books.OrderBy(b => b.PublicationYear) : books.OrderByDescending(b => b.PublicationYear),
-                    "booktype" => ascending ? books.OrderBy(b => b.BookType) : books.OrderByDescending(b => b.BookType),
-                    "added" => ascending
-                        ? books.OrderBy(b => b.StatusHistory.Min(sh => sh.Timestamp))
-                        : books.OrderByDescending(b => b.StatusHistory.Min(sh => sh.Timestamp)),
-                    _ => ascending ? books.OrderBy(b => b.Title) : books.OrderByDescending(b => b.Title)
-                };
-
-                if (sortedBooks.Any())
-                {
-                    response.Result = sortedBooks.ToList();
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("No books found with the provided genre.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
             }
             return response;
         }

@@ -48,21 +48,6 @@ namespace NyriaNest.Api.Repositories
                 .FirstOrDefaultAsync(b => b.BookId == id);
         }
 
-        public async Task<IEnumerable<Book>> GetByTitleAsync(string title)
-        {
-            return await _db.Books
-                .Include(b => b.StatusHistory)
-                .Where(b => b.Title.ToLower().Contains(title.ToLower()))
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Book>> GetByAuthorAsync(string author)
-        {
-            return await _db.Books
-                .Include(b => b.StatusHistory)
-                .Where(b => b.Author.ToLower().Contains(author.ToLower()))
-                .ToListAsync();
-        }
         public async Task<List<LibraryBookDto>> GetLibraryListAsync(string? userId)
         {
             return await _db.Books
@@ -184,14 +169,6 @@ namespace NyriaNest.Api.Repositories
         {
             _db.Books.Update(book);
             return Task.CompletedTask;
-        }
-
-        public async Task<IEnumerable<Book>> GetByGenreAsync(GenreEnums genre)
-        {
-            return await _db.Books
-                .Include(b => b.StatusHistory)
-                .Where(b => b.Genre == genre)
-                .ToListAsync();
         }
     }
 }
