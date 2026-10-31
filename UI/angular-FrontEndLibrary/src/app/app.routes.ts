@@ -25,7 +25,7 @@ export const routes: Routes = [
       { path: 'add-book', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
       // Same page in edit mode. Kept outside the admin wrapper so it lays out
       // exactly like Add book; listed before 'admin' so that route doesn't claim it.
-      { path: 'admin/books/:id/edit', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
+      { path: 'admin/manage-books/:id/edit', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
       {
         path: 'user-page',
         component: UserPageComponent,

@@ -47,7 +47,7 @@ function epubFileValidator(control: AbstractControl): ValidationErrors | null {
   return error ? { epubFile: error } : null;
 }
 
-// One page for both /add-book and /admin/books/:id/edit; the route decides the mode
+// One page for both /add-book and /admin/manage-books/:id/edit; the route decides the mode
 @Component({
   selector: 'app-addbook',
   standalone: true,
