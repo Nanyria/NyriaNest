@@ -17,6 +17,9 @@ export interface Book {
   bookDescription?: string;
   coverImagePath?: string;
   hasEpub: boolean;
+  // Null for files uploaded before the name and size were stored
+  epubFileName?: string | null;
+  epubFileSize?: number | null;
   bookStatus: BookStatusEnum;
   bookType: BookTypeEnums;
   availabilityDate: Date;

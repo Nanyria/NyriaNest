@@ -42,6 +42,12 @@ namespace NyriaNest.Api.Models.Books
         [NotMapped]
         public bool HasEpub => EpubFileKey != null;
 
+        // The uploaded file's original name and size in bytes, shown on the edit page.
+        // Null for files uploaded before these were stored.
+        [MaxLength(255)]
+        public string? EpubFileName { get; set; }
+        public long? EpubFileSize { get; set; }
+
         // Navigation properties
         public List<ReviewItem> Reviews { get; set; } = new();
         public List<StatusHistoryItem> StatusHistory { get; set; } = new();

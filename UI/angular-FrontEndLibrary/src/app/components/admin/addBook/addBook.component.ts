@@ -99,6 +99,8 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   // Edit mode: what the book has on the server right now
   hasStoredEpub = false;
+  storedEpubName: string | null = null;
+  storedEpubSize: number | null = null;
   private storedBookType: BookTypeEnums | null = null;
 
   // EPUB drop area
@@ -191,6 +193,8 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
       removeStoredEpub: false,
     });
     this.hasStoredEpub = book.hasEpub;
+    this.storedEpubName = book.epubFileName ?? null;
+    this.storedEpubSize = book.epubFileSize ?? null;
     this.storedBookType = book.bookType;
     this.loadState = 'ready';
   }

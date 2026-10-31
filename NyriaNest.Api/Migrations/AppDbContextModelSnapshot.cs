@@ -202,6 +202,13 @@ namespace NyriaNest.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("EpubFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long?>("EpubFileSize")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("Genre")
                         .HasColumnType("int");
 

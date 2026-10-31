@@ -73,6 +73,8 @@ namespace NyriaNest.Api.Services
 
             var oldKey = book.EpubFileKey;
             book.EpubFileKey = newKey;
+            book.EpubFileName = TrimFileName(Path.GetFileName(file.FileName));
+            book.EpubFileSize = file.Length;
 
             try
             {
@@ -106,6 +108,8 @@ namespace NyriaNest.Api.Services
 
             await _storage.DeleteAsync(book.EpubFileKey, ct);
             book.EpubFileKey = null;
+            book.EpubFileName = null;
+            book.EpubFileSize = null;
             await _db.SaveChangesAsync(ct);
 
             response.IsSuccess = true;
@@ -158,6 +162,15 @@ namespace NyriaNest.Api.Services
             var invalid = Path.GetInvalidFileNameChars();
             var cleaned = new string(title.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
             return (string.IsNullOrWhiteSpace(cleaned) ? "book" : cleaned) + ".epub";
+        }
+
+        // Fits the 255-character column, keeping the ".epub" ending
+        private static string TrimFileName(string name)
+        {
+            const int max = 255;
+            if (name.Length <= max) return name;
+            var ext = Path.GetExtension(name);
+            return name[..(max - ext.Length)] + ext;
         }
 
         private static APIResponse<T> Fail<T>(APIResponse<T> response, HttpStatusCode status, string message)

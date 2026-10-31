@@ -370,6 +370,8 @@ namespace NyriaNest.Api.Services
                     {
                         droppedEpubKey = existingBook.EpubFileKey;
                         existingBook.EpubFileKey = null;
+                        existingBook.EpubFileName = null;
+                        existingBook.EpubFileSize = null;
                     }
 
                     await _bookRepo.SaveAsync();

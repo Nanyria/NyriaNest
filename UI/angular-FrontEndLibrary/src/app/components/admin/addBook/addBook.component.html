@@ -239,10 +239,11 @@
                 <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
                 <span class="add-book__file-text">
                   <span class="add-book__file-name">
-                    <strong>Current EPUB file</strong>
+                    <!-- Older uploads have no stored name or size -->
+                    <strong>{{ storedEpubName ?? 'Current EPUB file' }}</strong>
                     <i class="bi bi-check-circle-fill add-book__file-check" aria-hidden="true"></i>
                   </span>
-                  <span>Attached · EPUB</span>
+                  <span>{{ storedEpubSize !== null ? formatSize(storedEpubSize) + ' · ' : '' }}EPUB · current file</span>
                 </span>
                 <span class="add-book__file-actions">
                   <label class="nn-btn nn-btn--outline add-book__file-btn" title="Replace file">
