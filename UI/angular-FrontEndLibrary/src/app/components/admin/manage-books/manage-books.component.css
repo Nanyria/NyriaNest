@@ -1,8 +1,87 @@
 /* Spacing and panels match the Add book page */
 :host {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--nn-space-3);
+}
+
+/* Everything on the page sits above the decoration */
+:host > :not(.mb-art, .mb-decor) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Decoration ----------
+   The same images as on Add book. Absolutely positioned, so they add no height
+   and take no part in the flex gap; behind the panels, so only the parts reaching
+   past the panel edges show. The admin wrapper clips them at the window edge.
+   Longhands only: a background shorthand would reset each modifier's image. */
+.mb-art,
+.mb-decor {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.mb-decor {
+  opacity: 0.9;
+}
+
+/* The books stand on the Find books panel, left of the Add new book button */
+.mb-art {
+  top: -26px;
+  right: 200px;
+  width: 230px;
+  aspect-ratio: 700 / 343;
+  background-position: right bottom;
+  background-image: url('/assets/images/web-icons-1/booksQuill.png');
+}
+
+/* Flipped upside down, so the branch hangs in from above the header */
+.mb-decor--left {
+  top: -34px;
+  left: -190px; /* the tip stops just short of the header's compass */
+  width: 230px;
+  aspect-ratio: 620 / 400;
+  background-image: url('/assets/images/web-icons-1/loweLeaves.png');
+  transform: scaleY(-1);
+}
+
+.mb-decor--corner {
+  bottom: -20px;
+  left: -96px;
+  width: 300px;
+  aspect-ratio: 590 / 364;
+  background-image: url('/assets/images/web-icons-1/cornerLeaves.png');
+}
+
+.mb-decor--right {
+  top: 330px;
+  right: -110px;
+  width: 200px;
+  aspect-ratio: 438 / 505;
+  background-image: url('/assets/images/web-icons-1/upperLeaves.png');
+}
+
+/* Narrower screens: the margins disappear, so the leaves would only clutter */
+@media (max-width: 1199px) {
+  .mb-decor {
+    display: none;
+  }
+
+  .mb-art {
+    width: 170px;
+  }
+}
+
+@media (max-width: 899px) {
+  .mb-art {
+    display: none;
+  }
 }
 
 /* ---------- Header (theme nn-admin-header) ---------- */
