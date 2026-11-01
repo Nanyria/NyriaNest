@@ -1,7 +1,7 @@
 <!-- Always in the page, so screen readers announce toasts as they're added -->
 <div class="toast-stack" role="status" aria-live="polite">
   @for (t of toast.toasts(); track t.id) {
-    <div class="toast">
+    <div class="toast" [class.toast--error]="t.kind === 'error'">
       <span class="toast__seal" aria-hidden="true"><i class="bi" [class]="'bi-' + t.icon"></i></span>
       <span class="toast__message">{{ t.message }}</span>
       <button type="button" class="toast__close" aria-label="Dismiss" (click)="toast.dismiss(t.id)">

@@ -44,6 +44,11 @@
   font-size: 0.95rem;
 }
 
+/* Errors: the accent red seal, still with the gold rim */
+.toast--error .toast__seal {
+  background-color: var(--nn-accent);
+}
+
 .toast__message {
   flex: 1;
 }
