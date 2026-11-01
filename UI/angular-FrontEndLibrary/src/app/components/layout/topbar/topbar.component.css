@@ -144,6 +144,12 @@ button.topbar__link:hover {
   flex-shrink: 0;
 }
 
+/* Without the search box (admin pages) nothing pushes the actions right,
+   so they do it themselves */
+.topbar__nav + .topbar__actions {
+  margin-left: auto;
+}
+
 .topbar__bell {
   position: relative;
   font-size: 1.35rem;

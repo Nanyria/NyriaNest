@@ -29,35 +29,13 @@ public class LibraryController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
-
-
-    [HttpGet("title/{title}")]
-    public async Task<IActionResult> GetBooksByTitle(string title)
-    {
-        var response = await _bookService.GetBooksByTitleAsync(title);
-        return StatusCode((int)response.StatusCode, response);
-    }
-
-    [HttpGet("author/{author}")]
-    public async Task<IActionResult> GetBooksByAuthor(string author)
-    {
-        var response = await _bookService.GetBooksByAuthorAsync(author);
-        return StatusCode((int)response.StatusCode, response);
-    }
-
-
     [HttpGet("reservations/{bookId:int}")]
     public async Task<IActionResult> GetBookReservations(int bookId)
     {
         var response = await _bookService.GetBookReservationsAsync(bookId);
         return StatusCode((int)response.StatusCode, response);
     }
-    [HttpGet("booksbygenre/{genre}")]
-    public async Task<IActionResult> GetBooksByGenre(GenreEnums genre, [FromQuery] string sortBy = "Title", [FromQuery] bool ascending = true)
-    {
-        var response = await _bookService.GetBooksByGenreAsync(genre, sortBy, ascending);
-        return StatusCode((int)response.StatusCode, response);
-    }
+
     [HttpGet("review/{bookId:int}")]
     public async Task<IActionResult> GetBookReview(int bookId)
     {

@@ -163,6 +163,16 @@ namespace NyriaNest.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BookId"), 1001L);
 
+                    b.Property<int?>("AdminStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AdminStatusNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("AdminStatusSetAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Author")
                         .IsRequired()
                         .HasMaxLength(75)
@@ -191,6 +201,13 @@ namespace NyriaNest.Api.Migrations
                     b.Property<string>("EpubFileKey")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("EpubFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long?>("EpubFileSize")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Genre")
                         .HasColumnType("int");

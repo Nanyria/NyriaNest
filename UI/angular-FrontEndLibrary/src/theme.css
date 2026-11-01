@@ -10,6 +10,7 @@
   --nn-surface: #faf3e5;
   --nn-surface-sunken: #efe2c9;
   --nn-surface-hover: #f6ebd6;
+  --nn-field: #fffcf6; /* compact form fields: lighter than the panels so they stand out */
 
   /* Text */
   --nn-ink: #3b2619;
@@ -93,7 +94,9 @@ body:has(.nn-theme) > app-root {
   margin: 0;
 }
 
-.nn-theme a {
+/* Links styled as buttons keep the button's own colours.
+   :where() keeps this as weak as a plain ".nn-theme a", so other link styles can override it. */
+.nn-theme a:where(:not(.nn-btn)) {
   color: var(--nn-primary);
 }
 
@@ -231,6 +234,17 @@ body:has(.nn-theme) > app-root {
   background-color: var(--nn-primary-hover);
 }
 
+/* Destructive actions, e.g. Delete in a confirm dialog */
+.nn-btn--danger {
+  background-color: var(--nn-accent);
+  border-color: var(--nn-accent-hover);
+  color: var(--nn-on-primary);
+}
+
+.nn-btn--danger:hover:not(:disabled) {
+  background-color: var(--nn-accent-hover);
+}
+
 .nn-btn--outline {
   background-color: transparent;
   border-color: var(--nn-gold);
@@ -284,6 +298,21 @@ body:has(.nn-theme) > app-root {
 
 .nn-btn--ornate::after {
   right: -5px;
+}
+
+/* Red version, e.g. Delete in a confirm dialog */
+.nn-btn--ornate.nn-btn--danger {
+  border-color: #5c1210;
+  box-shadow: inset 0 0 0 3px var(--nn-accent), inset 0 0 0 4px var(--nn-gold), var(--nn-shadow);
+}
+
+.nn-btn--ornate.nn-btn--danger:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 3px var(--nn-accent-hover), inset 0 0 0 4px var(--nn-gold), var(--nn-shadow);
+}
+
+.nn-btn--ornate.nn-btn--danger::before,
+.nn-btn--ornate.nn-btn--danger::after {
+  border-color: #5c1210;
 }
 
 .nn-btn--block {
@@ -351,6 +380,13 @@ body:has(.nn-theme) > app-root {
   color: var(--nn-ink-muted);
   font-size: 0.8rem;
 }
+
+/* Book status colours, e.g. <span class="nn-tag nn-tag--reserved"> */
+.nn-tag--available   { background-color: #e3ecd9; border-color: #b9c9ad; color: #2e5d3f; }
+.nn-tag--checked-out { background-color: #f5e0d6; border-color: #e2bba8; color: #8a3b22; }
+.nn-tag--overdue     { background-color: #f3d4d0; border-color: #d99a93; color: var(--nn-accent); }
+.nn-tag--reserved    { background-color: #f6e8c6; border-color: #e2c98f; color: #6e4b0c; }
+.nn-tag--withdrawn   { background-color: #ebe2d5; border-color: #d3c4ae; color: #5a4a3d; } /* Lost or Removed */
 
 /* ---------- Form fields ---------- */
 .nn-input {
@@ -456,6 +492,32 @@ body:has(.nn-theme) > app-root {
   outline: none;
   border-color: var(--nn-gold);
   box-shadow: var(--nn-focus);
+}
+
+/* Compact, lighter fields for dense admin forms: put .nn-compact on a container.
+   background-color only, so nn-select keeps its arrow image. */
+.nn-compact .nn-input,
+.nn-compact .nn-select {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background-color: var(--nn-field);
+}
+
+/* A select without a leading icon (nn-select leaves room for one) */
+.nn-select--plain {
+  padding-left: 12px;
+}
+
+/* Label above a field, with an optional red asterisk for required fields:
+   <label class="nn-field-label">Title<span class="nn-required" aria-hidden="true">*</span></label> */
+.nn-field-label {
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.nn-required {
+  margin-left: 2px;
+  color: var(--nn-accent);
 }
 
 /* ---------- Stars ---------- */
@@ -624,6 +686,126 @@ body:has(.nn-theme) > app-root {
    they're easy to find later. */
 .nn-placeholder {
   position: relative;
+}
+
+/* ---------- Admin page header ----------
+   Compass, breadcrumb and title on the left, a gold divider centred on the page:
+   <header class="nn-admin-header">
+     <span class="nn-admin-header__compass" aria-hidden="true"></span>
+     <div class="nn-admin-header__heading">
+       <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">…</nav>
+       <h1 class="nn-admin-header__title">…</h1>
+     </div>
+     <span class="nn-admin-header__divider" aria-hidden="true"></span>
+   </header> */
+.nn-admin-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+}
+
+.nn-admin-header__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nn-admin-header__compass {
+  flex: 0 0 auto;
+  width: 46px;
+  aspect-ratio: 1;
+  background: url('/assets/images/web-icons-1/compass-star.png') no-repeat center / contain;
+}
+
+.nn-admin-header__breadcrumb {
+  font-size: 0.7rem;
+}
+
+.nn-admin-header__breadcrumb a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nn-admin-header__breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.nn-admin-header__title {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+/* The small ornament in the middle, with lines fading out on both sides.
+   The gap between the two lines leaves room for the ornament. */
+.nn-admin-header__divider {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 420px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 86px;
+  transform: translate(-50%, -50%);
+  background: url('/assets/images/login-page/divider-small.png') no-repeat center / 76px auto;
+  pointer-events: none;
+}
+
+.nn-admin-header__divider::before,
+.nn-admin-header__divider::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--nn-gold));
+}
+
+.nn-admin-header__divider::after {
+  background: linear-gradient(to left, transparent, var(--nn-gold));
+}
+
+/* The divider would run into the title on narrower screens */
+@media (max-width: 1099px) {
+  .nn-admin-header__divider {
+    display: none;
+  }
+}
+
+/* ---------- Section title ----------
+   Icon, title, then a gold diamond and a thin rule running to the edge:
+   <h2 class="nn-section-title"><i class="bi bi-book" aria-hidden="true"></i>Book details
+     <span class="nn-section-title__rule" aria-hidden="true"></span></h2> */
+.nn-section-title {
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.nn-section-title > .bi {
+  color: var(--nn-gold-ink);
+  font-size: 1.35rem;
+}
+
+.nn-section-title__rule {
+  position: relative;
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 14px;
+  background-color: var(--nn-gold-soft);
+}
+
+.nn-section-title__rule::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--nn-gold);
+  background-color: var(--nn-gold-soft);
+  transform: translateY(-50%) rotate(45deg);
 }
 
 /* ---------- Utilities ---------- */

@@ -1,9 +1,8 @@
 
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Book, LibraryBook } from '../Models/interfaces';
-import { GenreEnums } from '../Helpers/Enums/enum';
+import { LibraryBook } from '../Models/interfaces';
 
 
 @Injectable({
@@ -18,27 +17,6 @@ getAllBooks(): Observable<{ isSuccess: boolean; result: LibraryBook[] }> {
   return this.http.get<{ isSuccess: boolean; result: LibraryBook[] }>(this.apiUrl);
 }
 
-
-  getBooksByTitle(title: string): Observable<{ isSuccess: boolean; result: Book[] }> {
-    return this.http.get<{ isSuccess: boolean; result: Book[] }>(`${this.apiUrl}/title/${title}`);
-  }
-
-  getBooksByAuthor(author: string): Observable<{ isSuccess: boolean; result: Book[] }> {
-    return this.http.get<{ isSuccess: boolean; result: Book[] }>(`${this.apiUrl}/author/${author}`);
-  }
-
-
-  getBooksByGenre(genre: GenreEnums, sortBy: string = 'Title', ascending: boolean = true): Observable<{ isSuccess: boolean; result: Book[] }> {
-  const params = new HttpParams()
-    .set('sortBy', sortBy)
-    .set('ascending', ascending.toString());
-
-    return this.http.get<{ isSuccess: boolean; result: Book[] }>(
-      `${this.apiUrl}/booksbygenre/${genre}`,
-      { params }
-    );
-  }
-  
     getBookReviews(bookId: string): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/review/${bookId}`);
   }

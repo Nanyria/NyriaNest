@@ -12,6 +12,7 @@ import { AdminPageComponent } from './components/admin/admin-page/admin-page.com
 import { ManageBooksComponent } from './components/admin/manage-books/manage-books.component';
 import { ManageUsersComponent } from './components/admin/manage-users/manage-users.component';
 import { AuthGuard } from './Services/auth.guard';
+import { unsavedChangesGuard } from './Services/unsaved-changes.guard';
 import { StartPageComponent } from './components/start-page/start-page.component';
 export const routes: Routes = [
   { path: '', component: StartPageComponent, canActivate: [AuthGuard] }, // Add canActivate here
@@ -21,7 +22,10 @@ export const routes: Routes = [
     children: [
       { path: 'home', component: HomePageComponent },
       { path: 'library', component: LibraryComponent },
-      { path: 'add-book', component: AddBookComponent },
+      { path: 'add-book', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
+      // Same page in edit mode. Kept outside the admin wrapper so it lays out
+      // exactly like Add book; listed before 'admin' so that route doesn't claim it.
+      { path: 'admin/manage-books/:id/edit', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
       {
         path: 'user-page',
         component: UserPageComponent,

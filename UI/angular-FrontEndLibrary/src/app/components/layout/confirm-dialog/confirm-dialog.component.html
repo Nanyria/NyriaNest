@@ -1,0 +1,56 @@
+<!-- Esc fires "close"; ConfirmService.close() ignores it if the answer is already in -->
+<dialog
+  #dialog
+  class="confirm nn-parchment"
+  aria-labelledby="confirm-title"
+  aria-describedby="confirm-message"
+  (close)="confirm.close(false)"
+  (click)="onClick($event)"
+>
+  @if (confirm.current(); as c) {
+    <!-- Decoration only: inset gold frame with bracket corners and a star
+         in the middle of the top and bottom edges -->
+    <span class="confirm__frame" aria-hidden="true">
+      @for (corner of corners; track corner) {
+        <svg class="confirm__corner" [class]="'confirm__corner--' + corner" viewBox="0 0 26 26">
+          <path class="confirm__line" d="M4 20 V9 L9 4 H20" />
+          <path class="confirm__fill" [attr.d]="starPath(9, 9, 3.6)" />
+        </svg>
+      }
+      @for (edge of edges; track edge) {
+        <svg class="confirm__mark" [class]="'confirm__mark--' + edge" viewBox="-22 -7 44 14">
+          <circle class="confirm__fill" cx="-14" cy="0" r="1.4" />
+          <path class="confirm__fill" [attr.d]="starPath(0, 0, 6)" />
+          <circle class="confirm__fill" cx="14" cy="0" r="1.4" />
+        </svg>
+      }
+    </span>
+
+    <div class="confirm__body">
+      <!-- Diamond like the logo; red for things that can't be undone -->
+      <span class="confirm__seal" [class.is-danger]="c.danger" aria-hidden="true">
+        <i class="bi" [class]="'bi-' + (c.icon ?? (c.danger ? 'exclamation-lg' : 'question-lg'))"></i>
+      </span>
+      <h2 id="confirm-title" class="confirm__title">{{ c.title }}</h2>
+      <div class="nn-divider confirm__divider" aria-hidden="true"><span class="nn-divider__mark"></span></div>
+      @if (c.message) {
+        <p id="confirm-message" class="confirm__message">{{ c.message }}</p>
+      }
+      <!-- Cancel gets focus, so pressing Enter by habit doesn't confirm -->
+      <div class="confirm__actions">
+        <button type="button" class="nn-btn nn-btn--outline" autofocus (click)="confirm.close(false)">
+          {{ c.cancelLabel ?? 'Cancel' }}
+        </button>
+        <button
+          type="button"
+          class="nn-btn nn-btn--ornate"
+          [class.nn-btn--danger]="c.danger"
+          [class.nn-btn--primary]="!c.danger"
+          (click)="confirm.close(true)"
+        >
+          {{ c.confirmLabel }}
+        </button>
+      </div>
+    </div>
+  }
+</dialog>

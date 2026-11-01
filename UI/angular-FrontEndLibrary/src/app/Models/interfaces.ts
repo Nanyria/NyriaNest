@@ -17,6 +17,9 @@ export interface Book {
   bookDescription?: string;
   coverImagePath?: string;
   hasEpub: boolean;
+  // Null for files uploaded before the name and size were stored
+  epubFileName?: string | null;
+  epubFileSize?: number | null;
   bookStatus: BookStatusEnum;
   bookType: BookTypeEnums;
   availabilityDate: Date;
@@ -78,8 +81,59 @@ export interface LibraryBook {
   myReservationAvailableDate: string | null;
 }
 
-// The admin book table lists both: the library list (LibraryBook) and search results (Book)
-export type AdminBook = Book | LibraryBook;
+// The API wraps every result like this
+export interface ApiResponse<T> {
+  isSuccess: boolean;
+  statusCode: number;
+  result: T;
+  errorMessages: string[];
+}
+
+// One page of results plus the total, for "1–10 of 42" and the page buttons
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+// A row in the admin catalogue (GET /api/Book/catalogue). Admin-only: includes borrower names.
+export interface AdminBook {
+  bookId: number;
+  title: string;
+  author: string;
+  coverImagePath?: string | null;
+  genre: GenreEnums;
+  language: LanguageEnums;
+  bookType: BookTypeEnums;
+  publicationYear: number;
+  hasEpub: boolean;
+  bookStatus: BookStatusEnum;
+  isOverdue: boolean;
+  borrowerName?: string | null;
+  dueDate?: string | null;
+  nextInLineName?: string | null;
+  expectedDate?: string | null; // when the book is expected to reach them (an estimate, not a hold)
+  adminStatusNotes?: string | null;
+}
+
+// Must match the backend's CatalogueSort names. The API matches names in any case.
+export type CatalogueSort = 'titleAsc' | 'titleDesc' | 'authorAsc' | 'yearDesc' | 'yearAsc';
+
+// The statuses you can filter by: BookStatusEnum names, minus Returned and Added
+// (the API rejects those). Sent as names, so the URL stays readable.
+export type CatalogueStatus = 'available' | 'checkedOut' | 'overdue' | 'reserved' | 'lost' | 'removed';
+
+export interface CatalogueQuery {
+  q?: string;
+  genre?: GenreEnums;
+  bookType?: BookTypeEnums;
+  status?: CatalogueStatus;
+  needsAttention?: boolean;
+  sort?: CatalogueSort;
+  page?: number;
+  pageSize?: number;
+}
 // User interfaces
 export interface UserDto {
     id: string;

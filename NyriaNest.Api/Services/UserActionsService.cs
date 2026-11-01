@@ -203,6 +203,13 @@ namespace NyriaNest.Api.Services
                 return response;
             }
 
+            // A book an admin has marked Lost or Removed can't be reserved
+            if (book.AdminStatus != null)
+            {
+                response.ErrorMessages.Add("This book isn't available.");
+                response.StatusCode = HttpStatusCode.Conflict;
+                return response;
+            }
 
             if (user != null && book != null)
             {
@@ -255,9 +262,7 @@ namespace NyriaNest.Api.Services
             _dbContext.ReservationItems.Add(reservation);
 
             // Now update all availability dates, including the new reservation
-            _bookService.SetAvailabilityDatesForReservations(book).Wait();
-
-            // The reservation.AvailabilityDate is now set correctly
+            _bookService.RecalculateAvailabilityDates(book);
         }
 
         public bool RemoveReservation(User user, Book book)
@@ -272,7 +277,7 @@ namespace NyriaNest.Api.Services
                 _dbContext.ReservationItems.Remove(reservationItem);
 
                 // Update all availability dates for remaining reservations
-                _bookService.SetAvailabilityDatesForReservations(book).Wait();
+                _bookService.RecalculateAvailabilityDates(book);
 
                 return true;
             }
@@ -299,7 +304,8 @@ namespace NyriaNest.Api.Services
                 // Use the refactored RemoveReservation method
                 if (RemoveReservation(user, book))
                 {
-                    await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Available, $"Reservation cancelled by {user.UserName}");
+                    // Returned means "recalculate": Reserved if others are still queued, otherwise Available
+                    await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Reservation cancelled by {user.UserName}");
 
                     await _userRepo.SaveAsync();
                     await _bookRepo.SaveAsync();
@@ -368,46 +374,83 @@ namespace NyriaNest.Api.Services
             var book = bookResponse.Result;
 
 
-            if (user != null && book != null)
-            {
-                // Check if the book is reserved by the user
-                if (RemoveReservation(user, book) || book.BookStatus == BookStatusEnum.Available)
-                {
-                    SetCheckedOutBookAsync(user, book);
-                    await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.CheckedOut, $"Checked out by {user.UserName}");
-                }
-
-                else
-                {
-                    response.ErrorMessages.Add("Book is not available to check out.");
-                    response.StatusCode = HttpStatusCode.Conflict;
-                    return response;
-                }
-
-                await _userRepo.UpdateAsync(user);
-                await _userRepo.SaveAsync();
-
-                var userDto = _mapper.Map<UserDto>(user);
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-                response.Result = userDto;
-            }
-            else
+            if (user == null || book == null)
             {
                 response.ErrorMessages.Add("User or Book not found.");
                 response.StatusCode = HttpStatusCode.NotFound;
+                return response;
             }
 
+            // Check every rule before changing anything, so a refused check-out
+            // never leaves a half-made change behind.
+
+            // A book an admin has marked Lost or Removed can't be borrowed
+            if (book.AdminStatus != null)
+            {
+                response.ErrorMessages.Add("This book isn't available.");
+                response.StatusCode = HttpStatusCode.Conflict;
+                return response;
+            }
+
+            // Someone already has it. A book has only one loan at a time, so replacing
+            // it would silently drop the other person's loan.
+            if (book.CheckedOutBy != null)
+            {
+                response.ErrorMessages.Add(book.CheckedOutBy.UserId == user.Id
+                    ? "You already have this book."
+                    : "This book is checked out by someone else.");
+                response.StatusCode = HttpStatusCode.Conflict;
+                return response;
+            }
+
+            // If there's a queue, only the person at the front may borrow it
+            var firstInLine = book.Reservations
+                .OrderBy(r => r.ReservationDate)
+                .FirstOrDefault();
+            if (firstInLine != null && firstInLine.UserId != user.Id)
+            {
+                response.ErrorMessages.Add("This book is reserved for someone else.");
+                response.StatusCode = HttpStatusCode.Conflict;
+                return response;
+            }
+
+            RemoveReservation(user, book); // Does nothing if they had no reservation
+            SetCheckedOutBook(user, book);
+
+            // The rest of the queue now waits for this new loan's due date
+            _bookService.RecalculateAvailabilityDates(book);
+
+            try
+            {
+                // UpdateBookStatusAsync saves the changes
+                await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.CheckedOut, $"Checked out by {user.UserName}");
+                await _userRepo.UpdateAsync(user);
+                await _userRepo.SaveAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // CheckOutItems.BookId is unique (one loan per book). If two people borrow
+                // at the same moment, the second save fails here instead of crashing with a 500.
+                response.ErrorMessages.Add("Someone just borrowed this book. Please refresh.");
+                response.StatusCode = HttpStatusCode.Conflict;
+                return response;
+            }
+
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.OK;
+            response.Result = _mapper.Map<UserDto>(user);
             return response;
         }
-        public void SetCheckedOutBookAsync(User user, Book book)
+
+        // Creates the loan. Not async: it only adds tracked entities, saving happens later.
+        public void SetCheckedOutBook(User user, Book book)
         {
             var checkedOutItem = new CheckedOutItem
             {
                 BookId = book.BookId,
                 UserId = user.Id,
                 CheckOutDate = DateTime.UtcNow,
-                ReturnDate = DateTime.UtcNow.AddMonths(1),
+                ReturnDate = DateTime.UtcNow.AddMonths(BookService.LoanPeriodMonths), // the due date
             };
             user.CheckedOutBooks.Add(checkedOutItem);
             book.CheckedOutBy = checkedOutItem;
@@ -427,10 +470,19 @@ namespace NyriaNest.Api.Services
 
             if (user != null && book != null)
             {
-                if (user.CheckedOutBooks.Any(c => c.BookId == book.BookId))
+                // Only the borrower can return a book. Without this check, a return of a
+                // book you don't have would still log "Returned by ..." and report success.
+                if (!RemoveFromCheckedOutList(user, book))
                 {
-                    RemoveFromCheckedOutList(user, book);
+                    response.ErrorMessages.Add("You don't have this book checked out.");
+                    response.StatusCode = HttpStatusCode.Conflict;
+                    return response;
                 }
+
+                // The book may come back early, so the queue restarts from today
+                // instead of from the old due date
+                _bookService.RecalculateAvailabilityDates(book);
+
                 await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Returned by {user.UserName}");
 
                 await _userRepo.SaveAsync();

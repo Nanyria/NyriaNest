@@ -1,33 +1,302 @@
-<div class="library-layout">
-  <div class="row page-row">
-    <div class="col-8 page-container">
-      <div class="table-body">
-        <div class="library-search-container">
-          <app-admin-search
-            (searchResults)="handleSearchResults($event)"
-          ></app-admin-search>
-          <button class="add-new-book-button" (click)="addNewBook()">
-            <i class="bi bi-plus"></i> <i class="bi bi-book-fill"></i>
-          </button>
+<!-- Decoration only, as on Add book: books beside the header, leaves at the page edges -->
+<span class="mb-art" aria-hidden="true"></span>
+<span class="mb-decor mb-decor--left" aria-hidden="true"></span>
+<span class="mb-decor mb-decor--corner" aria-hidden="true"></span>
+<span class="mb-decor mb-decor--right" aria-hidden="true"></span>
+
+<!-- Same header pattern as Add book: compass, breadcrumb, title, centred divider -->
+<header class="nn-admin-header">
+  <span class="nn-admin-header__compass" aria-hidden="true"></span>
+  <div class="nn-admin-header__heading">
+    <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">Admin / Books</nav>
+    <h1 class="nn-admin-header__title">Manage books</h1>
+  </div>
+  <span class="nn-admin-header__divider" aria-hidden="true"></span>
+  <a class="nn-btn nn-btn--primary mb-add" routerLink="/add-book">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i> Add new book
+  </a>
+</header>
+
+<!-- 1. Find books -->
+<section class="nn-panel mb-panel" aria-labelledby="find-h">
+  <h2 id="find-h" class="nn-section-title">
+    <i class="bi bi-search" aria-hidden="true"></i>Find books
+    <span class="nn-section-title__rule" aria-hidden="true"></span>
+  </h2>
+
+  <div class="nn-field">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input
+      class="nn-input"
+      type="search"
+      [formControl]="search"
+      placeholder="Search by title or author…"
+      aria-label="Search by title or author"
+    />
+  </div>
+
+  <div class="mb-filters">
+    <label class="mb-filter">
+      <span class="nn-field-label">Genre</span>
+      <select class="nn-select nn-select--plain" (change)="setFilter({ genre: $any($event.target).value || null })">
+        <option value="" [selected]="query().genre === undefined">All genres</option>
+        @for (g of genreValues; track g) {
+          <option [value]="g" [selected]="query().genre === g">{{ genreNames[g] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="mb-filter">
+      <span class="nn-field-label">Book type</span>
+      <select class="nn-select nn-select--plain" (change)="setFilter({ bookType: $any($event.target).value || null })">
+        <option value="" [selected]="query().bookType === undefined">All formats</option>
+        @for (t of bookTypeValues; track t) {
+          <option [value]="t" [selected]="query().bookType === t">{{ bookTypeNames[t] }}</option>
+        }
+      </select>
+    </label>
+
+    <label class="mb-filter">
+      <span class="nn-field-label">Status</span>
+      <!-- Values are BookStatusEnum names; the API matches them in any case -->
+      <select class="nn-select nn-select--plain" (change)="setFilter({ status: $any($event.target).value || null })">
+        <option value="" [selected]="!query().status">All statuses</option>
+        <option value="available" [selected]="query().status === 'available'">Available</option>
+        <option value="checkedOut" [selected]="query().status === 'checkedOut'">Checked out</option>
+        <option value="overdue" [selected]="query().status === 'overdue'">Overdue</option>
+        <option value="reserved" [selected]="query().status === 'reserved'">Reserved</option>
+        <option value="lost" [selected]="query().status === 'lost'">Lost</option>
+        <option value="removed" [selected]="query().status === 'removed'">Removed</option>
+      </select>
+    </label>
+
+    <!-- E-books with no EPUB file attached -->
+    <button
+      type="button"
+      class="nn-chip mb-attention"
+      [class.is-active]="query().needsAttention"
+      [attr.aria-pressed]="!!query().needsAttention"
+      (click)="setFilter({ needsAttention: query().needsAttention ? null : true })"
+    >
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs attention
+    </button>
+  </div>
+
+  @if (hasFilters()) {
+    <button type="button" class="nn-link-button mb-clear" (click)="clearAll()">Clear all filters</button>
+  }
+</section>
+
+<!-- 2. Books -->
+<section class="nn-panel mb-panel" aria-labelledby="books-h">
+  <!-- The title's rule runs up to the sort control -->
+  <div class="mb-toolbar">
+    <h2 id="books-h" class="nn-section-title mb-toolbar__title">
+      <i class="bi bi-journals" aria-hidden="true"></i>Books
+      @if (page(); as p) {
+        <span class="nn-muted mb-count">({{ p.totalCount }})</span>
+      }
+      <span class="nn-section-title__rule" aria-hidden="true"></span>
+    </h2>
+    <label class="mb-sort">
+      <span class="nn-field-label">Sort by</span>
+      <!-- Values are the backend's CatalogueSort names; anything else gets a 400 -->
+      <select class="nn-select nn-select--plain" (change)="setFilter({ sort: $any($event.target).value })">
+        <option value="titleAsc" [selected]="query().sort === 'titleAsc'">Title A → Z</option>
+        <option value="titleDesc" [selected]="query().sort === 'titleDesc'">Title Z → A</option>
+        <option value="authorAsc" [selected]="query().sort === 'authorAsc'">Author A → Z</option>
+        <option value="yearDesc" [selected]="query().sort === 'yearDesc'">Newest first</option>
+        <option value="yearAsc" [selected]="query().sort === 'yearAsc'">Oldest first</option>
+      </select>
+    </label>
+  </div>
+
+  @if (actionError(); as message) {
+    <p class="mb-alert" role="alert">
+      <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+    </p>
+  }
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <p class="mb-state" aria-busy="true">Loading books…</p>
+    }
+    @case ('error') {
+      <div class="mb-state">
+        <p>Couldn't load the catalogue.</p>
+        <button type="button" class="nn-btn nn-btn--outline" (click)="retry()">Try again</button>
+      </div>
+    }
+    @case ('ready') {
+      @let p = page()!;
+      @if (p.items.length === 0) {
+        <div class="mb-state">
+          <p>No books match these filters.</p>
+          <!-- e.g. the last book on the last page was just deleted -->
+          @if (p.page > 1 && p.totalCount > 0) {
+            <button type="button" class="nn-btn nn-btn--outline" (click)="goToPage(1)">Go to the first page</button>
+          } @else if (hasFilters()) {
+            <button type="button" class="nn-btn nn-btn--outline" (click)="clearAll()">Clear filters</button>
+          }
+        </div>
+      } @else {
+        <div class="mb-table-wrap">
+          <table class="mb-table">
+            <thead>
+              <tr>
+                <th scope="col">Book</th>
+                <th scope="col" class="mb-col-meta">Genre / Language</th>
+                <th scope="col" class="mb-col-meta">Type / Year</th>
+                <th scope="col">Status</th>
+                <th scope="col">File</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (b of p.items; track b.bookId) {
+                <tr>
+                  <td>
+                    <div class="mb-book">
+                      <img class="nn-cover mb-cover" [src]="b.coverImagePath || fallbackCover" alt="" />
+                      <div>
+                        <div class="mb-title">{{ b.title }}</div>
+                        <div class="mb-author">{{ b.author }}</div>
+                        <!-- Shown instead of the meta columns on narrower screens -->
+                        <div class="mb-meta-inline nn-muted">
+                          {{ genreNames[b.genre] }} · {{ languageNames[b.language] }} ·
+                          {{ bookTypeNames[b.bookType] }} · {{ b.publicationYear }}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="mb-col-meta">
+                    {{ genreNames[b.genre] }}
+                    <div class="nn-muted">{{ languageNames[b.language] }}</div>
+                  </td>
+                  <td class="mb-col-meta">
+                    {{ bookTypeNames[b.bookType] }}
+                    <div class="nn-muted">{{ b.publicationYear }}</div>
+                  </td>
+                  <td class="mb-cell-status">
+                    <span class="nn-tag" [class]="statusClass(b)">{{ statusLabel(b) }}</span>
+                    @if (statusDetail(b); as detail) {
+                      <div class="mb-detail" [class.is-overdue]="b.isOverdue">{{ detail }}</div>
+                    }
+                  </td>
+                  <td class="mb-cell-file">
+                    @if (!isEbook(b)) {
+                      <span class="nn-muted">N/A</span>
+                    } @else if (b.hasEpub) {
+                      <span class="mb-file-ok"><i class="bi bi-check2" aria-hidden="true"></i> EPUB attached</span>
+                    } @else {
+                      <span class="mb-file-missing"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> No EPUB file</span>
+                    }
+                  </td>
+                  <td class="mb-cell-actions">
+                    <div class="mb-actions">
+                      <a
+                        class="nn-btn nn-btn--outline nn-btn--icon"
+                        [routerLink]="['/admin/manage-books', b.bookId, 'edit']"
+                        title="Edit"
+                        [attr.aria-label]="'Edit ' + b.title"
+                      >
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                      </a>
+
+                      <button
+                        #menuButton
+                        type="button"
+                        class="nn-btn nn-btn--outline nn-btn--icon"
+                        [attr.popovertarget]="'mb-menu-' + b.bookId"
+                        [attr.aria-label]="'More actions for ' + b.title"
+                      >
+                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                      </button>
+                      <!-- Popover: closes on Esc or a click outside -->
+                      <div
+                        class="mb-menu__list nn-panel"
+                        popover
+                        [id]="'mb-menu-' + b.bookId"
+                        (beforetoggle)="placeMenu($event, menuButton)"
+                        (click)="closeMenu($event)"
+                      >
+                          @if (isWithdrawn(b)) {
+                            <button type="button" (click)="restore(b)">
+                              <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore
+                            </button>
+                          } @else if (!b.borrowerName) {
+                            <button type="button" (click)="markLost(b)">
+                              <i class="bi bi-question-circle" aria-hidden="true"></i> Mark as lost
+                            </button>
+                            <button type="button" (click)="markRemoved(b)">
+                              <i class="bi bi-archive" aria-hidden="true"></i> Mark as removed
+                            </button>
+                          }
+                          <!-- A checked-out book can't be deleted; the API refuses too -->
+                          <button
+                            type="button"
+                            class="is-danger"
+                            [disabled]="!!b.borrowerName"
+                            [title]="b.borrowerName ? 'Return this book before deleting it' : ''"
+                            (click)="delete(b)"
+                          >
+                            <i class="bi bi-trash3" aria-hidden="true"></i> Delete
+                          </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
 
-        @if (books.length === 0) {
-          <div class="loading">Loading books...</div>
-        }
-        @if (books.length > 0) {
-          <app-admin-book-list
-            [books]="books"
-            [editBook]="editBook"
-            (onEdit)="populateForm($event)"
-            (onDelete)="deleteBook($event)"
-            (onUpdateStatus)="updateStatus($event)"
-            (onSave)="saveBook($event)"
-            (onCancel)="cancelEdit()"
-          ></app-admin-book-list>
-        }
-        <footer></footer>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- <div class="col-2 right-bar"></div> -->
+        <nav class="mb-pager" aria-label="Pagination">
+          <span class="nn-muted">
+            Showing {{ (p.page - 1) * p.pageSize + 1 }}–{{ (p.page - 1) * p.pageSize + p.items.length }}
+            of {{ p.totalCount }} books
+          </span>
+          @if (totalPages() > 1) {
+            <div class="mb-pager__buttons">
+              <button
+                type="button"
+                class="nn-btn nn-btn--outline nn-btn--icon"
+                [disabled]="p.page === 1"
+                aria-label="Previous page"
+                (click)="goToPage(p.page - 1)"
+              >
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+              </button>
+              @for (n of pageButtons(); track $index) {
+                @if (n === null) {
+                  <span class="mb-pager__gap" aria-hidden="true">…</span>
+                } @else {
+                  <button
+                    type="button"
+                    class="nn-btn nn-btn--icon"
+                    [class.nn-btn--primary]="n === p.page"
+                    [class.nn-btn--outline]="n !== p.page"
+                    [attr.aria-current]="n === p.page ? 'page' : null"
+                    [attr.aria-label]="'Page ' + n"
+                    (click)="goToPage(n)"
+                  >
+                    {{ n }}
+                  </button>
+                }
+              }
+              <button
+                type="button"
+                class="nn-btn nn-btn--outline nn-btn--icon"
+                [disabled]="p.page === totalPages()"
+                aria-label="Next page"
+                (click)="goToPage(p.page + 1)"
+              >
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          }
+        </nav>
+      }
+    }
+  }
+</section>

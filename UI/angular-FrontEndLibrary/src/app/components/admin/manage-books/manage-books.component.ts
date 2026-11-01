@@ -1,413 +1,322 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-
-import { AdminBook, Book, LibraryBook, SlimBookDto } from '../../../Models/interfaces';
-import { LibraryService } from '../../../Services/library.services';
-import { BookService } from '../../../Services/book.services';
-import { BookStatusEnum, GenreEnums } from '../../../Helpers/Enums/enum';
-import { AdminSearchComponent } from '../admin-search/admin-search.component';
-import { AdminBookListComponent } from '../admin-book-list/admin-book-list.component';
-import { Router } from '@angular/router';
 import {
-  BookTypeOptions,
-  BookStatusOptions,
-  GenreOptions,
-} from '../../../Helpers/Helper';
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { BehaviorSubject, Observable, combineLatest, of } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  startWith,
+  switchMap,
+} from 'rxjs/operators';
+import { BookService } from '../../../Services/book.services';
+import { ToastService } from '../../../Services/toast.service';
+import { ConfirmService } from '../../../Services/confirm.service';
+import {
+  AdminBook,
+  CatalogueQuery,
+  CatalogueSort,
+  CatalogueStatus,
+  PagedResult,
+} from '../../../Models/interfaces';
+import {
+  BookStatusEnum,
+  BookTypeDisplayNames,
+  BookTypeEnums,
+  GenreDisplayNames,
+  GenreEnums,
+  LanguageDisplayNames,
+} from '../../../Helpers/Enums/enum';
+import { BookTypeOptions, GenreOptions } from '../../../Helpers/Helper';
+
+type ViewState =
+  | { kind: 'loading' }
+  | { kind: 'error' }
+  | { kind: 'ready'; data: PagedResult<AdminBook> };
+
+const PAGE_SIZE = 10;
+
+// The URL query string is the single source of truth for filters, sorting and
+// paging, so refresh and the Back button keep the admin's place.
+function readQuery(p: ParamMap): CatalogueQuery {
+  const num = (k: string) => (p.has(k) ? Number(p.get(k)) : undefined);
+  return {
+    q: p.get('q') ?? undefined,
+    genre: num('genre'),
+    bookType: num('bookType'),
+    status: (p.get('status') as CatalogueStatus | null) ?? undefined,
+    needsAttention: p.get('needsAttention') === 'true' || undefined,
+    sort: (p.get('sort') as CatalogueSort | null) ?? 'titleAsc',
+    page: num('page') ?? 1,
+    pageSize: PAGE_SIZE,
+  };
+}
+
 @Component({
   selector: 'app-manage-books',
+  standalone: true,
   templateUrl: './manage-books.component.html',
   styleUrls: ['./manage-books.component.css'],
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [
-    AdminSearchComponent,
-    AdminBookListComponent,
-  ],
+  imports: [ReactiveFormsModule, RouterLink],
+  host: { class: 'nn-compact' }, // the theme's tighter, lighter fields, like Add book
 })
 export class ManageBooksComponent {
-  books: AdminBook[] = [];
-  editBook: AdminBook | null = null;
-  updatedBook: SlimBookDto | null = null;
-  showInfoCard = false;
-  infoCardActions: { label: string; action: () => void; disabled?: boolean }[] =
-    [];
-  bookTypeOptions = BookTypeOptions;
-  bookStatusOptions = BookStatusOptions;
-  genreOptions = GenreOptions;
-  constructor(
-    private libraryService: LibraryService,
-    private bookService: BookService,
-    private router: Router,
-  ) {}
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private bookService = inject(BookService);
+  private toast = inject(ToastService);
+  private confirmDialog = inject(ConfirmService);
+  private refresh$ = new BehaviorSubject<void>(undefined);
 
-  addNewBook() {
-    this.router.navigate(['/add-book']);
-  }
+  // "All" means no filter, which the empty option already covers
+  readonly genreValues = GenreOptions.values.filter((g) => g !== GenreEnums.All);
+  readonly bookTypeValues = BookTypeOptions.values;
+  readonly genreNames = GenreDisplayNames;
+  readonly bookTypeNames = BookTypeDisplayNames;
+  readonly languageNames = LanguageDisplayNames;
+  readonly Status = BookStatusEnum;
+  readonly fallbackCover = 'assets/images/book-covers/BrownBook.svg';
 
-  ngOnInit(): void {
-    this.getAllBooks();
-  }
+  readonly query = toSignal(this.route.queryParamMap.pipe(map(readQuery)), {
+    initialValue: readQuery(this.route.snapshot.queryParamMap),
+  });
 
-  getAllBooks() {
-    // console.log('Fetching all books...');
-    this.libraryService.getAllBooks().subscribe(
-      (response: { isSuccess: boolean; result: LibraryBook[] }) => {
-        console.log('Books fetched:', response);
-        if (response.isSuccess && Array.isArray(response.result)) {
-          this.books = response.result;
-          // console.log('Books array:', this.books);
-        } else {
-          this.books = [];
-        }
-      },
-      (error) => {
-        console.error('Error fetching books', error);
-        this.books = [];
-      },
-    );
-  }
-
-  deleteBook(bookID: string) {
-    this.bookService.deleteBook(bookID).subscribe(() => {
-      this.getAllBooks();
-    });
-  }
-
-  updateStatus(event: {
-    bookId: string;
-    userId: string;
-    bookStatus: BookStatusEnum;
-  }) {
-    const { bookId, userId, bookStatus } = event;
-
-    this.bookService
-      .updateBookStatus(
-        bookId,
-        userId,
-        bookStatus,
-        'Status updated via dropdown',
-      )
-      .subscribe(() => {
-        this.getAllBooks(); // Refresh the book list after updating the status
-      });
-  }
-
-  populateForm(book: AdminBook) {
-    this.editBook = { ...book };
-  }
-
-  resetForm() {
-    this.editBook = null;
-  }
-
-  cancelEdit() {
-    this.resetForm();
-  }
-
-  handleSearchResults(results: Book[]) {
-    this.books = results;
-  }
-
-  saveBook(bookInput: SlimBookDto) {
-    console.log('saveBook called', { editBook: this.editBook, bookInput });
-
-    if (!this.editBook) {
-      console.warn('saveBook: no editBook set, aborting');
-      return;
-    }
-
-    // Build payload with proper types (cast enums/years to numbers if API expects numbers)
-    const payload: any = {
-      title: (bookInput.title ?? this.editBook.title) as string,
-      author: (bookInput.author ?? this.editBook.author) as string,
-      genre: Number(bookInput.genre ?? this.editBook.genre),
-      publicationYear: Number(
-        bookInput.publicationYear ?? this.editBook.publicationYear,
-      ),
-      bookDescription:
-        bookInput.bookDescription ?? this.editBook.bookDescription ?? null,
-      bookType: Number(bookInput.bookType ?? this.editBook.bookType),
-      language: Number(bookInput.language ?? this.editBook.language),
-      coverImagePath:
-        bookInput.coverImagePath ?? this.editBook.coverImagePath ?? null,
-    };
-
-    console.log('saveBook -> sending payload:', payload);
-
-    this.bookService.updateBook(this.editBook.bookId, payload).subscribe(
-      (res) => {
-        console.log('saveBook update response', res);
-        this.getAllBooks();
-        this.resetForm();
-      },
-      (err) => {
-        // show HTTP status and backend error body for diagnosis
-        console.error(
-          'saveBook update error status=',
-          err?.status,
-          'errorBody=',
-          err?.error,
-        );
-      },
-    );
-  }
-
-  // If you also use handleFormSubmit to update, apply the same mapping there
-  handleFormSubmit(bookInput: any) {
-    console.log('handleFormSubmit called', {
-      editBook: this.editBook,
-      bookInput,
-    });
-
-    if (this.editBook) {
-      const payload: SlimBookDto = {
-        title: bookInput.title ?? this.editBook.title,
-        author: bookInput.author ?? this.editBook.author,
-        genre: (bookInput.genre ?? this.editBook.genre) as any,
-        publicationYear: String(
-          bookInput.publicationYear ?? this.editBook.publicationYear,
+  // Reloads whenever the URL changes or refresh$ fires (after an action)
+  readonly state = toSignal(
+    combineLatest([this.route.queryParamMap, this.refresh$]).pipe(
+      switchMap(([params]) =>
+        this.bookService.getCatalogue(readQuery(params)).pipe(
+          map((res): ViewState =>
+            res.isSuccess ? { kind: 'ready', data: res.result } : { kind: 'error' },
+          ),
+          catchError(() => of<ViewState>({ kind: 'error' })),
+          startWith<ViewState>({ kind: 'loading' }),
         ),
-        bookDescription:
-          bookInput.bookDescription ?? this.editBook.bookDescription,
-        bookType: (bookInput.bookType ?? this.editBook.bookType) as any,
-        language: (bookInput.language ?? this.editBook.language) as any,
-        coverImagePath:
-          bookInput.coverImagePath ?? this.editBook.coverImagePath,
-      };
+      ),
+    ),
+    { initialValue: { kind: 'loading' } as ViewState },
+  );
 
-      console.log('handleFormSubmit -> updating with payload:', payload);
-      this.bookService.updateBook(this.editBook.bookId, payload).subscribe(
-        (res) => {
-          console.log('handleFormSubmit update response', res);
-          this.getAllBooks();
-          this.resetForm();
-        },
-        (err) => {
-          console.error('handleFormSubmit update error', err);
-        },
-      );
-    } else {
-      // For creating new books, construct SlimBookDto similarly
+  // The current page, or null while loading or after an error
+  readonly page = computed(() => {
+    const s = this.state();
+    return s.kind === 'ready' ? s.data : null;
+  });
+
+  readonly totalPages = computed(() => {
+    const p = this.page();
+    return p ? Math.max(1, Math.ceil(p.totalCount / p.pageSize)) : 1;
+  });
+
+  // Page buttons: first, last, and the current page with its neighbours.
+  // null marks a gap ("…").
+  readonly pageButtons = computed(() => {
+    const current = this.page()?.page ?? 1;
+    const last = this.totalPages();
+    const pages: (number | null)[] = [];
+    for (let n = 1; n <= last; n++) {
+      if (n === 1 || n === last || Math.abs(n - current) <= 1) {
+        pages.push(n);
+      } else if (pages[pages.length - 1] !== null) {
+        pages.push(null);
+      }
+    }
+    return pages;
+  });
+
+  readonly hasFilters = computed(() => {
+    const q = this.query();
+    return !!(q.q || q.genre !== undefined || q.bookType !== undefined || q.status || q.needsAttention);
+  });
+
+  // Shown above the list when an action (mark lost, delete, …) fails
+  readonly actionError = signal<string | null>(null);
+
+  readonly search = new FormControl(this.query().q ?? '', { nonNullable: true });
+
+  constructor() {
+    // Wait for a pause in typing before searching
+    this.search.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((q) => this.setFilter({ q: q.trim() || null }));
+  }
+
+  /** Updates the URL. null removes a param. Any filter change goes back to page 1. */
+  setFilter(patch: Record<string, string | number | boolean | null>) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { ...patch, page: null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  goToPage(page: number) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: page === 1 ? null : page },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  clearAll() {
+    this.search.setValue('', { emitEvent: false });
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+  }
+
+  retry() {
+    this.refresh$.next();
+  }
+  // Status badge text. Overdue isn't a stored status: it's a checked-out book past its due date.
+  statusLabel(b: AdminBook): string {
+    switch (b.bookStatus) {
+      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'Overdue' : 'Checked out';
+      case BookStatusEnum.Reserved: return 'Reserved';
+      case BookStatusEnum.Lost: return 'Lost';
+      case BookStatusEnum.Removed: return 'Removed';
+      default: return 'Available';
     }
   }
-  // onBookRowClicked(book: Book) {
-  //   this.bookService.getBookById(book.bookId).subscribe((response) => {
-  //     if (response.isSuccess && response.result) {
-  //       this.selectedBook = response.result;
-  //       this.showInfoCard = true;
-  //       this.selectedBookReviews = [];
-  //       this.libraryService.getBookReviews(book.bookId).subscribe({
-  //         next: (reviewResponse) => {
-  //           this.selectedBookReviews = (reviewResponse.result || []).map(
-  //             (review: any): InfoCardDisplayRow[] => [
-  //               { label: '', value: review.userName },
-  //               { label: '', value: review.createdAt },
-  //               { label: '', value: `Betyg: ${review.ratingItem?.rating}` },
-  //               { isBreak: true, value: '' },
-  //               { label: '', value: review.reviewHeader },
-  //               { label: '', value: review.reviewText },
-  //             ],
-  //           );
-  //         },
-  //         error: () => {
-  //           this.selectedBookReviews = [];
-  //         },
-  //       });
-  //       this.updateInfoCardActions(response.result);
-  //     }
-  //   });
-  // }
 
-  // updateInfoCardActions(book: Book) {
-  //   const isReservedByUser =
-  //     this.user?.reservedBooks?.some((item) => +item.bookId === +book.bookId) ??
-  //     false;
-  //   const isInReadList =
-  //     this.user?.readList?.some((item) => +item.bookId === +book.bookId) ??
-  //     false;
-  //   const isCheckedOutByUser =
-  //     this.user?.checkedOutBooks?.some(
-  //       (item) => +item.bookId === +book.bookId,
-  //     ) ?? false;
-
-  //   this.infoCardActions = [
-  //     {
-  //       label: isCheckedOutByUser ? 'Återlämna' : 'Låna',
-  //       action: () => this.toggleBorrow(book),
-  //       disabled: this.isBorrowDisabled(book),
-  //     },
-  //     {
-  //       label: isReservedByUser ? 'Ta bort reservation' : 'Reservera',
-  //       action: () => this.toggleReservation(book),
-  //     },
-  //     {
-  //       label: isInReadList ? 'Ta bort från läslista' : 'Lägg till i läslista',
-  //       action: () => this.toggleReadList(book),
-  //     },
-  //   ];
-  // }
-  // isBorrowDisabled(book: Book): boolean {
-  //   const isCheckedOutBySomeoneElse =
-  //     book.bookStatus === BookStatusEnum.CheckedOut &&
-  //     book.checkedOutBy?.userId !== this.currentUserId;
-
-  //   // If the book is not checked out, but there are prior reservations (not by this user)
-  //   const hasPriorReservations =
-  //     book.bookStatus !== BookStatusEnum.CheckedOut &&
-  //     Array.isArray(book.reservations) &&
-  //     book.reservations.length > 0 &&
-  //     !this.user?.reservedBooks?.some((item) => +item.bookId === +book.bookId);
-
-  //   return isCheckedOutBySomeoneElse || hasPriorReservations;
-  // }
-  // getBookStatusDisplay(book: Book): { status: string; availability: string } {
-  //   const status =
-  //     this.bookStatusOptions.displayNames[book.bookStatus]?.toString() ||
-  //     (typeof book.bookStatus === 'string'
-  //       ? book.bookStatus
-  //       : book.bookStatus?.toString() || '');
-
-  //   // If user has a reservation, show their reservation's availability date
-  //   const userReservation = book.reservations?.find(
-  //     (item: any) => item.userId === this.currentUserId,
-  //   );
-  //   let availabilityDate = '';
-  //   if (userReservation?.availabilityDate) {
-  //     availabilityDate = new Date(
-  //       userReservation.availabilityDate,
-  //     ).toLocaleDateString();
-  //   } else if (book.availabilityDate) {
-  //     availabilityDate = new Date(book.availabilityDate).toLocaleDateString();
-  //   }
-
-  //   return {
-  //     status,
-  //     availability: availabilityDate,
-  //   };
-  // }
-
-  // toggleBorrow(book: Book) {
-  //   const isCheckedOutByUser =
-  //     this.user?.checkedOutBooks?.some(
-  //       (item) => +item.bookId === +book.bookId,
-  //     ) ?? false;
-  //   // First, perform the user action
-  //   const obs = isCheckedOutByUser
-  //     ? this.userActionsService.returnBook(this.currentUserId, book.bookId)
-  //     : this.userActionsService.borrowBook(this.currentUserId, book.bookId);
-
-  //   obs.subscribe(() => {
-  //     this.authService.refreshCurrentUser();
-  //     this.bookService.getBookById(book.bookId).subscribe((response) => {
-  //       if (response.isSuccess && response.result) {
-  //         this.selectedBook = response.result;
-  //         this.updateInfoCardActions(response.result);
-  //       }
-  //     });
-  //   });
-  // }
-
-  // toggleReservation(book: Book) {
-  //   const isReservedByUser =
-  //     this.user?.reservedBooks?.some((item) => +item.bookId === +book.bookId) ??
-  //     false;
-  //   const obs = isReservedByUser
-  //     ? this.userActionsService.unreserveBook(this.currentUserId, book.bookId)
-  //     : this.userActionsService.reserveBook(this.currentUserId, book.bookId);
-
-  //   obs.subscribe(() => {
-  //     this.authService.refreshCurrentUser();
-  //     this.bookService.getBookById(book.bookId).subscribe((response) => {
-  //       if (response.isSuccess && response.result) {
-  //         this.selectedBook = response.result;
-  //         this.updateInfoCardActions(response.result);
-  //       }
-  //     });
-  //   });
-  // }
-
-  // toggleReadList(book: Book) {
-  //   const isInReadList =
-  //     this.user?.readList?.some((item) => +item.bookId === +book.bookId) ??
-  //     false;
-  //   const obs = isInReadList
-  //     ? this.userActionsService.removeFromFavorites(
-  //         this.currentUserId,
-  //         book.bookId,
-  //       )
-  //     : this.userActionsService.addToFavorites(this.currentUserId, book.bookId);
-
-  //   obs.subscribe(() => {
-  //     this.authService.refreshCurrentUser();
-  //   });
-  // }
-  // closeInfoCard() {
-  //   this.showInfoCard = false;
-  //   this.selectedBook = null;
-  // }
-
-  // get infoCardCol2(): InfoCardColumn2 {
-  //   if (!this.selectedBook) return {};
-  //   const statusObj = this.getBookStatusDisplay(this.selectedBook);
-  //   return {
-  //     rows: [
-  //       { title: 'Titel', value: this.selectedBook.title ?? '' },
-  //       { title: 'Författare', value: this.selectedBook.author ?? '' },
-  //     ],
-  //     rowPairs: [
-  //       {
-  //         first: {
-  //           title: 'Genre',
-  //           value:
-  //             this.genreOptions.displayNames[
-  //               this.selectedBook.genre
-  //             ]?.toString() ||
-  //             this.selectedBook.genre?.toString() ||
-  //             '',
-  //         },
-  //         second: {
-  //           title: 'Boktyp',
-  //           value:
-  //             this.bookTypeOptions.displayNames[
-  //               this.selectedBook.bookType
-  //             ]?.toString() || '',
-  //         },
-  //       },
-  //       {
-  //         first: {
-  //           title: 'Publicerad',
-  //           value: this.selectedBook.publicationYear?.toString() || '',
-  //         },
-  //         second: { title: statusObj.status, value: statusObj.availability },
-  //       },
-  //     ],
-  //     longText: {
-  //       title: 'Bokbeskrivning',
-  //       value: this.selectedBook.bookDescription ?? '',
-  //     },
-  //   };
-  // }
-
-  // get infoCardCol3(): InfoCardColumn3 {
-  //   if (!this.selectedBook) return {};
-  //   return {
-  //     rows: [
-  //       {
-  //         title: 'Recensioner',
-  //         value: this.selectedBookReviews, // This is InfoCardDisplayRow[][]
-  //       },
-  //     ],
-  //   };
-  // }
-
-  onGenreSelected(genre: GenreEnums) {
-    if (genre === GenreEnums.All) {
-      this.getAllBooks(); // Fetch all books
-    } else {
-      this.libraryService
-        .getBooksByGenre(genre, 'Title', true)
-        .subscribe((response) => {
-          this.books = response.isSuccess ? response.result : [];
-        });
+  statusClass(b: AdminBook): string {
+    switch (b.bookStatus) {
+      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'nn-tag--overdue' : 'nn-tag--checked-out';
+      case BookStatusEnum.Reserved: return 'nn-tag--reserved';
+      case BookStatusEnum.Lost:
+      case BookStatusEnum.Removed: return 'nn-tag--withdrawn';
+      default: return 'nn-tag--available';
     }
+  }
+
+  // The small line under the badge: who has it, who's next, or the admin's note
+  statusDetail(b: AdminBook): string {
+    const date = (s?: string | null) =>
+      s ? new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+
+    if (b.borrowerName) {
+      if (b.isOverdue && b.dueDate) {
+        const days = Math.ceil((Date.now() - new Date(b.dueDate).getTime()) / 86_400_000);
+        return `${b.borrowerName} · ${days} day${days === 1 ? '' : 's'} overdue`;
+      }
+      return `${b.borrowerName} · due ${date(b.dueDate)}`;
+    }
+    // The date is an estimate of when the book reaches them, not a hold expiry
+    if (b.nextInLineName) {
+      return b.expectedDate
+        ? `Next in line: ${b.nextInLineName} · expected ${date(b.expectedDate)}`
+        : `Next in line: ${b.nextInLineName}`;
+    }
+    return b.adminStatusNotes ?? '';
+  }
+
+  isEbook(b: AdminBook) {
+    return b.bookType === BookTypeEnums.EBook;
+  }
+
+  isWithdrawn(b: AdminBook) {
+    return b.bookStatus === BookStatusEnum.Lost || b.bookStatus === BookStatusEnum.Removed;
+  }
+
+  // The ⋯ menu is a popover: it opens in the browser's top layer, so the
+  // table's scroll area can't clip it or make the page scroll. Place it under
+  // its button, or above it when the button is near the bottom of the window.
+  placeMenu(event: Event, button: HTMLElement) {
+    if ((event as ToggleEvent).newState !== 'open') return;
+    const menu = event.target as HTMLElement;
+    const r = button.getBoundingClientRect();
+    const openUp = r.bottom > window.innerHeight - 180;
+    menu.style.right = `${document.documentElement.clientWidth - r.right}px`;
+    menu.style.top = openUp ? 'auto' : `${r.bottom + 4}px`;
+    menu.style.bottom = openUp ? `${window.innerHeight - r.top + 4}px` : 'auto';
+  }
+
+  // Close once an action is picked
+  closeMenu(event: Event) {
+    (event.currentTarget as HTMLElement).hidePopover();
+  }
+
+  // The menu is fixed to the window, so it would drift away from its button
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  closeOpenMenus() {
+    document.querySelectorAll<HTMLElement>('.mb-menu__list:popover-open').forEach((m) => m.hidePopover());
+  }
+
+  markLost(b: AdminBook) {
+    this.confirmAdminStatus(b, BookStatusEnum.Lost);
+  }
+
+  markRemoved(b: AdminBook) {
+    this.confirmAdminStatus(b, BookStatusEnum.Removed);
+  }
+
+  restore(b: AdminBook) {
+    this.run(
+      this.bookService.clearAdminStatus(b.bookId),
+      { message: `"${b.title}" was restored.`, icon: 'arrow-counterclockwise' },
+      `Couldn't restore "${b.title}".`,
+    );
+  }
+
+  async delete(b: AdminBook) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: `Delete "${b.title}"?`,
+      message: b.hasEpub ? "This can't be undone. Its EPUB file will be deleted too." : "This can't be undone.",
+      confirmLabel: 'Delete',
+      danger: true,
+      icon: 'trash3',
+    });
+    if (!confirmed) return;
+    this.run(
+      this.bookService.deleteBook(String(b.bookId)),
+      { message: `"${b.title}" was deleted.`, icon: 'trash3' },
+      `Couldn't delete "${b.title}".`,
+    );
+  }
+
+  // Not shown as dangerous: Restore undoes it
+  private async confirmAdminStatus(b: AdminBook, status: BookStatusEnum.Lost | BookStatusEnum.Removed) {
+    const label = status === BookStatusEnum.Lost ? 'lost' : 'removed';
+    const icon = status === BookStatusEnum.Lost ? 'question-circle' : 'archive';
+    const confirmed = await this.confirmDialog.confirm({
+      title: `Mark "${b.title}" as ${label}?`,
+      message: "It can't be borrowed or reserved until you restore it.",
+      confirmLabel: `Mark as ${label}`,
+      icon,
+    });
+    if (!confirmed) return;
+    this.run(
+      this.bookService.setAdminStatus(b.bookId, status),
+      { message: `"${b.title}" was marked as ${label}.`, icon },
+      `Couldn't mark "${b.title}" as ${label}.`,
+    );
+  }
+
+  // Runs an action, reloads the list and shows a toast. On failure, shows the
+  // API's own message if there is one (e.g. "Return this book before deleting it.").
+  // The toast icon matches the menu item's icon.
+  private run(
+    action: Observable<unknown>,
+    success: { message: string; icon: string },
+    fallbackMessage: string,
+  ) {
+    this.actionError.set(null);
+    action.subscribe({
+      next: () => {
+        this.toast.success(success.message, success.icon);
+        this.refresh$.next();
+      },
+      error: (err) => this.actionError.set(err?.error?.errorMessages?.[0] ?? fallbackMessage),
+    });
   }
 }

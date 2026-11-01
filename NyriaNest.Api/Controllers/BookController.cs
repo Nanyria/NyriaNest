@@ -1,10 +1,11 @@
-﻿using NyriaNest.Api.Helpers.Enums;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
 using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Services;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 
 [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
@@ -13,11 +14,18 @@ using Microsoft.AspNetCore.Mvc;
 public class BookController : ControllerBase
 {
     private readonly IBookService _bookService;
-    private readonly IUserService _userService;
-    public BookController(IBookService bookService, IUserService userService)
+    public BookController(IBookService bookService)
     {
         _bookService = bookService;
-        _userService = userService;
+    }
+
+    /// <summary>Admin catalogue with search, filters, sorting and paging.</summary>
+    /// <remarks>Example: GET /api/Book/catalogue?q=sand&amp;bookType=3&amp;status=available&amp;page=1</remarks>
+    [HttpGet("catalogue")]
+    public async Task<IActionResult> GetCatalogue([FromQuery] AdminCatalogueQuery query)
+    {
+        var response = await _bookService.GetAdminCatalogueAsync(query);
+        return StatusCode((int)response.StatusCode, response);
     }
 
     [HttpGet("{id:int}")]
@@ -58,21 +66,21 @@ public class BookController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
-
-    [HttpPut("status/{bookId:int}")]
-    public async Task<IActionResult> UpdateBookStatus(int bookId, string userId, BookStatusEnum bookStatus, string? notes)
+    [HttpPut("{bookId:int}/admin-status")]
+    public async Task<IActionResult> SetAdminStatus(int bookId, [FromBody] AdminStatusRequest body)
     {
-        var bookResponse = await _bookService.GetBookByIdAsync(bookId);
-        if (!bookResponse.IsSuccess)
-        {
-            return StatusCode((int)bookResponse.StatusCode, bookResponse);
-        }
-
-
-        var response = await _bookService.UpdateBookStatusAsync(bookResponse.Result, userId, bookStatus, notes);
+        var adminId = User.FindFirstValue("userId");
+        var response = await _bookService.SetAdminStatusAsync(bookId, body.Status, adminId, body.Notes);
         return StatusCode((int)response.StatusCode, response);
     }
 
+    [HttpDelete("{bookId:int}/admin-status")]
+    public async Task<IActionResult> ClearAdminStatus(int bookId)
+    {
+        var adminId = User.FindFirstValue("userId");
+        var response = await _bookService.ClearAdminStatusAsync(bookId, adminId);
+        return StatusCode((int)response.StatusCode, response);
+    }
     [HttpGet("history/{bookId:int}")]
     public async Task<IActionResult> GetBookHistory(int bookId)
     {
@@ -80,7 +88,7 @@ public class BookController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
-
+    public record AdminStatusRequest(BookStatusEnum Status, string? Notes);
 
 
 }

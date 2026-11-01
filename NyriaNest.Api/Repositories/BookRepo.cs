@@ -3,7 +3,6 @@ using NyriaNest.Api.Data;
 using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
-using System.Net;
 
 namespace NyriaNest.Api.Repositories
 {
@@ -21,9 +20,11 @@ namespace NyriaNest.Api.Repositories
             await _db.Books.AddAsync(book);
         }
 
-        public async Task DeleteAsync(Book book)
+        // Only marks the book for deletion; SaveAsync writes it to the database
+        public Task DeleteAsync(Book book)
         {
             _db.Books.Remove(book);
+            return Task.CompletedTask;
         }
 
 
@@ -35,36 +36,24 @@ namespace NyriaNest.Api.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Book> GetByIdAsync(int id)
+        public async Task<Book?> GetByIdAsync(int id)
         {
             return await _db.Books
-                   .Include(b => b.Reviews)
-                       .ThenInclude(r => r.User)
-                   .Include(b => b.Reviews)
-                       .ThenInclude(r => r.RatingItem)
-                   .Include(b => b.CheckedOutBy)
-                   .FirstOrDefaultAsync(b => b.BookId == id);
+                .Include(b => b.Reviews)
+                    .ThenInclude(r => r.User)
+                .Include(b => b.Reviews)
+                    .ThenInclude(r => r.RatingItem)
+                .Include(b => b.CheckedOutBy)
+                .Include(b => b.Reservations)
+                .FirstOrDefaultAsync(b => b.BookId == id);
         }
 
-        public async Task<IEnumerable<Book>> GetByTitleAsync(string title)
-        {
-            return await _db.Books
-                .Include(b => b.StatusHistory)
-                .Where(b => b.Title.ToLower().Contains(title.ToLower()))
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Book>> GetByAuthorAsync(string author)
-        {
-            return await _db.Books
-                .Include(b => b.StatusHistory)
-                .Where(b => b.Author.ToLower().Contains(author.ToLower()))
-                .ToListAsync();
-        }
         public async Task<List<LibraryBookDto>> GetLibraryListAsync(string? userId)
         {
             return await _db.Books
                 .AsNoTracking()
+                // Books an admin has marked Lost or Removed aren't part of the public catalogue
+                .Where(b => b.AdminStatus == null)
                 .OrderBy(b => b.Title)
                 .Select(b => new LibraryBookDto
                 {
@@ -97,27 +86,89 @@ namespace NyriaNest.Api.Repositories
                 })
                 .ToListAsync();
         }
+
+        // Admin catalogue: search, filter, sort and page in the database, then
+        // project straight to the DTO so only the needed columns are loaded
+        public async Task<PagedResult<AdminBookDto>> GetAdminCatalogueAsync(AdminCatalogueQuery q)
+        {
+            var now = DateTime.UtcNow;
+            var books = _db.Books.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(q.Q))
+            {
+                var term = q.Q.Trim().ToLower();
+                books = books.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term));
+            }
+            if (q.Genre.HasValue) books = books.Where(b => b.Genre == q.Genre.Value);
+            if (q.BookType.HasValue) books = books.Where(b => b.BookType == q.BookType.Value);
+            if (q.NeedsAttention) books = books.Where(b => b.BookType == BookTypeEnums.EBook && b.EpubFileKey == null);
+
+            // Status is worked out from loans, reservations and the admin status,
+            // the same way GetBookStatus does, rather than trusting the stored BookStatus
+            // (Returned and Added are rejected by the service before we get here)
+            books = q.Status switch
+            {
+                BookStatusEnum.Available  => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
+                BookStatusEnum.CheckedOut => books.Where(b => b.CheckedOutBy != null),
+                BookStatusEnum.Overdue    => books.Where(b => b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now),
+                BookStatusEnum.Reserved   => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && b.Reservations.Any()),
+                BookStatusEnum.Lost       => books.Where(b => b.AdminStatus == BookStatusEnum.Lost),
+                BookStatusEnum.Removed    => books.Where(b => b.AdminStatus == BookStatusEnum.Removed),
+                _ => books // no status filter
+            };
+
+            // Each sort ends with a unique tie-breaker. Without one, books with the same
+            // title can swap places between pages, so one shows up twice and another never.
+            books = q.Sort switch
+            {
+                CatalogueSort.TitleDesc => books.OrderByDescending(b => b.Title).ThenBy(b => b.BookId),
+                CatalogueSort.AuthorAsc => books.OrderBy(b => b.Author).ThenBy(b => b.Title).ThenBy(b => b.BookId),
+                CatalogueSort.YearDesc  => books.OrderByDescending(b => b.PublicationYear).ThenBy(b => b.Title).ThenBy(b => b.BookId),
+                CatalogueSort.YearAsc   => books.OrderBy(b => b.PublicationYear).ThenBy(b => b.Title).ThenBy(b => b.BookId),
+                _                       => books.OrderBy(b => b.Title).ThenBy(b => b.BookId), // TitleAsc
+            };
+
+            var total = await books.CountAsync();
+            var pageSize = Math.Clamp(q.PageSize, 1, 50);
+            var page = Math.Max(1, q.Page);
+
+            var items = await books
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(b => new AdminBookDto
+                {
+                    BookId = b.BookId,
+                    Title = b.Title,
+                    Author = b.Author,
+                    CoverImagePath = b.CoverImagePath,
+                    Genre = b.Genre,
+                    Language = b.Language,
+                    BookType = b.BookType,
+                    PublicationYear = b.PublicationYear,
+                    HasEpub = b.EpubFileKey != null,
+                    BookStatus = b.BookStatus,
+                    IsOverdue = b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now,
+                    BorrowerName = b.CheckedOutBy != null ? b.CheckedOutBy.User!.UserName : null,
+                    DueDate = b.CheckedOutBy != null ? b.CheckedOutBy.ReturnDate : null,
+                    NextInLineName = b.Reservations.OrderBy(r => r.ReservationDate).Select(r => r.User.UserName).FirstOrDefault(),
+                    ExpectedDate = b.Reservations.OrderBy(r => r.ReservationDate).Select(r => r.AvailabilityDate).FirstOrDefault(),
+                    AdminStatusNotes = b.AdminStatusNotes,
+                })
+                .ToListAsync();
+
+            return new PagedResult<AdminBookDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize };
+        }
+
         public async Task SaveAsync()
         {
             await _db.SaveChangesAsync(); 
         }
 
-        public async Task UpdateAsync(Book book)
+        // Only marks the book as changed; SaveAsync writes it to the database
+        public Task UpdateAsync(Book book)
         {
             _db.Books.Update(book);
-        }
-
-        public async Task UpdateStatusAsync(int id, Book book)
-        {
-
-            _db.Books.Update(book);
-        }
-        public async Task<IEnumerable<Book>> GetByGenreAsync(GenreEnums genre)
-        {
-            return await _db.Books
-                .Include(b => b.StatusHistory)
-                .Where(b => b.Genre == genre)
-                .ToListAsync();
+            return Task.CompletedTask;
         }
     }
 }

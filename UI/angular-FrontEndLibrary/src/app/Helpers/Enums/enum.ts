@@ -1,9 +1,13 @@
+// Enums travel as numbers, so this must match the backend's BookStatusEnum order exactly
 export enum BookStatusEnum {
     Available,
     Reserved,
     CheckedOut,
     Returned,
     Overdue,
+    Added,
+    Lost,     // set by an admin
+    Removed,  // set by an admin
 }
 
 export const BookStatusDisplayNames: { [key in BookStatusEnum]: string } = {
@@ -12,6 +16,9 @@ export const BookStatusDisplayNames: { [key in BookStatusEnum]: string } = {
     [BookStatusEnum.CheckedOut]: 'Checked out',
     [BookStatusEnum.Returned]: 'Returned',
     [BookStatusEnum.Overdue]: 'Overdue',
+    [BookStatusEnum.Added]: 'Added',
+    [BookStatusEnum.Lost]: 'Lost',
+    [BookStatusEnum.Removed]: 'Removed',
 };
 export enum GenreEnums {
     None,

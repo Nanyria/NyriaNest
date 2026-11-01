@@ -3,7 +3,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Book, SlimBookDto, StatusHistoryItem } from '../Models/interfaces';
+import {
+  AdminBook,
+  ApiResponse,
+  Book,
+  CatalogueQuery,
+  PagedResult,
+  SlimBookDto,
+  StatusHistoryItem,
+} from '../Models/interfaces';
 import { BookStatusEnum } from '../Helpers/Enums/enum';
 
 @Injectable({
@@ -38,18 +46,40 @@ export class BookService {
     return this.http.put<any>(`${this.apiUrl}/${bookID}`, updatedBook);
   }
 
-  updateBookStatus(
-    bookID: string,
-    userID: string,
-    bookStatus: BookStatusEnum,
-    notes?: string
-  ): Observable<any> {
-    const params = new HttpParams()
-      .set('userId', userID.toString())
-      .set('bookStatus', bookStatus)
-      .set('notes', notes || '');
+  // Adds an EPUB to an existing e-book, or replaces the one it has
+  uploadEpub(bookID: string, file: File): Observable<ApiResponse<string>> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    return this.http.post<ApiResponse<string>>(`${this.apiUrl}/${bookID}/epub`, formData);
+  }
 
-    return this.http.put<any>(`${this.apiUrl}/status/${bookID}`, {}, { params });
+  deleteEpub(bookID: string): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.apiUrl}/${bookID}/epub`);
+  }
+
+  // Admin catalogue: search, filters, sorting and paging all happen on the server.
+  // Empty values are left out so the URL only carries what's set.
+  getCatalogue(query: CatalogueQuery): Observable<ApiResponse<PagedResult<AdminBook>>> {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null && value !== '') {
+        params = params.set(key, String(value));
+      }
+    }
+    return this.http.get<ApiResponse<PagedResult<AdminBook>>>(`${this.apiUrl}/catalogue`, { params });
+  }
+
+  // Lost/Removed win over loans and reservations until an admin clears them
+  setAdminStatus(
+    bookId: number,
+    status: BookStatusEnum.Lost | BookStatusEnum.Removed,
+    notes?: string,
+  ): Observable<ApiResponse<unknown>> {
+    return this.http.put<ApiResponse<unknown>>(`${this.apiUrl}/${bookId}/admin-status`, { status, notes });
+  }
+
+  clearAdminStatus(bookId: number): Observable<ApiResponse<unknown>> {
+    return this.http.delete<ApiResponse<unknown>>(`${this.apiUrl}/${bookId}/admin-status`);
   }
 
   deleteBook(bookID: string): Observable<any> {

@@ -19,9 +19,6 @@
 }
 
 .add-book {
-  /* Fields are lighter than the panels so they stand out */
-  --add-book-field: #fffcf6;
-
   position: relative;
   max-width: 1360px;
   margin: 0 auto;
@@ -101,95 +98,18 @@
 }
 
 @media (max-width: 899px) {
-  .add-book > .add-book__art,
-  .add-book__divider {
+  .add-book > .add-book__art {
     display: none;
   }
 }
 
-/* ---------- Header ---------- */
-.add-book__header {
-  display: flex;
-  align-items: center;
-  gap: var(--nn-space-3);
-}
-
-.add-book__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* Starts at the cards' left edge, beside the breadcrumb and title */
-.add-book__compass {
-  flex: 0 0 auto;
-  width: 46px;
-  aspect-ratio: 1;
-  background: url('/assets/images/web-icons-1/compass-star.png') no-repeat center / contain;
-}
-
-/* Gold divider centred on the page, level with the title: the small ornament
-   in the middle, with CSS lines fading out on both sides. The gap between
-   the two lines leaves room for the ornament. */
-.add-book__divider {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 420px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  gap: 86px;
-  transform: translate(-50%, -50%);
-  background: url('/assets/images/login-page/divider-small.png') no-repeat center / 76px auto;
-  pointer-events: none;
-}
-
-.add-book__divider::before,
-.add-book__divider::after {
-  content: '';
-  flex: 1 1 auto;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--nn-gold));
-}
-
-.add-book__divider::after {
-  background: linear-gradient(to left, transparent, var(--nn-gold));
-}
-
-/* The wider divider would run into the title on narrower screens */
-@media (max-width: 1099px) {
-  .add-book__divider {
-    display: none;
-  }
-}
-
-.add-book__breadcrumb {
-  font-size: 0.7rem;
-}
-
-.add-book__breadcrumb a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.add-book__breadcrumb a:hover {
-  text-decoration: underline;
-}
-
-.add-book__title {
-  font-size: 1.6rem;
-}
+/* The header (compass, breadcrumb, title, divider) uses the theme's
+   nn-admin-header, shared with Manage Books */
 
 .add-book__help {
   margin: 0;
   color: var(--nn-ink-muted);
   font-size: 0.92rem;
-}
-
-.add-book__required {
-  margin-left: 2px;
-  color: var(--nn-accent);
 }
 
 /* ---------- Panels ---------- */
@@ -200,38 +120,7 @@
   gap: 10px;
 }
 
-/* Section title with a gold diamond and a thin rule running to the edge */
-.add-book__panel-title {
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.add-book__panel-title > .bi {
-  color: var(--nn-gold-ink);
-  font-size: 1.35rem;
-}
-
-.add-book__title-rule {
-  position: relative;
-  flex: 1 1 auto;
-  height: 1px;
-  margin-left: 14px;
-  background-color: var(--nn-gold-soft);
-}
-
-.add-book__title-rule::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  border: 1px solid var(--nn-gold);
-  background-color: var(--nn-gold-soft);
-  transform: translateY(-50%) rotate(45deg);
-}
+/* Section titles use the theme's nn-section-title */
 
 /* ---------- Format ---------- */
 .add-book__format {
@@ -260,7 +149,7 @@
 }
 
 /* Matches the field labels, where the asterisk sits right after the word */
-.add-book__format-title .add-book__required {
+.add-book__format-title .nn-required {
   font-size: 1rem;
 }
 
@@ -286,7 +175,7 @@
   padding: 4px 18px;
   border: 1px solid var(--nn-border-strong);
   border-radius: var(--nn-radius-sm);
-  background-color: var(--add-book-field);
+  background-color: var(--nn-field);
   color: var(--nn-ink);
   font-family: var(--nn-font-body);
   font-size: 1.05rem;
@@ -364,12 +253,6 @@
   min-width: 0;
 }
 
-.add-book__field > label,
-.add-book__label {
-  font-weight: 600;
-  font-size: 0.98rem;
-}
-
 .add-book__field--title {
   flex: 3 1 240px;
 }
@@ -396,19 +279,10 @@
   font-weight: 400;
 }
 
-/* The theme's fields are sized for single search boxes; this form has many,
-   so they are a little tighter here to fit a laptop screen */
-.add-book .nn-input {
-  padding: 5px 12px;
-  background-color: var(--add-book-field);
-}
-
-/* nn-select reserves room for a leading icon; these selects have none.
-   background-color only, so the theme's arrow image stays */
+/* The form uses the theme's nn-compact fields (tighter and lighter, to fit a
+   laptop screen) and nn-select--plain for selects without an icon */
 .add-book__select {
   width: 100%;
-  padding: 5px 38px 5px 12px;
-  background-color: var(--add-book-field);
 }
 
 .add-book__textarea {
@@ -421,6 +295,12 @@
 .add-book__error {
   color: var(--nn-accent);
   font-size: 0.9rem;
+}
+
+/* After a save attempt with no format chosen. Two classes, to beat .nn-panel.
+   (The EPUB drop area's version is with the drop styles.) */
+.nn-panel.add-book__panel--invalid {
+  border-color: #d99a93;
 }
 
 /* ---------- Cover ----------
@@ -449,7 +329,7 @@
   object-fit: cover;
   border: 1px solid var(--nn-border-strong);
   border-radius: 4px;
-  background-color: var(--add-book-field);
+  background-color: var(--nn-field);
 }
 
 .add-book__cover--empty {
@@ -502,7 +382,7 @@
   gap: 2px;
   border: 1.5px dashed var(--nn-border-strong);
   border-radius: var(--nn-radius);
-  background-color: var(--add-book-field);
+  background-color: var(--nn-field);
   text-align: center;
   cursor: pointer;
   transition: background-color 0.12s, border-color 0.12s;
@@ -523,6 +403,17 @@
   border-style: solid;
   border-color: var(--nn-primary);
   background-color: #e6ece3;
+}
+
+/* No EPUB for a new e-book, after a save attempt. After :focus-within so it
+   stays red when the save jumps here; the ring still shows the focus. */
+.add-book__drop--invalid:not(.add-book__drop--active) {
+  border-color: #d99a93;
+  background-color: #fbf1ee;
+}
+
+.add-book__drop--invalid:not(.add-book__drop--active):focus-within {
+  box-shadow: 0 0 0 3px rgba(142, 31, 28, 0.18);
 }
 
 .add-book__drop-text {
@@ -568,7 +459,7 @@
 .add-book__drop--disabled,
 .add-book__drop--disabled:hover {
   border-color: var(--nn-border-strong);
-  background-color: var(--add-book-field);
+  background-color: var(--nn-field);
   cursor: not-allowed;
 }
 
@@ -661,7 +552,7 @@
   margin: 0;
   padding: 6px 14px;
   font-size: 0.98rem;
-  background-color: var(--add-book-field);
+  background-color: var(--nn-field);
 }
 
 .add-book__file-btn--remove {
@@ -676,6 +567,35 @@
 .add-book__file--error > .bi,
 .add-book__file--error strong {
   color: var(--nn-accent);
+}
+
+/* Edit mode: the stored EPUB is marked for removal but not yet deleted */
+.add-book__removed-note {
+  font-size: 0.85rem;
+  color: var(--nn-accent);
+}
+
+/* Edit mode: changing an e-book to another type deletes its file */
+.add-book__warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--nn-accent);
+  font-size: 0.9rem;
+}
+
+/* Edit mode: loading or load error, in place of the form */
+.add-book__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nn-space-3);
+  margin: 0;
+}
+
+.add-book__state p {
+  margin: 0;
 }
 
 /* ---------- Server errors and actions ---------- */
@@ -725,10 +645,10 @@
 }
 
 .add-book__actions .nn-btn--outline {
-  background-color: var(--add-book-field);
+  background-color: var(--nn-field);
 }
 
-/* The hint explains why it is disabled, so it doesn't need to look faded out */
+/* Only disabled while saving or when an edit has no changes; the hint says why */
 .add-book__submit:disabled {
   opacity: 0.75;
 }
@@ -739,4 +659,8 @@
   gap: 6px;
   color: var(--nn-ink-muted);
   font-size: 0.95rem;
+}
+
+.add-book__hint--error {
+  color: var(--nn-accent);
 }

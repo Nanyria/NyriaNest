@@ -17,23 +17,27 @@ namespace NyriaNest.Api.Services
     {
         Task<APIResponse<List<Book>>> GetAllBooksAsync();
         Task<APIResponse<Book>> GetBookByIdAsync(int id);
-        Task<APIResponse<List<Book>>> GetBooksByTitleAsync(string title);
-        Task<APIResponse<List<Book>>> GetBooksByAuthorAsync(string author);
         // Accept optional userId of the actor who adds the book
         Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
         Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, IFormFile file, CancellationToken ct = default);
         Task<APIResponse<Book>> DeleteBookAsync(int id);
         Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
-        Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string userId, BookStatusEnum bookStatus, string? n);
+        Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId);
-        Task<APIResponse<List<Book>>> GetBooksByGenreAsync(GenreEnums genre, string sortBy = "Title", bool ascending = true);
         Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync (int bookId);
-        Task<APIResponse<DateTime>> SetAvailabilityDatesForReservations(Book book);
+        void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
+        Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
+        Task<APIResponse<Book>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
+        Task<APIResponse<Book>> ClearAdminStatusAsync(int bookId, string? adminUserId);
     }
     public class BookService : IBookService
     {
+        // How long a loan lasts. Used for the due date and for spacing out the
+        // reservation queue, so the two can't drift apart.
+        public const int LoanPeriodMonths = 1;
+
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IUserRepo _userRepo;
@@ -93,66 +97,6 @@ namespace NyriaNest.Api.Services
                 {
                     response.IsSuccess = false;
                     response.ErrorMessages.Add("Book not found.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-
-            return response;
-        }
-        public async Task<APIResponse<List<Book>>> GetBooksByTitleAsync(string title)
-        {
-            var response = new APIResponse<List<Book>>();
-
-            try
-            {
-                var books = await _bookRepo.GetByTitleAsync(title);
-                if (books.Any())
-                {
-
-                    response.Result = books.ToList();
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("No books found with the provided title.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-
-            return response;
-        }
-        public async Task<APIResponse<List<Book>>> GetBooksByAuthorAsync(string author)
-        {
-            var response = new APIResponse<List<Book>>();
-
-            try
-            {
-                var books = await _bookRepo.GetByAuthorAsync(author);
-                if (books.Any())
-                {
-
-                    response.Result = books.ToList();
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("No books found with the provided author.");
                     response.StatusCode = HttpStatusCode.NotFound;
                 }
             }
@@ -345,6 +289,17 @@ namespace NyriaNest.Api.Services
             try
             {
                 var bookToDelete = await _bookRepo.GetByIdAsync(id);
+
+                // Deleting a book someone has borrowed would wipe out their loan
+                // (and the loan's FK is Restrict, so the delete would fail anyway)
+                if (bookToDelete?.CheckedOutBy != null)
+                {
+                    response.IsSuccess = false;
+                    response.ErrorMessages.Add("Return this book before deleting it.");
+                    response.StatusCode = HttpStatusCode.Conflict;
+                    return response;
+                }
+
                 if (bookToDelete != null)
                 {
                     await _bookRepo.DeleteAsync(bookToDelete);
@@ -397,16 +352,42 @@ namespace NyriaNest.Api.Services
                 var existingBook = await _bookRepo.GetByIdAsync(id);
                 if (existingBook != null)
                 {
-                    existingBook.Title = updatedBook.Title ?? existingBook.Title;
-                    existingBook.Author = updatedBook.Author ?? existingBook.Author;
-                    existingBook.Genre = updatedBook.Genre != default ? updatedBook.Genre : existingBook.Genre;
-                    existingBook.Language = updatedBook.Language != default ? updatedBook.Language : existingBook.Language;
-                    existingBook.PublicationYear = updatedBook.PublicationYear != default ? updatedBook.PublicationYear : existingBook.PublicationYear;
-                    existingBook.BookDescription = updatedBook.BookDescription ?? existingBook.BookDescription;
-                    existingBook.BookType = updatedBook.BookType != default ? updatedBook.BookType : existingBook.BookType;
-                    existingBook.CoverImagePath = updatedBook.CoverImagePath ?? existingBook.CoverImagePath;
+                    // The edit page always sends every field, so assign them as they are.
+                    // That way a description or cover can be cleared.
+                    existingBook.Title = updatedBook.Title.Trim();
+                    existingBook.Author = updatedBook.Author.Trim();
+                    existingBook.Genre = updatedBook.Genre;
+                    existingBook.Language = updatedBook.Language;
+                    existingBook.PublicationYear = updatedBook.PublicationYear;
+                    existingBook.BookDescription = string.IsNullOrWhiteSpace(updatedBook.BookDescription) ? null : updatedBook.BookDescription.Trim();
+                    existingBook.BookType = updatedBook.BookType;
+                    existingBook.CoverImagePath = string.IsNullOrWhiteSpace(updatedBook.CoverImagePath) ? null : updatedBook.CoverImagePath.Trim();
+
+                    // Only e-books can have an EPUB, so changing the type drops the file.
+                    // The edit page warns the admin before saving.
+                    string? droppedEpubKey = null;
+                    if (existingBook.BookType != BookTypeEnums.EBook && existingBook.EpubFileKey is not null)
+                    {
+                        droppedEpubKey = existingBook.EpubFileKey;
+                        existingBook.EpubFileKey = null;
+                        existingBook.EpubFileName = null;
+                        existingBook.EpubFileSize = null;
+                    }
 
                     await _bookRepo.SaveAsync();
+
+                    // As in DeleteBookAsync: remove the file only once the database no longer points at it
+                    if (droppedEpubKey is not null)
+                    {
+                        try
+                        {
+                            await _fileStorage.DeleteAsync(droppedEpubKey);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Could not delete EPUB {Key} after book {BookId} stopped being an e-book.", droppedEpubKey, id);
+                        }
+                    }
 
                     response.Result = existingBook;
                     response.IsSuccess = true;
@@ -466,59 +447,34 @@ namespace NyriaNest.Api.Services
             response.StatusCode = HttpStatusCode.OK;
             return response;
         }
-        public async Task<APIResponse<DateTime>> SetAvailabilityDatesForReservations(Book book)
+        /// <summary>
+        /// Recalculates when the book is expected to be available for each person in
+        /// the reservation queue. Call it whenever the loan or the queue changes.
+        /// A reservation's AvailabilityDate is an estimate, not a hold expiry.
+        /// </summary>
+        // Plain (not async) on purpose: it only updates tracked entities in memory,
+        // and callers used to block on it with .Wait(), which can deadlock.
+        public void RecalculateAvailabilityDates(Book book)
         {
-            var response = new APIResponse<DateTime>
+            // The queue starts when the current loan is due, or today if nobody has the book
+            var baseDate = book.CheckedOutBy?.ReturnDate ?? DateTime.UtcNow;
+
+            // First come, first served
+            var queue = book.Reservations
+                .OrderBy(r => r.ReservationDate)
+                .ToList();
+
+            // Each person after the first waits one more loan period
+            for (int i = 0; i < queue.Count; i++)
             {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-            try
-            {
-                DateTime baseDate;
-                if (book.CheckedOutBy != null)
-                {
-                    // Book is checked out, start from return date
-                    baseDate = book.CheckedOutBy.ReturnDate;
-                }
-                else
-                {
-                    // Book is available, start from today
-                    baseDate = DateTime.UtcNow;
-                }
-
-                if (book.Reservations == null || book.Reservations.Count == 0)
-                {
-                    response.Result = baseDate;
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {   // Sort reservations by ReservationDate (FIFO)
-                    var sortedReservations = book.Reservations
-                        .OrderBy(r => r.ReservationDate)
-                        .ToList();
-
-                    for (int i = 0; i < sortedReservations.Count; i++)
-                    {
-                        sortedReservations[i].AvailabilityDate = baseDate.AddMonths(i);
-                    }
-                    book.AvailabilityDate = sortedReservations.Count > 0
-                    ? sortedReservations.Last().AvailabilityDate ?? baseDate
-                    : baseDate;
-
-                    response.Result = book.AvailabilityDate;
-                    response.StatusCode = HttpStatusCode.OK;
-
-
-                }
+                queue[i].AvailabilityDate = baseDate.AddMonths(i * LoanPeriodMonths);
             }
-            catch (Exception ex)
-            {
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-            return response;
+
+            // The book's own date is when the last person in the queue gets it
+            // (or when it's free, if there's no queue)
+            book.AvailabilityDate = queue.Count > 0
+                ? queue[^1].AvailabilityDate ?? baseDate
+                : baseDate;
         }
         public void AddStatusHistoryItem(User user, Book book, BookStatusEnum bookStatus, string? notes)
         {
@@ -538,6 +494,12 @@ namespace NyriaNest.Api.Services
         }
         public Book GetBookStatus(Book book, BookStatusEnum bookStatus)
         {
+            // An admin-set status (Lost/Removed) always wins
+            if (book.AdminStatus is BookStatusEnum.Lost or BookStatusEnum.Removed)
+            {
+                book.BookStatus = book.AdminStatus.Value;
+                return book;
+            }
             // If the book was checked out and the user is now removed
             if (book.CheckedOutBy == null && (bookStatus == BookStatusEnum.CheckedOut || bookStatus == BookStatusEnum.Returned))
             {
@@ -565,13 +527,6 @@ namespace NyriaNest.Api.Services
 
             return book;
         }
-        public BookStatusEnum GetCurrentStatus(Book book)
-        {
-            return book.StatusHistory
-                .OrderByDescending(sh => sh.Timestamp)
-                .FirstOrDefault()?.BookStatus ?? BookStatusEnum.Available;
-        }
-
         public async Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId)
         {
             var response = new APIResponse<List<StatusHistoryItem>>
@@ -619,51 +574,6 @@ namespace NyriaNest.Api.Services
             return response;
         }
 
-        public async Task<APIResponse<List<Book>>> GetBooksByGenreAsync(
-            GenreEnums genre,
-            string sortBy = "Title",
-            bool ascending = true)
-        {
-            var response = new APIResponse<List<Book>>();
-            try
-            {
-                var books = await _bookRepo.GetByGenreAsync(genre);
-
-                // Sorting logic
-                IEnumerable<Book> sortedBooks = sortBy.ToLower() switch
-                {
-                    "title" => ascending ? books.OrderBy(b => b.Title) : books.OrderByDescending(b => b.Title),
-                    "author" => ascending ? books.OrderBy(b => b.Author) : books.OrderByDescending(b => b.Author),
-                    "publishedyear" => ascending ? books.OrderBy(b => b.PublicationYear) : books.OrderByDescending(b => b.PublicationYear),
-                    "booktype" => ascending ? books.OrderBy(b => b.BookType) : books.OrderByDescending(b => b.BookType),
-                    "added" => ascending
-                        ? books.OrderBy(b => b.StatusHistory.Min(sh => sh.Timestamp))
-                        : books.OrderByDescending(b => b.StatusHistory.Min(sh => sh.Timestamp)),
-                    _ => ascending ? books.OrderBy(b => b.Title) : books.OrderByDescending(b => b.Title)
-                };
-
-                if (sortedBooks.Any())
-                {
-                    response.Result = sortedBooks.ToList();
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("No books found with the provided genre.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-            return response;
-        }
-
         public async Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId)
         {
             var response = new APIResponse<List<BookReviewDto>>
@@ -704,6 +614,104 @@ namespace NyriaNest.Api.Services
             }
             return response;
         }
-    
+
+        public async Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q)
+        {
+            var response = new APIResponse<PagedResult<AdminBookDto>>();
+
+            // Returned and Added are momentary events, not states a book stays in,
+            // so filtering by them would silently match nothing useful
+            if (q.Status is BookStatusEnum.Returned or BookStatusEnum.Added)
+            {
+                response.IsSuccess = false;
+                response.StatusCode = HttpStatusCode.BadRequest;
+                response.ErrorMessages.Add($"Can't filter by {q.Status}.");
+                return response;
+            }
+
+            try
+            {
+                response.Result = await _bookRepo.GetAdminCatalogueAsync(q);
+                response.IsSuccess = true;
+                response.StatusCode = HttpStatusCode.OK;
+            }
+            catch (Exception ex)
+            {
+                // Log the details, but don't send exception text to the client
+                _logger.LogError(ex, "Failed to load admin catalogue");
+                response.IsSuccess = false;
+                response.StatusCode = HttpStatusCode.InternalServerError;
+                response.ErrorMessages.Add("Could not load the catalogue.");
+            }
+            return response;
+        }
+
+        public async Task<APIResponse<Book>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes)
+        {
+            var response = new APIResponse<Book> { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest };
+
+            if (status is not (BookStatusEnum.Lost or BookStatusEnum.Removed))
+            {
+                response.ErrorMessages.Add("Admins can only set Lost or Removed.");
+                return response;
+            }
+
+            var book = await _bookRepo.GetByIdAsync(bookId);
+            if (book == null)
+            {
+                response.StatusCode = HttpStatusCode.NotFound;
+                response.ErrorMessages.Add("Book not found.");
+                return response;
+            }
+            if (book.CheckedOutBy != null)
+            {
+                response.ErrorMessages.Add("This book is checked out. Return it first.");
+                return response;
+            }
+
+            book.AdminStatus = status;
+            book.AdminStatusSetAt = DateTime.UtcNow;
+            book.AdminStatusNotes = notes;
+            GetBookStatus(book, status);
+
+            await AddHistoryIfAdminAsync(adminUserId, book, status, notes);
+            await _bookRepo.UpdateAsync(book);
+            await _bookRepo.SaveAsync();
+
+            response.Result = book;
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.OK;
+            return response;
+        }
+
+        public async Task<APIResponse<Book>> ClearAdminStatusAsync(int bookId, string? adminUserId)
+        {
+            var response = new APIResponse<Book> { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+            var book = await _bookRepo.GetByIdAsync(bookId);
+            if (book == null) { response.ErrorMessages.Add("Book not found."); return response; }
+
+            book.AdminStatus = null;
+            book.AdminStatusSetAt = null;
+            book.AdminStatusNotes = null;
+            // "Returned" makes GetBookStatus recompute: Reserved if there are reservations, else Available
+            GetBookStatus(book, BookStatusEnum.Returned);
+
+            await AddHistoryIfAdminAsync(adminUserId, book, book.BookStatus, "Restored by admin");
+            await _bookRepo.UpdateAsync(book);
+            await _bookRepo.SaveAsync();
+
+            response.Result = book;
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.OK;
+            return response;
+        }
+
+        private async Task AddHistoryIfAdminAsync(string? adminUserId, Book book, BookStatusEnum status, string? notes)
+        {
+            if (string.IsNullOrEmpty(adminUserId)) return;
+            var admin = await _userRepo.GetByIdAsync<User>(adminUserId);
+            if (admin != null) AddStatusHistoryItem(admin, book, status, notes);
+        }
+
     }
 }

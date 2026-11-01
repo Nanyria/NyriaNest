@@ -65,18 +65,20 @@
     }
   </nav>
 
-  <form class="nn-field topbar__search" role="search" (submit)="search($event, searchInput.value)">
-    <i class="bi bi-search"></i>
-    <input
-      #searchInput
-      class="nn-input"
-      type="search"
-      placeholder="Search books …"
-      aria-label="Search the library"
-      [value]="searchQuery"
-      (input)="searchQuery = searchInput.value"
-    />
-  </form>
+  @if (!isAdminPage) {
+    <form class="nn-field topbar__search" role="search" (submit)="search($event, searchInput.value)">
+      <i class="bi bi-search"></i>
+      <input
+        #searchInput
+        class="nn-input"
+        type="search"
+        placeholder="Search books …"
+        aria-label="Search the library"
+        [value]="searchQuery"
+        (input)="searchQuery = searchInput.value"
+      />
+    </form>
+  }
 
   @if (isLibraryPage) {
     <button

@@ -1,98 +1,401 @@
+/* Spacing and panels match the Add book page */
 :host {
-  display: contents;
-}
-
-.library-layout {
-  display: flex;
-  flex-direction: row;
-  height: 100vh; /* or adjust as needed */
-}
-
-.table-body {
-  flex: 1;
-  overflow-x: auto;
-  width: 100%;
-  height: 100%;
-  padding: 2px;
-}
-.library-search-container {
-  display: flex;
-  justify-content: center; 
-  align-items: center;
-  gap: 16px;
-  font-size: 16px;
-  color: rgba(178, 178, 178, 1);
-  font-weight: 400;
-  flex-direction: row;
-  height: 80px; 
-}
-app-search {
-  display: flex; /* Set display to flex to allow flex properties to take effect */
-  flex-grow: 1; /* Allow app-search to take up more space */
-}
-
-.add-new-book-button {
-  display: flex;
-  justify-content: center; /* Center text horizontally */
-  align-items: center; /* Center text vertically */
   position: relative;
-  border-radius: 8px;
-  background-color: rgba(31, 41, 55, 1);
-  color: rgba(178, 178, 178, 1);
-  padding: 12px;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 400;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+}
+
+/* Everything on the page sits above the decoration */
+:host > :not(.mb-art, .mb-decor) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Decoration ----------
+   The same images as on Add book. Absolutely positioned, so they add no height
+   and take no part in the flex gap; behind the panels, so only the parts reaching
+   past the panel edges show. The admin wrapper clips them at the window edge.
+   Longhands only: a background shorthand would reset each modifier's image. */
+.mb-art,
+.mb-decor {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.mb-decor {
+  opacity: 0.9;
+}
+
+/* The books stand on the Find books panel, left of the Add new book button */
+.mb-art {
+  top: -26px;
+  right: 200px;
+  width: 230px;
+  aspect-ratio: 700 / 343;
+  background-position: right bottom;
+  background-image: url('/assets/images/web-icons-1/booksQuill.png');
+}
+
+/* Flipped upside down, so the branch hangs in from above the header */
+.mb-decor--left {
+  top: -34px;
+  left: -190px; /* the tip stops just short of the header's compass */
+  width: 230px;
+  aspect-ratio: 620 / 400;
+  background-image: url('/assets/images/web-icons-1/loweLeaves.png');
+  transform: scaleY(-1);
+}
+
+.mb-decor--corner {
+  bottom: -20px;
+  left: -96px;
+  width: 300px;
+  aspect-ratio: 590 / 364;
+  background-image: url('/assets/images/web-icons-1/cornerLeaves.png');
+}
+
+.mb-decor--right {
+  top: 330px;
+  right: -110px;
+  width: 200px;
+  aspect-ratio: 438 / 505;
+  background-image: url('/assets/images/web-icons-1/upperLeaves.png');
+}
+
+/* Narrower screens: the margins disappear, so the leaves would only clutter */
+@media (max-width: 1199px) {
+  .mb-decor {
+    display: none;
+  }
+
+  .mb-art {
+    width: 170px;
+  }
+}
+
+@media (max-width: 899px) {
+  .mb-art {
+    display: none;
+  }
+}
+
+/* ---------- Header (theme nn-admin-header) ---------- */
+.mb-add {
+  margin-left: auto; /* push the button to the right of the title */
+  white-space: nowrap;
+}
+
+/* Phones: the button gets its own row instead of squeezing the title */
+@media (max-width: 640px) {
+  .nn-admin-header {
+    flex-wrap: wrap;
+  }
+
+  .mb-add {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ---------- Panels ---------- */
+.mb-panel {
+  padding: var(--nn-space-3) var(--nn-space-4) 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---------- Find books ---------- */
+.mb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px var(--nn-space-4);
+  align-items: flex-end;
+}
+
+.mb-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 180px;
+  margin: 0;
+}
+
+.mb-attention {
+  gap: 8px;
   flex-shrink: 0;
-  width: 80px; /* Set width to a fixed value */
-  height: 80px; 
-  z-index: 1;
 }
 
-.add-new-book-button:hover {
-  background-color: rgba(41, 51, 65, 1);
-}
-.add-new-book-button .bi-plus {
-  width: 40px; 
-  height: 40px;
-  font-size: 40px; 
-  color: rgba(32, 175, 109, 1); 
-  position: absolute; 
-  left: 40px; 
-  top: 40px; 
-  transform: translate(-50%, -50%); 
-  z-index: 2;
-  vertical-align: -50%;
-}
-.add-new-book-button .bi-plus::before {
-  vertical-align: 5%;
-}
-.add-new-book-button:hover .bi-plus{
-  color: rgba(41, 51, 65, 1);
-}
-.add-new-book-button:hover .bi-book-fill {
-  color: rgba(32, 175, 109, 1); 
-}
-.add-new-book-button .bi-book-fill {
-  width: 80px; 
-  height: 80px;
-  font-size: 60px;
-  color: rgba(55, 65, 81, 1); 
-  position: absolute; 
-  left: 50%; /* Center horizontally */
-  transform: translateX(-50%); /* Center horizontally */
-  z-index: 1;
-}
-.add-new-book-button .bi-book-fill::before {
-  vertical-align: -11%;
+.mb-clear {
+  align-self: flex-start;
 }
 
+/* ---------- Books ---------- */
+.mb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-4);
+  flex-wrap: wrap;
+}
 
-@media (max-width: 991px) {
-  .body {
-    max-width: 100%;
-    padding: 0 20px;
-    box-sizing: border-box; /* Ensure padding is included in the width */
+/* Takes the free space, so its rule runs up to the sort control */
+.mb-toolbar__title {
+  flex: 1 1 240px;
+}
+
+.mb-count {
+  font-size: 1rem;
+}
+
+.mb-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  margin: 0;
+}
+
+.mb-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #d99a93;
+  border-radius: var(--nn-radius-sm);
+  background-color: #f8e4e1;
+  color: var(--nn-accent);
+}
+
+.mb-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-4) 0;
+  margin: 0;
+}
+
+.mb-state p {
+  margin: 0;
+}
+
+/* position: relative keeps absolutely positioned children (e.g. the
+   visually-hidden "Actions" header) inside the scroll area; without it they
+   escape and make the whole page scroll sideways on phones */
+.mb-table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+
+.mb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mb-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+  background-color: var(--nn-surface-sunken);
+  padding: 10px 12px;
+}
+
+.mb-table td {
+  padding: 10px 12px;
+  border-top: 1px solid var(--nn-border);
+  vertical-align: middle;
+}
+
+.mb-book {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mb-cover {
+  width: 36px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.mb-title {
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.mb-author {
+  color: var(--nn-ink);
+}
+
+.mb-detail {
+  font-size: 0.85rem;
+  color: var(--nn-ink-muted);
+  margin-top: 3px;
+}
+
+.mb-detail.is-overdue {
+  color: var(--nn-accent);
+}
+
+.mb-file-ok {
+  color: #2e5d3f;
+  white-space: nowrap;
+}
+
+.mb-file-missing {
+  color: var(--nn-accent);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mb-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ---------- ⋯ menu ---------- */
+/* A popover in the top layer; placeMenu() sets top/bottom and right.
+   inset and margin undo the browser's default centring of popovers. */
+.mb-menu__list {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 6px;
+}
+
+/* display only while open, or it would override the popover's hidden state */
+.mb-menu__list:popover-open {
+  display: flex;
+}
+
+.mb-menu__list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--nn-radius-sm);
+  background: none;
+  color: var(--nn-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mb-menu__list button:hover:not(:disabled) {
+  background-color: var(--nn-surface-hover);
+}
+
+.mb-menu__list button:disabled {
+  color: var(--nn-ink-faint);
+  cursor: not-allowed;
+}
+
+.mb-menu__list .is-danger:not(:disabled) {
+  color: var(--nn-accent);
+}
+
+/* ---------- Pagination ---------- */
+.mb-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nn-space-3);
+  padding-top: var(--nn-space-4);
+}
+
+.mb-pager__buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mb-pager__gap {
+  padding: 0 4px;
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- Narrower screens: fold genre/type into the book cell ---------- */
+.mb-meta-inline {
+  display: none;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1180px) {
+  .mb-col-meta {
+    display: none;
+  }
+
+  .mb-meta-inline {
+    display: block;
+  }
+}
+
+/* ---------- Phones: each row becomes a small card ----------
+   Book on top; status and file below it; actions on the right */
+@media (max-width: 640px) {
+  .mb-table,
+  .mb-table tbody,
+  .mb-table td {
+    display: block;
+  }
+
+  /* Hidden visually but still read out by screen readers */
+  .mb-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .mb-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px var(--nn-space-3);
+    padding: var(--nn-space-3) 0;
+    border-top: 1px solid var(--nn-border);
+  }
+
+  .mb-table td {
+    padding: 0;
+    border: none;
+  }
+
+  /* Genre/type are already in the book cell; beat the display: block above */
+  .mb-table td.mb-col-meta {
+    display: none;
+  }
+
+  .mb-table td:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .mb-cell-status { grid-column: 1; grid-row: 2; }
+  .mb-cell-file   { grid-column: 1; grid-row: 3; }
+
+  .mb-cell-actions {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    align-self: center;
+  }
+
+  .mb-cell-file .nn-muted {
+    display: none; /* "N/A" for non-e-books adds nothing on a card */
+  }
+
+  .mb-pager {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

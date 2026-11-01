@@ -92,6 +92,11 @@ export class TopbarComponent {
     return this.router.url.startsWith('/library');
   }
 
+  // Admin pages have their own search, so the library search is hidden there
+  get isAdminPage(): boolean {
+    return this.router.url.startsWith('/admin');
+  }
+
   toggleFilters(): void {
     this.libraryUi.toggleFilters();
   }

@@ -48,7 +48,9 @@ export const ADMIN_NAV: NavGroup = {
   label: 'Admin',
   icon: 'bi-shield-lock',
   items: [
-    { label: 'Manage books', icon: 'bi-journal-plus', route: '/admin/manage-books' },
+    { label: 'Dashboard', icon: 'bi-speedometer2' },
+    { label: 'Manage books', icon: 'bi-journals', route: '/admin/manage-books' },
+    { label: 'Add book', icon: 'bi-journal-plus', route: '/add-book' },
     { label: 'Manage users', icon: 'bi-people', route: '/admin/manage-users' },
   ],
 };
