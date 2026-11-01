@@ -223,6 +223,10 @@
   text-align: center;
 }
 
+.library__message p {
+  margin: 0;
+}
+
 /* ---------- Filter panel ("Refine your search") ---------- */
 .filter-backdrop {
   position: fixed;

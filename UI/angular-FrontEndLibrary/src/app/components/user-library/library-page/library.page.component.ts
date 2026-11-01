@@ -16,6 +16,9 @@ import { LibraryService } from '../../../Services/library.services';
 import { UserActionsService } from '../../../Services/user-actions.service';
 import { AuthService } from '../../../Services/auth.service';
 import { LibraryUiService } from '../../../Services/library-ui.service';
+import { ToastService } from '../../../Services/toast.service';
+import { ConfirmService } from '../../../Services/confirm.service';
+import { Observable } from 'rxjs';
 import { BookStatusEnum, BookTypeEnums, GenreEnums } from '../../../Helpers/Enums/enum';
 import { BookCoverListComponent } from '../book-cover-list/book-cover-list.component';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -142,6 +145,8 @@ export class LibraryComponent implements AfterViewInit {
     private libraryUi: LibraryUiService,
     private router: Router,
     private route: ActivatedRoute,
+    private toast: ToastService,
+    private confirmDialog: ConfirmService,
   ) {}
   @ViewChild(InfoCardComponent) infoCardComponent?: InfoCardComponent;
 
@@ -495,27 +500,56 @@ export class LibraryComponent implements AfterViewInit {
   }
 
   // After borrowing, returning or (un)reserving, reload the list: the server
-  // works out the new "…ByMe" flags and getAllBooks refreshes the open popup
-  toggleBorrow(book: LibraryBook) {
-    const obs = book.isCheckedOutByMe
-      ? this.userActionsService.returnBook(this.currentUserId, book.bookId)
-      : this.userActionsService.borrowBook(this.currentUserId, book.bookId);
-
-    obs.subscribe(() => {
-      this.authService.refreshCurrentUser();
-      this.getAllBooks();
-    });
+  // works out the new "…ByMe" flags and getAllBooks refreshes the open popup.
+  // Returning asks first; borrowing is one click, like on Manage books.
+  async toggleBorrow(book: LibraryBook) {
+    if (book.isCheckedOutByMe) {
+      const confirmed = await this.confirmDialog.confirm({
+        title: `Return "${book.title}"?`,
+        message: 'Someone else may borrow or reserve it once it is back.',
+        confirmLabel: 'Return book',
+        cancelLabel: 'Keep it',
+        icon: 'arrow-return-left',
+      });
+      if (!confirmed) return;
+      this.runAction(
+        this.userActionsService.returnBook(this.currentUserId, book.bookId),
+        { message: `You returned "${book.title}".`, icon: 'arrow-return-left' },
+        `Couldn't return "${book.title}".`,
+      );
+    } else {
+      this.runAction(
+        this.userActionsService.borrowBook(this.currentUserId, book.bookId),
+        { message: `You borrowed "${book.title}".`, icon: 'book' },
+        `Couldn't borrow "${book.title}".`,
+      );
+    }
   }
 
-  toggleReservation(book: LibraryBook) {
-    const obs = book.isReservedByMe
-      ? this.userActionsService.unreserveBook(this.currentUserId, book.bookId)
-      : this.userActionsService.reserveBook(this.currentUserId, book.bookId);
-
-    obs.subscribe(() => {
-      this.authService.refreshCurrentUser();
-      this.getAllBooks();
-    });
+  // Cancelling gives up the place in the queue, so it asks first
+  async toggleReservation(book: LibraryBook) {
+    if (book.isReservedByMe) {
+      const confirmed = await this.confirmDialog.confirm({
+        title: 'Cancel your reservation?',
+        message: `You'll lose your place in the queue for "${book.title}".`,
+        confirmLabel: 'Cancel reservation',
+        cancelLabel: 'Keep reservation',
+        danger: true,
+        icon: 'calendar-x',
+      });
+      if (!confirmed) return;
+      this.runAction(
+        this.userActionsService.unreserveBook(this.currentUserId, book.bookId),
+        { message: `Your reservation for "${book.title}" was cancelled.`, icon: 'calendar-x' },
+        `Couldn't cancel the reservation for "${book.title}".`,
+      );
+    } else {
+      this.runAction(
+        this.userActionsService.reserveBook(this.currentUserId, book.bookId),
+        { message: `You reserved "${book.title}".`, icon: 'calendar-check' },
+        `Couldn't reserve "${book.title}".`,
+      );
+    }
   }
 
   toggleReadList(book: LibraryBook) {
@@ -529,9 +563,44 @@ export class LibraryComponent implements AfterViewInit {
         )
       : this.userActionsService.addToFavorites(this.currentUserId, book.bookId);
 
-    obs.subscribe(() => {
-      this.authService.refreshCurrentUser();
+    // The reading list lives on the user, so the book list needn't reload
+    this.runAction(
+      obs,
+      isInReadList
+        ? { message: `"${book.title}" was removed from your reading list.`, icon: 'bookmark-dash' }
+        : { message: `"${book.title}" was added to your reading list.`, icon: 'bookmark-plus' },
+      isInReadList
+        ? `Couldn't remove "${book.title}" from your reading list.`
+        : `Couldn't add "${book.title}" to your reading list.`,
+      false,
+    );
+  }
+
+  // Runs a book action and says how it went in a toast. The server's own
+  // explanation (e.g. why a book can't be borrowed) follows the failure text.
+  private runAction(
+    action: Observable<unknown>,
+    success: { message: string; icon: string },
+    failure: string,
+    reloadBooks = true,
+  ) {
+    action.subscribe({
+      next: () => {
+        this.toast.success(success.message, success.icon);
+        this.authService.refreshCurrentUser();
+        if (reloadBooks) this.getAllBooks();
+      },
+      error: (err) => {
+        const reason: string | undefined = err?.error?.errorMessages?.[0];
+        this.toast.error(reason ? `${failure} ${reason}` : failure);
+      },
     });
+  }
+
+  retry() {
+    this.loading = true;
+    this.loadError = false;
+    this.getAllBooks();
   }
   closeInfoCard() {
     this.showInfoCard = false;

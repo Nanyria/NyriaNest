@@ -166,10 +166,10 @@
       @if (loading) {
         <p class="library__message">Loading books …</p>
       } @else if (loadError) {
-        <p class="library__message">
-          <i class="bi bi-exclamation-circle"></i>
-          The library couldn't be loaded. Please try again later.
-        </p>
+        <div class="library__message" role="alert">
+          <p><i class="bi bi-exclamation-circle"></i> The library couldn't be loaded.</p>
+          <button type="button" class="nn-btn nn-btn--outline" (click)="retry()">Try again</button>
+        </div>
       } @else if (visibleBooks.length === 0) {
         <div class="library__message">
           <p>No books match your filters.</p>
@@ -190,16 +190,16 @@
     </section>
   } @else if (loading || loadError || books.length === 0) {
     <section class="nn-panel nn-panel--framed library__section">
-      <p class="library__message">
-        @if (loading) {
-          Loading books …
-        } @else if (loadError) {
-          <i class="bi bi-exclamation-circle"></i>
-          The library couldn't be loaded. Please try again later.
-        } @else {
-          The library has no books yet.
-        }
-      </p>
+      @if (loading) {
+        <p class="library__message">Loading books …</p>
+      } @else if (loadError) {
+        <div class="library__message" role="alert">
+          <p><i class="bi bi-exclamation-circle"></i> The library couldn't be loaded.</p>
+          <button type="button" class="nn-btn nn-btn--outline" (click)="retry()">Try again</button>
+        </div>
+      } @else {
+        <p class="library__message">The library has no books yet.</p>
+      }
     </section>
   } @else {
     <!-- Browse: shelves that scroll sideways -->
