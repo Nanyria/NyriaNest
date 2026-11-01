@@ -45,6 +45,15 @@ export class BookCoverListComponent {
     }
   }
 
+  // The theme's status colours, as on Manage books: only Overdue is red
+  statusClass(book: LibraryBook): string {
+    switch (book.bookStatus) {
+      case BookStatusEnum.Reserved: return 'nn-tag--reserved';
+      case BookStatusEnum.Overdue: return 'nn-tag--overdue';
+      default: return 'nn-tag--checked-out';
+    }
+  }
+
 
   openBook(book: LibraryBook, event?: Event) {
     if (event instanceof KeyboardEvent) {

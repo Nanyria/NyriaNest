@@ -154,12 +154,6 @@
   margin-top: var(--nn-space-2);
 }
 
-.book__status {
-  border-color: var(--nn-accent);
-  color: var(--nn-accent);
-  background-color: transparent;
-}
-
 .book__reviews {
   margin: var(--nn-space-2) 0 0;
   font-size: 0.85rem;
