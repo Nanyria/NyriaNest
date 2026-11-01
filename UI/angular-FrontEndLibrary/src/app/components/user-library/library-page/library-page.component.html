@@ -45,7 +45,7 @@
   </ng-template>
 
   <!-- Illustrated genre cards; the row scrolls sideways or expands to a grid -->
-  <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="genres-title">
+  <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="genres-title">
     <header class="nn-section-header">
       <svg class="library__section-icon" viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-linejoin="round">
         <circle cx="32" cy="32" r="18" stroke-width="1" />
@@ -84,11 +84,9 @@
     }
   </section>
 
-  <span class="library__joint" aria-hidden="true"></span>
-
   @if (isResultsMode) {
     <!-- Results: every book matching the search and filters -->
-    <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="results-title">
+    <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="results-title">
       <header class="nn-section-header">
         <i class="bi bi-search nn-section-header__icon library__section-icon"></i>
         <div>
@@ -177,7 +175,7 @@
       }
     </section>
   } @else if (loading || loadError || books.length === 0) {
-    <section class="nn-panel nn-panel--ornate library__section">
+    <section class="nn-panel nn-panel--framed library__section">
       <p class="library__message">
         @if (loading) {
           Loading books …
@@ -191,7 +189,7 @@
     </section>
   } @else {
     <!-- Browse: shelves that scroll sideways -->
-    <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="arrivals-title">
+    <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="arrivals-title">
       <header class="nn-section-header">
         <i class="bi bi-book-half nn-section-header__icon library__section-icon"></i>
         <div>
@@ -214,9 +212,7 @@
       </app-scroll-strip>
     </section>
 
-    <span class="library__joint" aria-hidden="true"></span>
-
-    <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="popular-title">
+    <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="popular-title">
       <header class="nn-section-header">
         <i class="bi bi-stars nn-section-header__icon library__section-icon"></i>
         <div>
