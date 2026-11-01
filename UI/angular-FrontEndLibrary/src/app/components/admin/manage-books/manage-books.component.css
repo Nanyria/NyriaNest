@@ -104,7 +104,7 @@
 
 /* ---------- Panels ---------- */
 .mb-panel {
-  padding: var(--nn-space-3) var(--nn-space-4) 14px;
+  padding: var(--nn-frame-pad); /* clears the frame (nn-panel--framed) */
   display: flex;
   flex-direction: column;
   gap: 10px;
