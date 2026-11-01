@@ -23,6 +23,10 @@
   padding: var(--nn-space-2) var(--nn-space-4) 0;
 }
 
+.library__header {
+  margin-bottom: var(--nn-space-3);
+}
+
 /* ---------- Sections: the theme's framed panels (nn-panel--framed) ---------- */
 .library__section {
   --panel-padding: 32px; /* clears the frame corners */
@@ -40,22 +44,55 @@
   position: relative;
 }
 
+/* Icon, title, rule and action on one line; the subtitle under the title.
+   The title block is flattened (display: contents) so its title and subtitle
+   take part in the grid. */
 .library__section .nn-section-header {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
+  gap: 0 var(--nn-space-3); /* no gap between the title and subtitle rows */
+  margin-bottom: var(--nn-space-3);
+}
+
+.library__section .nn-section-header > div {
+  display: contents;
+}
+
+/* Overhangs its row, so the row is only as tall as the title and the
+   subtitle sits right under it */
+.library__section .nn-section-header > .library__section-icon {
+  margin-block: -6px;
 }
 
 .library__section-icon {
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   color: var(--nn-gold);
-  font-size: 2.4rem;
+  font-size: 1.8rem;
   text-align: center;
-  line-height: 52px;
+  line-height: 40px;
 }
 
 .library__section .nn-section-header__title {
-  font-size: clamp(1.5rem, 2.4vw, 1.9rem);
+  margin: 0;
+  font-size: clamp(1.3rem, 1.8vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.library__section .nn-section-header__subtitle {
+  grid-row: 2;
+  grid-column: 2 / -1;
+  font-size: 0.95rem;
+}
+
+/* The theme's title rule (gold diamond and line, as on Manage books), running
+   from the title to the action link */
+.library__rule {
+  align-self: center;
+  min-width: 24px;
+  margin-right: var(--nn-space-2);
 }
 
 .library__action {
@@ -358,18 +395,27 @@
   }
 
   .library__section-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.8rem;
-    line-height: 40px;
+    width: 34px;
+    height: 34px;
+    font-size: 1.5rem;
+    line-height: 34px;
   }
 
+  .library__section .nn-section-header > .library__section-icon {
+    margin-block: -4px;
+  }
+
+  /* No room for the rule on phones: the action takes the free space and sits at the end */
   .library__section .nn-section-header {
-    flex-wrap: wrap;
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .library__rule {
+    display: none;
   }
 
   .library__section .nn-section-header__subtitle {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .genre-card {

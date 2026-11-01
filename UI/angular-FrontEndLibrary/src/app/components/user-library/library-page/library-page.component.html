@@ -1,4 +1,16 @@
 <div class="library">
+  <!-- Same header as Add book and Manage books: compass, breadcrumb, title, centred divider -->
+  <header class="nn-admin-header library__header">
+    <span class="nn-admin-header__compass" aria-hidden="true"></span>
+    <div class="nn-admin-header__heading">
+      <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/home">Home</a> / Library
+      </nav>
+      <h1 class="nn-admin-header__title">Library</h1>
+    </div>
+    <span class="nn-admin-header__divider" aria-hidden="true"></span>
+  </header>
+
   <!-- Search and filters for small screens; on desktop they live in the topbar -->
   <div class="library__mobile-tools">
     <div class="nn-field">
@@ -58,6 +70,7 @@
         <h2 id="genres-title" class="nn-section-header__title">Explore genres</h2>
         <p class="nn-section-header__subtitle">Find your next adventure by genre.</p>
       </div>
+      <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
       <button
         type="button"
         class="nn-link library__action"
@@ -97,6 +110,7 @@
             </p>
           }
         </div>
+        <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
         <button type="button" class="nn-link library__action" (click)="clearFilters()">
           <i class="bi bi-arrow-left"></i>
           {{ activeFilters.length ? 'Clear filters' : 'Back to browse' }}
@@ -196,6 +210,7 @@
           <h2 id="arrivals-title" class="nn-section-header__title">New arrivals</h2>
           <p class="nn-section-header__subtitle">Recently added to the library.</p>
         </div>
+        <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
         <button type="button" class="nn-link library__action" (click)="seeAll('added')">
           See all <i class="bi bi-arrow-right"></i>
         </button>
@@ -219,6 +234,7 @@
           <h2 id="popular-title" class="nn-section-header__title">Reader favorites</h2>
           <p class="nn-section-header__subtitle">Titles with the most reviews from readers.</p>
         </div>
+        <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
         <button type="button" class="nn-link library__action" (click)="seeAll('popular')">
           See all <i class="bi bi-arrow-right"></i>
         </button>

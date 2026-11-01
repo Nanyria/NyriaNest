@@ -18,7 +18,7 @@ import { AuthService } from '../../../Services/auth.service';
 import { LibraryUiService } from '../../../Services/library-ui.service';
 import { BookStatusEnum, BookTypeEnums, GenreEnums } from '../../../Helpers/Enums/enum';
 import { BookCoverListComponent } from '../book-cover-list/book-cover-list.component';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
   InfoCardColumn2,
@@ -62,6 +62,7 @@ const byMostReviewed = (a: LibraryBook, b: LibraryBook) => b.reviewCount - a.rev
     ScrollStripComponent,
     FormsModule,
     NgTemplateOutlet,
+    RouterLink,
   ],
 })
 export class LibraryComponent implements AfterViewInit {
