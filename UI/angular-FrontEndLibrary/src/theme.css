@@ -28,6 +28,9 @@
   --nn-gold-soft: #d8c097;
   --nn-gold-ink: #8a6634; /* gold dark enough for text on parchment */
   --nn-star: #b0611c;
+  /* Ornamental borders: the card frames and the nav bars. A panel can set its
+     own (an invalid form card turns red). */
+  --nn-frame-color: var(--nn-gold);
 
   /* Lines */
   --nn-border: #e0cca8;
@@ -155,7 +158,6 @@ body:has(.nn-theme) > app-root {
    Add nn-panel--titled when a title runs along the top: then only the bottom
    line gets a star, so it doesn't collide with the title's rule. */
 .nn-panel--framed {
-  --nn-frame-color: var(--nn-gold); /* inner line, corners and stars */
   --nn-frame-corner: 38px;
   /* The corners sit right in the card's corners, so their outer bracket is the
      card's edge */
@@ -950,6 +952,89 @@ body:has(.nn-theme) > app-root {
   border: 1px solid var(--nn-gold);
   background-color: var(--nn-gold-soft);
   transform: translateY(-50%) rotate(45deg);
+}
+
+/* ---------- Nav bar frame ----------
+   Gold frame for the top and bottom nav bars: one border all the way round,
+   with the knotwork of headerSideDecoWide on both ends (headerKnot-left/-right,
+   the artwork without its outer bracket). The ends keep the artwork's shape
+   (952 x 1615), so their size follows the bar's height: set --nn-navbar-height
+   to the framed element's height. */
+.nn-navbar-frame {
+  --nn-navbar-frame-end: calc(var(--nn-navbar-height, 68px) * 952.2 / 1615.4);
+  --nn-navbar-unit: calc(var(--nn-navbar-height, 68px) / 1615.4); /* one unit of the artwork */
+  --nn-navbar-line: 1.7px;
+  --nn-navbar-bg: color-mix(in srgb, var(--nn-page) 88%, transparent);
+  /* The knotwork reaches about 55% into the ends; content stays clear of it */
+  --nn-navbar-pad: calc(var(--nn-navbar-frame-end) * 0.6 + var(--nn-space-3));
+
+  position: relative;
+  isolation: isolate; /* keeps the background layer behind the content */
+}
+
+/* The border and background sit where the artwork's bracket was (its centre
+   line: x 46 from the sides, y 32.5 from the top and bottom, corner radius 60),
+   so the knots still meet the border. */
+.nn-navbar-frame {
+  --nn-navbar-box-y: calc(32.5 * var(--nn-navbar-unit) - var(--nn-navbar-line) / 2);
+  --nn-navbar-box-x: calc(46 * var(--nn-navbar-unit) - var(--nn-navbar-line) / 2);
+  --nn-navbar-radius: calc(60 * var(--nn-navbar-unit) + var(--nn-navbar-line) / 2);
+}
+
+/* The bar's background; the page blurs as it scrolls under it */
+.nn-navbar-frame::before {
+  content: '';
+  position: absolute;
+  inset: var(--nn-navbar-box-y) var(--nn-navbar-box-x);
+  z-index: -1;
+  border-radius: var(--nn-navbar-radius);
+  background-color: var(--nn-navbar-bg);
+  backdrop-filter: blur(6px);
+}
+
+/* The gold: border and knotwork, in their own element so a drop shadow can
+   follow their shapes (a filter on the masked layer itself would be masked
+   away too):
+   <span class="nn-navbar-frame__ornaments" aria-hidden="true"></span> */
+.nn-navbar-frame__ornaments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Embossed: a cream highlight on the top edge, a warm brown shadow below */
+  filter: drop-shadow(0 -0.6px 0 rgba(255, 246, 222, 0.95)) drop-shadow(0 1px 1px rgba(110, 62, 18, 0.65));
+}
+
+.nn-navbar-frame__ornaments::before {
+  content: '';
+  position: absolute;
+  inset: var(--nn-navbar-box-y) var(--nn-navbar-box-x);
+  border: var(--nn-navbar-line) solid var(--nn-frame-color);
+  border-radius: var(--nn-navbar-radius);
+}
+
+/* The knotwork is drawn five times, the extra copies shifted by --t to each
+   side, which thickens it evenly by 2 x --t to suit the border */
+.nn-navbar-frame__ornaments::after {
+  --t: 0.275px;
+  --end: var(--nn-navbar-frame-end);
+  --left: url('/assets/images/nav-bar/headerKnot-left.svg');
+  --right: url('/assets/images/nav-bar/headerKnot-right.svg');
+
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--nn-frame-color);
+  mask:
+    var(--left) 0 50% / var(--end) 100% no-repeat,
+    var(--left) var(--t) 50% / var(--end) 100% no-repeat,
+    var(--left) calc(-1 * var(--t)) 50% / var(--end) 100% no-repeat,
+    var(--left) 0 calc(50% + var(--t)) / var(--end) 100% no-repeat,
+    var(--left) 0 calc(50% - var(--t)) / var(--end) 100% no-repeat,
+    var(--right) 100% 50% / var(--end) 100% no-repeat,
+    var(--right) calc(100% + var(--t)) 50% / var(--end) 100% no-repeat,
+    var(--right) calc(100% - var(--t)) 50% / var(--end) 100% no-repeat,
+    var(--right) 100% calc(50% + var(--t)) / var(--end) 100% no-repeat,
+    var(--right) 100% calc(50% - var(--t)) / var(--end) 100% no-repeat;
 }
 
 /* ---------- Utilities ---------- */

@@ -1,7 +1,7 @@
 /* App shell: topbar with the main menu across the top, page content below.
    On narrower screens the menu moves into a drawer (app-sidebar). */
 .nn-shell {
-  --topbar-height: 80px;
+  --topbar-height: 84px;
 
   display: grid;
   grid-template-rows: var(--topbar-height) 1fr;
@@ -14,9 +14,6 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background-color: color-mix(in srgb, var(--nn-page) 88%, transparent);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--nn-border-strong);
 }
 
 .nn-shell__sidebar {
@@ -69,7 +66,7 @@
 
 @media (max-width: 991px) {
   .nn-shell {
-    --topbar-height: 68px;
+    --topbar-height: 72px;
   }
 
   .nn-shell__main {

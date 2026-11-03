@@ -1,9 +1,17 @@
+/* Framed with the theme's nn-navbar-frame. The same small space on every
+   side keeps the bar off the window's edges. */
 .topbar {
+  /* A multiple of 4px, so the frame lands on whole pixels at 125% and 150%
+     screen scaling too, and both ends render alike */
+  --topbar-space: 8px;
+  --nn-navbar-height: calc(var(--topbar-height, 84px) - 2 * var(--topbar-space));
+
   display: flex;
   align-items: center;
   gap: var(--nn-space-5);
-  height: 100%;
-  padding: 0 var(--nn-space-5);
+  height: var(--nn-navbar-height);
+  margin: var(--topbar-space);
+  padding: 0 var(--nn-navbar-pad);
 }
 
 .topbar__menu {
@@ -22,7 +30,7 @@
 /* Sized by height; the logo is slightly taller than wide */
 .topbar__logo {
   width: auto;
-  height: 64px;
+  height: 56px;
 }
 
 .topbar__name {
@@ -130,7 +138,7 @@ button.topbar__link:hover {
 /* ---------- Search and actions ---------- */
 .topbar__search {
   flex: 1 1 200px;
-  min-width: 160px;
+  min-width: 120px;
   max-width: 420px;
   margin-left: auto;
 }
@@ -268,10 +276,22 @@ button.topbar__link:hover {
   text-transform: uppercase;
 }
 
-/* Tighter brand and user button so the menu fits on laptop screens */
+/* Filters as an icon only, so Library's extra button fits inside the frame */
+@media (max-width: 1599px) {
+  .topbar__filter > span,
+  .topbar__filter > .bi-chevron-down {
+    display: none;
+  }
+}
+
+/* Tighter spacing and no username so the menu fits on laptop screens */
 @media (max-width: 1439px) {
   .topbar {
-    gap: var(--nn-space-4);
+    gap: var(--nn-space-3);
+  }
+
+  .topbar__link {
+    padding: 7px 8px;
   }
 
   .topbar__username {
@@ -360,7 +380,6 @@ button.topbar__link:hover {
 
   .topbar {
     gap: var(--nn-space-3);
-    padding: 0 var(--nn-space-4);
   }
 
   .topbar__search,
@@ -384,7 +403,7 @@ button.topbar__link:hover {
   }
 
   .topbar__logo {
-    height: 54px;
+    height: 46px;
   }
 
   .topbar__name {
