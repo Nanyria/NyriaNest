@@ -54,3 +54,17 @@ export const ADMIN_NAV: NavGroup = {
     { label: 'Manage users', icon: 'bi-people', route: '/admin/manage-users' },
   ],
 };
+
+export const SETTINGS_NAV: NavItem = {
+  label: 'Settings',
+  icon: 'bi-gear',
+  route: '/user-page/settings',
+};
+
+// Small screens: Home and Library have their own tabs in the bottom bar, the
+// other plain links (Challenges so far) go on the More page
+const BOTTOM_TAB_ROUTES = ['/home', '/library'];
+export const MORE_LINKS: NavItem[] = MAIN_NAV.filter(
+  (entry): entry is NavItem =>
+    !isNavGroup(entry) && !BOTTOM_TAB_ROUTES.includes(entry.route ?? ''),
+);

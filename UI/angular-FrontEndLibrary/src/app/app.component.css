@@ -1,5 +1,6 @@
 /* App shell: topbar with the main menu across the top, page content below.
-   On narrower screens the menu moves into a drawer (app-sidebar). */
+   On narrower screens the menu moves into a bar fixed to the bottom
+   (app-bottom-nav). */
 .nn-shell {
   --topbar-height: 84px;
 
@@ -16,7 +17,7 @@
   z-index: 20;
 }
 
-.nn-shell__sidebar {
+.nn-shell__bottom-nav {
   display: none;
 }
 
@@ -25,51 +26,24 @@
   padding: var(--nn-space-5) var(--nn-space-6) var(--nn-space-6);
 }
 
-.nn-shell__backdrop {
-  display: none;
-}
-
-/* Below lg the menu becomes an off-canvas drawer opened from the topbar */
-@media (max-width: 991px) {
-  .nn-shell__sidebar {
-    display: block;
-    position: fixed;
-    left: 0;
-    top: var(--topbar-height);
-    width: min(280px, 85vw);
-    height: calc(100vh - var(--topbar-height));
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--nn-border-strong) transparent;
-    z-index: 19;
-    background-color: var(--nn-page);
-    border-right: 1px solid var(--nn-border-strong);
-    transform: translateX(-100%);
-    visibility: hidden;
-    transition: transform 0.2s ease, visibility 0.2s;
-  }
-
-  .sidebar-open .nn-shell__sidebar {
-    transform: translateX(0);
-    visibility: visible;
-    box-shadow: var(--nn-shadow-raised);
-  }
-
-  .nn-shell__backdrop {
-    display: block;
-    position: fixed;
-    inset: var(--topbar-height) 0 0 0;
-    z-index: 18;
-    background-color: rgba(42, 22, 14, 0.35);
-  }
-}
-
 @media (max-width: 991px) {
   .nn-shell {
     --topbar-height: 72px;
+    /* The bottom bar's height with its space around it (see bottom-nav) */
+    --bottom-nav-total: calc(66px + 16px + env(safe-area-inset-bottom, 0px));
   }
 
+  .nn-shell__bottom-nav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+  }
+
+  /* Room at the end of the page so the bar never covers content */
   .nn-shell__main {
-    padding: var(--nn-space-4);
+    padding: var(--nn-space-4) var(--nn-space-4) calc(var(--nn-space-4) + var(--bottom-nav-total));
   }
 }

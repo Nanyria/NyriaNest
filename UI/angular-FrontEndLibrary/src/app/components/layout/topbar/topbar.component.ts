@@ -1,9 +1,7 @@
 import {
   Component,
   ElementRef,
-  EventEmitter,
   HostListener,
-  Output,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -33,10 +31,10 @@ type TopbarEntry =
   imports: [RouterModule, NgTemplateOutlet],
 })
 export class TopbarComponent {
-  @Output() menuToggle = new EventEmitter<void>();
   currentUser: ILoggedInUser | null = null;
   openMenu: string | null = null; // id of the open dropdown, 'user' for the user menu
   searchQuery = '';
+  searchOpen = false; // small screens: the search field covers the bar
 
   // No Home link here: the logo leads home
   readonly entries: TopbarEntry[] = MAIN_NAV.filter(
@@ -63,6 +61,7 @@ export class TopbarComponent {
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
         this.openMenu = null;
+        this.searchOpen = false;
         this.searchQuery = String(this.router.parseUrl(this.router.url).queryParams['q'] ?? '');
       });
   }
@@ -85,6 +84,7 @@ export class TopbarComponent {
   // Searching from anywhere opens the library filtered by the term
   search(event: Event, term: string) {
     event.preventDefault();
+    this.searchOpen = false;
     this.router.navigate(['/library'], {
       queryParams: { q: term.trim() || null },
     });
@@ -98,6 +98,12 @@ export class TopbarComponent {
   // Admin pages have their own search, so the library search is hidden there
   get isAdminPage(): boolean {
     return this.router.url.startsWith('/admin');
+  }
+
+  // Focus after the field is shown; it can't take focus while hidden
+  openSearch(input: HTMLInputElement): void {
+    this.searchOpen = true;
+    setTimeout(() => input.focus());
   }
 
   toggleFilters(): void {
@@ -119,6 +125,7 @@ export class TopbarComponent {
   @HostListener('document:keydown.escape')
   onEscape() {
     this.openMenu = null;
+    this.searchOpen = false;
   }
 
   logout() {

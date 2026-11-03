@@ -14,11 +14,6 @@
   padding: 0 var(--nn-navbar-pad);
 }
 
-.topbar__menu {
-  display: none;
-  font-size: 1.5rem;
-}
-
 .topbar__brand {
   position: relative;
   display: flex;
@@ -172,6 +167,12 @@ button.topbar__link:hover {
 }
 
 .topbar__filter { flex-shrink: 0; white-space: nowrap; }
+
+/* Only used on small screens, where the search opens across the bar */
+.topbar__search-open,
+.topbar__search-close {
+  display: none;
+}
 
 .topbar__actions {
   display: flex;
@@ -402,10 +403,6 @@ button.topbar__link:hover {
     display: none;
   }
 
-  .topbar__menu {
-    display: inline-flex;
-  }
-
   .topbar {
     gap: var(--nn-space-3);
   }
@@ -414,6 +411,34 @@ button.topbar__link:hover {
   .topbar__filter,
   .topbar__caret {
     display: none;
+  }
+
+  .topbar__search-open {
+    display: inline-flex;
+    margin-left: auto;
+    font-size: 1.25rem;
+  }
+
+  /* The search button pushes the actions right instead */
+  .topbar__search-open ~ .topbar__actions {
+    margin-left: 0;
+  }
+
+  /* Searching: the field takes the whole bar until it's closed */
+  .topbar.is-searching > :not(.topbar__search, .nn-navbar-frame__ornaments) {
+    display: none;
+  }
+
+  .topbar.is-searching .topbar__search {
+    display: flex;
+    flex: 1;
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .topbar.is-searching .topbar__search-close {
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .topbar__brand {

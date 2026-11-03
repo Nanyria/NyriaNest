@@ -2,7 +2,8 @@
 .toast-stack {
   position: fixed;
   right: var(--nn-space-5);
-  bottom: var(--nn-space-5);
+  /* Above the bottom nav bar on small screens (the shell sets its height) */
+  bottom: calc(var(--nn-space-5) + var(--bottom-nav-total, 0px));
   z-index: 1100;
   display: flex;
   flex-direction: column;
@@ -92,7 +93,7 @@
   .toast-stack {
     left: var(--nn-space-4);
     right: var(--nn-space-4);
-    bottom: var(--nn-space-4);
+    bottom: calc(var(--nn-space-4) + var(--bottom-nav-total, 0px));
     align-items: stretch;
   }
 

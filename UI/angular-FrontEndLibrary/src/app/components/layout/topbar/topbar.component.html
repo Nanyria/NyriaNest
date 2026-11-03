@@ -1,13 +1,5 @@
-<header class="topbar nn-navbar-frame">
+<header class="topbar nn-navbar-frame" [class.is-searching]="searchOpen">
   <span class="nn-navbar-frame__ornaments" aria-hidden="true"></span>
-  <button
-    class="nn-btn nn-btn--ghost nn-btn--icon topbar__menu"
-    aria-label="Open menu"
-    (click)="menuToggle.emit()"
-  >
-    <i class="bi bi-list"></i>
-  </button>
-
   <a class="topbar__brand" routerLink="/home" aria-label="NyriaNest, home" data-label="Home">
     <img src="assets/images/logos/HeaderLogo.svg" alt="" class="topbar__logo" />
     <span class="topbar__name">NyriaNest</span>
@@ -67,6 +59,16 @@
   </nav>
 
   @if (!isAdminPage) {
+    <!-- Small screens: the search opens across the bar from this button -->
+    <button
+      type="button"
+      class="nn-btn nn-btn--ghost nn-btn--icon topbar__search-open"
+      aria-label="Search the library"
+      (click)="openSearch(searchInput)"
+    >
+      <i class="bi bi-search"></i>
+    </button>
+
     <form class="nn-field topbar__search" role="search" (submit)="search($event, searchInput.value)">
       <i class="bi bi-search"></i>
       <input
@@ -78,6 +80,14 @@
         [value]="searchQuery"
         (input)="searchQuery = searchInput.value"
       />
+      <button
+        type="button"
+        class="nn-btn nn-btn--ghost nn-btn--icon topbar__search-close"
+        aria-label="Close search"
+        (click)="searchOpen = false"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
     </form>
   }
 

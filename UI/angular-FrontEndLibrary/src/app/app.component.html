@@ -1,15 +1,12 @@
 <!--app.component.html-->
 
 @if (isAuthenticated()) {
-  <div class="nn-theme nn-parchment nn-shell" [class.sidebar-open]="sidebarOpen">
-    <app-topbar class="nn-shell__topbar" (menuToggle)="sidebarOpen = !sidebarOpen"></app-topbar>
-    <app-sidebar class="nn-shell__sidebar" (navigate)="sidebarOpen = false"></app-sidebar>
-    @if (sidebarOpen) {
-      <div class="nn-shell__backdrop" (click)="sidebarOpen = false"></div>
-    }
+  <div class="nn-theme nn-parchment nn-shell">
+    <app-topbar class="nn-shell__topbar"></app-topbar>
     <main class="nn-shell__main">
       <router-outlet></router-outlet>
     </main>
+    <app-bottom-nav class="nn-shell__bottom-nav"></app-bottom-nav>
     <app-toast></app-toast>
     <app-confirm-dialog></app-confirm-dialog>
   </div>
