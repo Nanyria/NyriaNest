@@ -132,9 +132,20 @@ button.topbar__link:hover {
   right: -4px;
 }
 
+/* Pages that don't exist yet: muted, with a small Soon tag */
 .topbar__link.is-placeholder {
-  color: var(--nn-ink-faint);
+  color: var(--nn-ink-muted);
   cursor: default;
+}
+
+.topbar__soon-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--nn-border-strong);
+  border-radius: var(--nn-radius-pill);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  text-transform: uppercase;
 }
 
 .topbar__link .bi:first-child {
@@ -164,6 +175,12 @@ button.topbar__link:hover {
   min-width: 120px;
   max-width: 420px;
   margin-left: auto;
+}
+
+/* The bar has the fields' own surface colour, so the search uses the lighter
+   field colour to stand out */
+.topbar__search .nn-input {
+  background-color: var(--nn-field);
 }
 
 /* Only used on small screens, where the search opens across the bar */
@@ -284,7 +301,7 @@ button.topbar__link:hover {
 }
 
 .topbar__menu-panel .is-placeholder {
-  color: var(--nn-ink-faint);
+  color: var(--nn-ink-muted);
   cursor: default;
 }
 
@@ -342,6 +359,11 @@ button.topbar__link:hover {
   .topbar__link.is-active .topbar__label {
     max-width: 8em;
     opacity: 1;
+  }
+
+  /* The tooltip shows the name; the Soon tag would only crowd the icon */
+  .topbar__soon-tag {
+    display: none;
   }
 
   .topbar__link .bi:first-child {

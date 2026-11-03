@@ -15,7 +15,7 @@
   /* Text */
   --nn-ink: #3b2619;
   --nn-ink-strong: #2a160e;
-  --nn-ink-muted: #7b6552;
+  --nn-ink-muted: #725d4a; /* 5:1 on the page, for subtitles and helper text */
   --nn-ink-faint: #a8937c;
 
   /* Brand */
@@ -547,7 +547,7 @@ body:has(.nn-theme) > app-root {
 }
 
 .nn-input::placeholder {
-  color: var(--nn-ink-faint);
+  color: var(--nn-ink-muted);
 }
 
 /* Keep Chrome's autofill from painting fields light blue */
@@ -1014,7 +1014,7 @@ body:has(.nn-theme) > app-root {
   --nn-navbar-frame-end: calc(var(--nn-navbar-height, 68px) * 952.2 / 1615.4);
   --nn-navbar-unit: calc(var(--nn-navbar-height, 68px) / 1615.4); /* one unit of the artwork */
   --nn-navbar-line: 1.7px;
-  --nn-navbar-bg: color-mix(in srgb, var(--nn-page) 88%, transparent);
+  --nn-navbar-bg: color-mix(in srgb, var(--nn-surface) 92%, transparent);
   /* The knotwork reaches about 55% into the ends; content stays clear of it */
   --nn-navbar-pad: calc(var(--nn-navbar-frame-end) * 0.6 + var(--nn-space-3));
 
@@ -1031,7 +1031,9 @@ body:has(.nn-theme) > app-root {
   --nn-navbar-radius: calc(60 * var(--nn-navbar-unit) + var(--nn-navbar-line) / 2);
 }
 
-/* The bar's background; the page blurs as it scrolls under it */
+/* The background is the cards' surface, a touch lighter than the page; the
+   page blurs as it scrolls under it. The soft shadow lifts the bar off the
+   page (upwards for the bottom bar). */
 .nn-navbar-frame::before {
   content: '';
   position: absolute;
@@ -1040,6 +1042,11 @@ body:has(.nn-theme) > app-root {
   border-radius: var(--nn-navbar-radius);
   background-color: var(--nn-navbar-bg);
   backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(59, 38, 25, 0.08);
+}
+
+.nn-navbar-frame--bottom::before {
+  box-shadow: 0 -2px 8px rgba(59, 38, 25, 0.08);
 }
 
 /* The gold: border and knotwork, in their own element so a drop shadow can

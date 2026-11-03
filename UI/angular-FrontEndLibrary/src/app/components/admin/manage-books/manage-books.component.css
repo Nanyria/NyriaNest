@@ -110,6 +110,13 @@
   gap: 10px;
 }
 
+/* The lighter field colour, as on Add book and in the topbar search.
+   background-color only, so nn-select keeps its arrow image. */
+.mb-panel .nn-input,
+.mb-panel .nn-select {
+  background-color: var(--nn-field);
+}
+
 /* ---------- Find books ---------- */
 .mb-filters {
   display: flex;
