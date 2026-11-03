@@ -107,16 +107,6 @@
 }
 
 /* ---------- Search and filters on small screens ---------- */
-.library__mobile-tools {
-  display: none;
-  gap: var(--nn-space-2);
-  margin-bottom: var(--nn-space-4);
-}
-
-.library__mobile-tools .nn-field {
-  flex: 1;
-}
-
 /* ---------- Genre cards: tinted tile with an illustration and the name ---------- */
 .genre-grid {
   display: grid;
@@ -228,9 +218,10 @@
 }
 
 /* ---------- Filter panel ("Refine your search") ---------- */
+/* Between the topbar and, on small screens, the bottom nav bar */
 .filter-backdrop {
   position: fixed;
-  inset: var(--topbar-height, 80px) 0 0;
+  inset: var(--topbar-height, 84px) 0 var(--bottom-nav-total, 0px);
   z-index: 21;
 }
 
@@ -382,13 +373,6 @@
   max-height: 90%;
   overflow: auto;
   padding: var(--nn-space-5);
-}
-
-/* The topbar hides its search and Filters button below lg */
-@media (max-width: 991px) {
-  .library__mobile-tools {
-    display: flex;
-  }
 }
 
 @media (max-width: 600px) {

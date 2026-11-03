@@ -151,6 +151,9 @@ export class LibraryComponent implements AfterViewInit {
   @ViewChild(InfoCardComponent) infoCardComponent?: InfoCardComponent;
 
   ngOnInit(): void {
+    // The panel starts closed; tell the topbar, and again when leaving the page
+    this.libraryUi.filtersOpen.set(false);
+    this.destroyRef.onDestroy(() => this.libraryUi.filtersOpen.set(false));
     this.libraryUi.filtersToggled$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => (this.filtersOpen ? this.closeFilters() : this.openFilters()));
@@ -174,6 +177,17 @@ export class LibraryComponent implements AfterViewInit {
         this.selectedGenre = genre ?? GenreEnums.All;
         this.searchTerm = params.get('q') ?? '';
         this.showAll = params.get('view') === 'all';
+        // The topbar's Filters button on other pages links here with
+        // filters=open; open the panel and drop the flag from the URL
+        if (params.get('filters') === 'open') {
+          this.openFilters();
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { filters: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+        }
       });
     this.getAllBooks();
   }
@@ -345,10 +359,12 @@ export class LibraryComponent implements AfterViewInit {
       minimumRating: this.selectedMinimumRating,
     };
     this.filtersOpen = true;
+    this.libraryUi.filtersOpen.set(true);
   }
 
   closeFilters() {
     this.filtersOpen = false;
+    this.libraryUi.filtersOpen.set(false);
     this.allFilterGenresShown = false;
   }
 

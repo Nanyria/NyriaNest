@@ -166,8 +166,6 @@ button.topbar__link:hover {
   margin-left: auto;
 }
 
-.topbar__filter { flex-shrink: 0; white-space: nowrap; }
-
 /* Only used on small screens, where the search opens across the bar */
 .topbar__search-open,
 .topbar__search-close {
@@ -305,14 +303,6 @@ button.topbar__link:hover {
   text-transform: uppercase;
 }
 
-/* Filters as an icon only, so Library's extra button fits inside the frame */
-@media (max-width: 1599px) {
-  .topbar__filter > span,
-  .topbar__filter > .bi-chevron-down {
-    display: none;
-  }
-}
-
 /* Tighter spacing and no username so the menu fits on laptop screens */
 @media (max-width: 1439px) {
   .topbar {
@@ -408,7 +398,6 @@ button.topbar__link:hover {
   }
 
   .topbar__search,
-  .topbar__filter,
   .topbar__caret {
     display: none;
   }
@@ -425,7 +414,7 @@ button.topbar__link:hover {
   }
 
   /* Searching: the field takes the whole bar until it's closed */
-  .topbar.is-searching > :not(.topbar__search, .nn-navbar-frame__ornaments) {
+  .topbar.is-searching > :not(.topbar__search, .topbar__search-close, .nn-navbar-frame__ornaments) {
     display: none;
   }
 

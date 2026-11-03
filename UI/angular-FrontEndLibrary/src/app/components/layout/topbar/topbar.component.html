@@ -80,26 +80,26 @@
         [value]="searchQuery"
         (input)="searchQuery = searchInput.value"
       />
+      <!-- Library's filter panel; on other pages it opens Library with the panel -->
       <button
         type="button"
-        class="nn-btn nn-btn--ghost nn-btn--icon topbar__search-close"
-        aria-label="Close search"
-        (click)="searchOpen = false"
+        class="nn-field__action topbar__filter"
+        aria-label="Filters"
+        [attr.aria-controls]="isLibraryPage ? 'library-filters' : null"
+        [attr.aria-expanded]="isLibraryPage ? filtersOpen : null"
+        (click)="openFilters()"
       >
-        <i class="bi bi-x-lg"></i>
+        <i class="bi bi-sliders"></i>
       </button>
     </form>
-  }
 
-  @if (isLibraryPage) {
     <button
       type="button"
-      class="nn-btn nn-btn--outline topbar__filter"
-      aria-label="Filters"
-      aria-controls="library-filters"
-      (click)="toggleFilters()"
+      class="nn-btn nn-btn--ghost nn-btn--icon topbar__search-close"
+      aria-label="Close search"
+      (click)="searchOpen = false"
     >
-      <i class="bi bi-sliders"></i><span>Filters</span><i class="bi bi-chevron-down"></i>
+      <i class="bi bi-x-lg"></i>
     </button>
   }
 

@@ -11,29 +11,6 @@
     <span class="nn-admin-header__divider" aria-hidden="true"></span>
   </header>
 
-  <!-- Search and filters for small screens; on desktop they live in the topbar -->
-  <div class="library__mobile-tools">
-    <div class="nn-field">
-      <i class="bi bi-search"></i>
-      <input
-        class="nn-input"
-        type="search"
-        placeholder="Search the library …"
-        aria-label="Search the library"
-        [(ngModel)]="searchTerm"
-        (ngModelChange)="updateQueryParams()"
-      />
-    </div>
-    <button
-      type="button"
-      class="nn-btn nn-btn--outline"
-      aria-controls="library-filters"
-      (click)="filtersOpen ? closeFilters() : openFilters()"
-    >
-      <i class="bi bi-sliders"></i>Filters
-    </button>
-  </div>
-
   <ng-template #genreCard let-genre>
     <button
       type="button"

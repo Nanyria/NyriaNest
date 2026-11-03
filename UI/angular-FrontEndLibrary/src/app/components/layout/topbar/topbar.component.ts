@@ -107,8 +107,20 @@ export class TopbarComponent {
     setTimeout(() => input.focus());
   }
 
-  toggleFilters(): void {
-    this.libraryUi.toggleFilters();
+  get filtersOpen(): boolean {
+    return this.libraryUi.filtersOpen();
+  }
+
+  // On Library the panel opens in place; elsewhere Library opens with it,
+  // keeping what's typed in the search
+  openFilters(): void {
+    if (this.isLibraryPage) {
+      this.libraryUi.toggleFilters();
+      return;
+    }
+    this.router.navigate(['/library'], {
+      queryParams: { q: this.searchQuery.trim() || null, filters: 'open' },
+    });
   }
 
   toggleMenu(id: string) {

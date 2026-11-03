@@ -599,6 +599,56 @@ body:has(.nn-theme) > app-root {
   cursor: pointer;
 }
 
+/* A button inside the field's right end, behind a thin divider, e.g. Filters
+   in a search: <div class="nn-field"><i …></i><input class="nn-input" />
+   <button class="nn-field__action" aria-expanded="…">…</button></div>.
+   It turns green while what it opens is open (aria-expanded="true"). */
+.nn-field:has(.nn-field__action) > .nn-input {
+  padding-right: 54px;
+}
+
+.nn-field__action {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--nn-radius-sm) - 2px);
+  background: none;
+  color: var(--nn-ink);
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.nn-field__action::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: -4px;
+  width: 1px;
+  background-color: var(--nn-border-strong);
+}
+
+.nn-field__action:hover {
+  background-color: var(--nn-surface-sunken);
+}
+
+.nn-field__action[aria-expanded='true'] {
+  background-color: color-mix(in srgb, var(--nn-primary) 12%, transparent);
+  color: var(--nn-primary);
+}
+
+.nn-field__action:focus-visible {
+  outline: none;
+  box-shadow: var(--nn-focus);
+}
+
 /* Native <select> styled like the outline buttons, with a leading icon:
    <label class="nn-select-field"><i class="bi …"></i><select class="nn-select">… */
 .nn-select-field {
