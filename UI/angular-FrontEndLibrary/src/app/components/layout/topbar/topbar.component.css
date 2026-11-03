@@ -20,11 +20,39 @@
 }
 
 .topbar__brand {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--nn-space-3);
   text-decoration: none;
   flex-shrink: 0;
+}
+
+/* The logo is the way home, so it says so on hover, like the compact menu's
+   tooltips */
+.topbar__brand::after {
+  content: attr(data-label);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 28px; /* under the logo */
+  z-index: 31;
+  padding: 4px 10px;
+  border-radius: var(--nn-radius-sm);
+  background-color: var(--nn-ink-strong);
+  color: var(--nn-page);
+  font-family: var(--nn-font-body);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.topbar__brand:hover::after,
+.topbar__brand:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* Sized by height; the logo is slightly taller than wide */

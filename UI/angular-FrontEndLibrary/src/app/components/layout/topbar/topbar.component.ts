@@ -38,7 +38,10 @@ export class TopbarComponent {
   openMenu: string | null = null; // id of the open dropdown, 'user' for the user menu
   searchQuery = '';
 
-  readonly entries: TopbarEntry[] = MAIN_NAV.map((entry) =>
+  // No Home link here: the logo leads home
+  readonly entries: TopbarEntry[] = MAIN_NAV.filter(
+    (entry) => isNavGroup(entry) || entry.route !== '/home',
+  ).map((entry) =>
     isNavGroup(entry)
       ? { kind: 'group', group: entry }
       : { kind: 'link', item: entry },
