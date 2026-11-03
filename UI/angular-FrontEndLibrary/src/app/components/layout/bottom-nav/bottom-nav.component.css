@@ -22,6 +22,12 @@
   padding: 0 var(--nn-navbar-pad) env(safe-area-inset-bottom, 0px);
 }
 
+@media (max-width: 640px) {
+  :host {
+    --bottom-nav-space: 0px;
+  }
+}
+
 /* ---------- Tabs ---------- */
 /* The current tab gets a soft green square and a small gold diamond below */
 .bottom-nav__tab {
@@ -169,6 +175,26 @@ a.bottom-nav__item:hover {
   text-transform: uppercase;
 }
 
+
+/* Phones: a plain paper panel with the bars' thin gold line instead of the
+   card frame, which competes with the bar right below it */
+@media (max-width: 640px) {
+  .bottom-nav__sheet.nn-panel--framed {
+    left: var(--nn-space-2); /* the docked bar has no space around it */
+    right: var(--nn-space-2);
+    border: 1px solid var(--nn-frame-color);
+    border-radius: 6px;
+    background:
+      linear-gradient(rgba(250, 242, 226, 0.8), rgba(250, 242, 226, 0.8)),
+      url('/assets/images/webpage-images/backgrounds/paper%20background.png') center / cover,
+      var(--nn-surface);
+    padding: var(--nn-space-3) var(--nn-space-2);
+  }
+
+  .bottom-nav__sheet.nn-panel--framed::after {
+    display: none;
+  }
+}
 
 @keyframes bottom-nav-sheet-in {
   from {

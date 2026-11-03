@@ -1037,6 +1037,29 @@ body:has(.nn-theme) > app-root {
     var(--right) 100% calc(50% - var(--t)) / var(--end) 100% no-repeat;
 }
 
+/* Phones: the bars dock to the window's edges without the frame, whose
+   knotwork is too small to read there and takes too much width. The bottom bar
+   starts with a plain gold line (nn-navbar-frame--bottom); the top bar sets its
+   own background (clear at the top of a page, frosted once it scrolls). */
+@media (max-width: 640px) {
+  .nn-navbar-frame {
+    --nn-navbar-pad: var(--nn-space-4);
+  }
+
+  .nn-navbar-frame::before {
+    inset: 0;
+    border-radius: 0;
+  }
+
+  .nn-navbar-frame--bottom::before {
+    border-top: 1px solid var(--nn-frame-color); /* like the cards' lines on phones */
+  }
+
+  .nn-navbar-frame__ornaments {
+    display: none;
+  }
+}
+
 /* ---------- Utilities ---------- */
 .nn-muted {
   color: var(--nn-ink-muted);

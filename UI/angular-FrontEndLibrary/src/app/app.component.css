@@ -47,3 +47,12 @@
     padding: var(--nn-space-4) var(--nn-space-4) calc(var(--nn-space-4) + var(--bottom-nav-total));
   }
 }
+
+/* Phones: both bars dock to the window's edges, so no space around them, and
+   the top bar makes room for the notch */
+@media (max-width: 640px) {
+  .nn-shell {
+    --topbar-height: calc(64px + env(safe-area-inset-top, 0px));
+    --bottom-nav-total: calc(66px + env(safe-area-inset-bottom, 0px));
+  }
+}

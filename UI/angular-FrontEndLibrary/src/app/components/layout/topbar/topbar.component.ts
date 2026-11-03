@@ -35,6 +35,7 @@ export class TopbarComponent {
   openMenu: string | null = null; // id of the open dropdown, 'user' for the user menu
   searchQuery = '';
   searchOpen = false; // small screens: the search field covers the bar
+  isScrolled = window.scrollY > 0; // phones: clear at the top, frosted below it
 
   // No Home link here: the logo leads home
   readonly entries: TopbarEntry[] = MAIN_NAV.filter(
@@ -120,6 +121,11 @@ export class TopbarComponent {
     if (!this.elementRef.nativeElement.contains(event.target)) {
       this.openMenu = null;
     }
+  }
+
+  @HostListener('window:scroll')
+  onScroll() {
+    this.isScrolled = window.scrollY > 0;
   }
 
   @HostListener('document:keydown.escape')

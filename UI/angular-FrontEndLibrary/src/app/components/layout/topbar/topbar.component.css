@@ -463,3 +463,49 @@ button.topbar__link:hover {
     font-size: 1.3rem;
   }
 }
+
+/* Phones: docked to the top edge (see the theme's nn-navbar-frame), below the
+   notch and clear of rounded corners in landscape. A bigger logo with a
+   smaller name beside it. */
+@media (max-width: 640px) {
+  .topbar {
+    --topbar-space: 0px;
+
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(var(--nn-navbar-pad), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--nn-navbar-pad), env(safe-area-inset-right, 0px));
+  }
+
+  .topbar__brand {
+    gap: var(--nn-space-2);
+  }
+
+  .topbar__logo {
+    height: 56px;
+  }
+
+  .topbar__name {
+    font-size: 1.1rem;
+  }
+
+  /* Clear at the top of a page, so the bar sits on the page background; once
+     content scrolls under it, it fades to frosted so the icons stay readable */
+  .topbar::before {
+    background-color: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+    transition: background-color 0.25s, backdrop-filter 0.25s, box-shadow 0.25s;
+  }
+
+  .topbar.is-scrolled::before {
+    background-color: color-mix(in srgb, var(--nn-page) 62%, transparent);
+    backdrop-filter: blur(12px) saturate(1.2);
+    box-shadow: 0 1px 10px rgba(42, 22, 14, 0.1);
+  }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .topbar::before {
+    transition: none;
+  }
+}
