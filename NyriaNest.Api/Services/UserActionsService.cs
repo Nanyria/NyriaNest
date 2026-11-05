@@ -76,6 +76,7 @@ namespace NyriaNest.Api.Services
             CheckIfExists(createUserDTO.Email, createUserDTO.UserName);
 
             var user = _mapper.Map<User>(createUserDTO);
+            user.Role = Roles.User; // always, whatever the request contains
             // Create user with password
             var result = await _userManager.CreateAsync(user, createUserDTO.Password);
             if (!result.Succeeded)

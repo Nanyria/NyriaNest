@@ -41,6 +41,15 @@ namespace NyriaNest.Api.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
+        // The logged-in user's own profile, for every role. GET api/User/{id} is admin-only,
+        // so this is what the frontend loads the current user with.
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMe()
+        {
+            var response = await _userService.GetUserByIdAsync(CurrentUserId);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
         [HttpPut("update")]
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
         {
