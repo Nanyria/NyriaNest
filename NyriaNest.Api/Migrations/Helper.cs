@@ -13,7 +13,7 @@ namespace NyriaNest.Api.Helpers
             var config = serviceProvider.GetRequiredService<IConfiguration>();
             var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seeding");
 
-            string[] roles = { "SuperAdmin", "Administratör", "Användare" };
+            var roles = Roles.AllRoles;
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
@@ -39,7 +39,7 @@ namespace NyriaNest.Api.Helpers
                     FirstName = "Nathalee",
                     LastName = "Wilund",
                     EmailConfirmed = true,
-                    Role = "SuperAdmin"
+                    Role = Roles.SuperAdmin
                 };
                 var createResult = await userManager.CreateAsync(superAdminUser, superAdminPassword);
                 if (!createResult.Succeeded)
@@ -47,7 +47,7 @@ namespace NyriaNest.Api.Helpers
                     var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                     throw new Exception($"Failed to create SuperAdmin user: {errors}");
                 }
-                await userManager.AddToRoleAsync(superAdminUser, "SuperAdmin");
+                await userManager.AddToRoleAsync(superAdminUser, Roles.SuperAdmin);
             }
         }
         public static async Task AssignUserRoleToUsersWithoutRoleAsync(IServiceProvider serviceProvider)
@@ -60,7 +60,7 @@ namespace NyriaNest.Api.Helpers
                 var roles = await userManager.GetRolesAsync(user);
                 if (roles == null || roles.Count == 0)
                 {
-                    await userManager.AddToRoleAsync(user, Roles.User); // "Användare"
+                    await userManager.AddToRoleAsync(user, Roles.User);
 
                 }
                 user.Role = roles != null && roles.Count > 0 ? roles[0] : Roles.User;

@@ -24,8 +24,8 @@ export class ManageUsersComponent implements OnInit {
   users: UserDto[] = [];
   editUser: UserDto | null = null;
   roleOptions = [
-    { value: 'Användare', label: 'Användare' },
-    { value: 'Administratör', label: 'Administratör' },
+    { value: 'User', label: 'User' },
+    { value: 'Admin', label: 'Admin' },
     { value: 'SuperAdmin', label: 'Super Admin' },
   ];
 

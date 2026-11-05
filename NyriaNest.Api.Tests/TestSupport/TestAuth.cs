@@ -21,7 +21,7 @@ public static class TestAuth
         using var scope = factory.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-        // Role names contain å/ö, which Identity doesn't allow in usernames, so use a neutral prefix.
+        // A neutral prefix plus a GUID keeps usernames unique and within Identity's allowed characters.
         var user = TestData.User($"user-{Guid.NewGuid():N}"[..13], role);
         Check(await userManager.CreateAsync(user, Password));
         Check(await userManager.AddToRoleAsync(user, role));
