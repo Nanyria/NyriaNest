@@ -18,6 +18,13 @@ namespace NyriaNest.Api.Controllers
         {
             _userService = userService;
         }
+
+        // The admin making the request, from the token. What they may do to whom is
+        // decided in UserService (AdminMayNotUpdate / AdminMayNotDelete).
+        private string CurrentUserId =>
+            User.FindFirst("userId")?.Value
+            ?? throw new InvalidOperationException("The token has no userId claim.");
+        private bool IsSuperAdmin => User.IsInRole(Roles.SuperAdmin);
         [HttpGet]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -43,13 +50,13 @@ namespace NyriaNest.Api.Controllers
         [HttpDelete("{userId}")]
         public async Task<IActionResult> DeleteUser([FromRoute] string userId)
         {
-            var response = await _userService.DeleteUserAsync(userId);
+            var response = await _userService.DeleteUserAsync(IsSuperAdmin, userId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("updateAsAdmin/{userId}")]
         public async Task<IActionResult> UpdateUserAsAdmin([FromRoute] string userId, [FromBody] UpdateUserAsAdminDto updateUserDto)
         {
-            var response = await _userService.UpdateUserAsAdminAsync(userId, updateUserDto);
+            var response = await _userService.UpdateUserAsAdminAsync(CurrentUserId, IsSuperAdmin, userId, updateUserDto);
             return StatusCode((int)response.StatusCode, response);
         }
 
