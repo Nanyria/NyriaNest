@@ -98,7 +98,12 @@ namespace NyriaNest.Api
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                db.Database.Migrate(); // Ensures DB is created and up-to-date
+                // The migrations are written for SQL Server. Any other provider (the SQLite
+                // database the tests use) gets its schema straight from the model instead.
+                if (db.Database.IsSqlServer())
+                    db.Database.Migrate(); // Ensures DB is created and up-to-date
+                else
+                    db.Database.EnsureCreated();
 
                 var services = scope.ServiceProvider;
                 Helper.SeedRolesAndAdminAsync(services).GetAwaiter().GetResult();
