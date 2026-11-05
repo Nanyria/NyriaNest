@@ -65,7 +65,7 @@ export class ManageUsersComponent implements OnInit {
   handleFormSubmit(user: UserDto) {
     if (this.editUser) {
       this.userService
-        .updateUserAsAdmin(this.editUser.id, user)
+        .updateUserAsAdmin(this.editUser.userId, user)
         .subscribe(() => {
           this.getAllUsers();
           this.resetForm();
@@ -93,7 +93,7 @@ export class ManageUsersComponent implements OnInit {
     });
     if (!confirmed) return;
 
-    this.userService.deleteUser(user.id).subscribe({
+    this.userService.deleteUser(user.userId).subscribe({
       next: () => this.getAllUsers(),
       error: (err) => this.showError(err, "The user couldn't be deleted."),
     });
@@ -113,7 +113,7 @@ export class ManageUsersComponent implements OnInit {
   saveUser(user: UserDto) {
     if (this.editUser) {
       this.userService
-        .updateUserAsAdmin(this.editUser.id, user)
+        .updateUserAsAdmin(this.editUser.userId, user)
         .subscribe({
           next: () => {
             this.getAllUsers();
