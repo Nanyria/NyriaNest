@@ -529,13 +529,13 @@ export class LibraryComponent implements AfterViewInit {
       });
       if (!confirmed) return;
       this.runAction(
-        this.userActionsService.returnBook(this.currentUserId, book.bookId),
+        this.userActionsService.returnBook(book.bookId),
         { message: `You returned "${book.title}".`, icon: 'arrow-return-left' },
         `Couldn't return "${book.title}".`,
       );
     } else {
       this.runAction(
-        this.userActionsService.borrowBook(this.currentUserId, book.bookId),
+        this.userActionsService.borrowBook(book.bookId),
         { message: `You borrowed "${book.title}".`, icon: 'book' },
         `Couldn't borrow "${book.title}".`,
       );
@@ -555,13 +555,13 @@ export class LibraryComponent implements AfterViewInit {
       });
       if (!confirmed) return;
       this.runAction(
-        this.userActionsService.unreserveBook(this.currentUserId, book.bookId),
+        this.userActionsService.unreserveBook(book.bookId),
         { message: `Your reservation for "${book.title}" was cancelled.`, icon: 'calendar-x' },
         `Couldn't cancel the reservation for "${book.title}".`,
       );
     } else {
       this.runAction(
-        this.userActionsService.reserveBook(this.currentUserId, book.bookId),
+        this.userActionsService.reserveBook(book.bookId),
         { message: `You reserved "${book.title}".`, icon: 'calendar-check' },
         `Couldn't reserve "${book.title}".`,
       );
@@ -573,11 +573,8 @@ export class LibraryComponent implements AfterViewInit {
       this.user?.readList?.some((item) => +item.bookId === +book.bookId) ??
       false;
     const obs = isInReadList
-      ? this.userActionsService.removeFromFavorites(
-          this.currentUserId,
-          book.bookId,
-        )
-      : this.userActionsService.addToFavorites(this.currentUserId, book.bookId);
+      ? this.userActionsService.removeFromFavorites(book.bookId)
+      : this.userActionsService.addToFavorites(book.bookId);
 
     // The reading list lives on the user, so the book list needn't reload
     this.runAction(
