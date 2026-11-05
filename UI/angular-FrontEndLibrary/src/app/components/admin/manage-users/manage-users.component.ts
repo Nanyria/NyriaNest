@@ -10,6 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ILoggedInUser, UserDto } from '../../../Models/interfaces';
 import { UserService } from '../../../Services/user.service';
+import { ConfirmService } from '../../../Services/confirm.service';
 @Component({
   selector: 'app-manage-users',
   standalone: true,
@@ -31,7 +32,10 @@ export class ManageUsersComponent implements OnInit {
 
   isSuperAdmin: boolean = false;
 
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private confirmDialog: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.getAllUsers();
@@ -77,10 +81,28 @@ export class ManageUsersComponent implements OnInit {
   populateForm(user: UserDto) {
     this.editUser = { ...user };
   }
-  deleteUser(id: string) {
-    this.userService.deleteUser(id).subscribe(() => {
-      this.getAllUsers();
+  // Deleting can't be undone and removes the user's loans, reservations and reviews, so it asks first
+  async deleteUser(user: UserDto) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: `Delete ${user.firstName} ${user.lastName}?`,
+      message: `The account "${user.userName}" and its loans, reservations and reviews will be removed. This can't be undone.`,
+      confirmLabel: 'Delete user',
+      cancelLabel: 'Keep user',
+      danger: true,
+      icon: 'trash',
     });
+    if (!confirmed) return;
+
+    this.userService.deleteUser(user.id).subscribe({
+      next: () => this.getAllUsers(),
+      error: (err) => this.showError(err, "The user couldn't be deleted."),
+    });
+  }
+
+  // The API says why, e.g. that an Admin can't delete or change another admin
+  private showError(err: any, fallback: string) {
+    const messages: string[] = err?.error?.errorMessages ?? [];
+    alert(messages.length ? messages.join('\n') : fallback);
   }
   resetForm() {
     this.editUser = null;
@@ -92,9 +114,12 @@ export class ManageUsersComponent implements OnInit {
     if (this.editUser) {
       this.userService
         .updateUserAsAdmin(this.editUser.id, user)
-        .subscribe(() => {
-          this.getAllUsers();
-          this.resetForm();
+        .subscribe({
+          next: () => {
+            this.getAllUsers();
+            this.resetForm();
+          },
+          error: (err) => this.showError(err, "The changes couldn't be saved."),
         });
     } else {
       this.userService.createAdminUser(user).subscribe(() => {
