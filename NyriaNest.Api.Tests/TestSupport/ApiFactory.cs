@@ -65,6 +65,20 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         });
     }
 
+    /// <summary>
+    /// Runs <paramref name="action"/> with a fresh AppDbContext on the API's database,
+    /// to arrange data before a request or check what a request saved.
+    /// </summary>
+    public async Task<T> WithDbAsync<T>(Func<AppDbContext, Task<T>> action)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await action(db);
+    }
+
+    public Task WithDbAsync(Func<AppDbContext, Task> action) =>
+        WithDbAsync(async db => { await action(db); return true; });
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
