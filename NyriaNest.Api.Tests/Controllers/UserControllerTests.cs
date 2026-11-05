@@ -218,6 +218,40 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         (await Exists(me.Id)).Should().BeTrue();
     }
 
+    // ---- Finding 3: no Identity internals in responses ----
+
+    [Fact]
+    public async Task GetAllUsers_ReturnsDtos_WithoutPasswordHashOrSecurityStamp()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var someone = await factory.CreateUserAsync(Roles.User);
+
+        var response = await admin.GetAsync("api/User", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        body.Should().Contain($"\"userId\": \"{someone.Id}\"");
+        AssertNoIdentityInternals(body);
+    }
+
+    [Fact]
+    public async Task DeleteUser_ResponseHasNoPasswordHashOrSecurityStamp()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+
+        var response = await admin.DeleteAsync($"api/User/{target.Id}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        AssertNoIdentityInternals(await response.Content.ReadAsStringAsync(Ct));
+    }
+
+    private static void AssertNoIdentityInternals(string body)
+    {
+        foreach (var field in new[] { "passwordHash", "securityStamp", "concurrencyStamp", "\"password\"" })
+            body.Should().NotContainEquivalentOf(field);
+    }
+
     // ---- Helpers ----
 
     private static Task<HttpResponseMessage> Update(HttpClient client, string userId, object body) =>

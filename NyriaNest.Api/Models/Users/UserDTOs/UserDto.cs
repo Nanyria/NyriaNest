@@ -13,7 +13,7 @@ namespace NyriaNest.Api.Models.Users.UserDTOs
 		public required string LastName { get; set; }
 
 		public required string Email { get; set; }
-		public required string Password { get; set; }
+		// No Password: a user's password (or its hash) is never sent to a client
         public string? ProfilePictureUrl { get; set; } // or ProfilePictureName
         [MaxLength(500)]
         public string? Bio { get; set; }

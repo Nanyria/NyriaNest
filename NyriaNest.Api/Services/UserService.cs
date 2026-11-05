@@ -19,11 +19,11 @@ namespace NyriaNest.Api.Services
     public interface IUserService
     {
         // callerId / callerIsSuperAdmin = the admin asking. The rules are in AdminMayNotUpdate/-Delete.
-        Task<APIResponse<User>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
+        Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
         Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
         Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
         Task<APIResponse<UserDto>> GetUserByIdAsync(string userId);
-        Task<APIResponse<List<User>>> GetAllUsersAsync();
+        Task<APIResponse<List<UserDto>>> GetAllUsersAsync();
         Task<APIResponse<CreateAdminUserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto);
         Task<APIResponse<List<StatusHistoryItem>>> GetUserHistoryAsync(string userId);
     }
@@ -99,9 +99,9 @@ namespace NyriaNest.Api.Services
                 throw new Exception("UserName already exists.");
             }
         }
-        public async Task<APIResponse<User>> DeleteUserAsync(bool callerIsSuperAdmin, string userId)
+        public async Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId)
         {
-            var response = new APIResponse<User>
+            var response = new APIResponse<UserDto>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -175,7 +175,7 @@ namespace NyriaNest.Api.Services
 
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
-                response.Result = user;
+                response.Result = _mapper.Map<UserDto>(user);
             }
             else
             {
@@ -371,9 +371,10 @@ namespace NyriaNest.Api.Services
             }
             return response;
         }
-        public async Task<APIResponse<List<User>>> GetAllUsersAsync()
+        // DTOs, never the Identity users themselves: those carry PasswordHash and SecurityStamp
+        public async Task<APIResponse<List<UserDto>>> GetAllUsersAsync()
         {
-            var response = new APIResponse<List<User>>
+            var response = new APIResponse<List<UserDto>>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -383,7 +384,7 @@ namespace NyriaNest.Api.Services
                 var users = await _userRepo.GetAllAsync<User>();
                 if (users != null)
                 {
-                    response.Result = users.ToList();
+                    response.Result = _mapper.Map<List<UserDto>>(users);
                     response.IsSuccess = true;
                     response.StatusCode = HttpStatusCode.OK;
                 }
