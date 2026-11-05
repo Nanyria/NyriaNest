@@ -108,14 +108,26 @@ namespace NyriaNest.Api.Services
             var user = await _userRepo.GetByIdAsync<User>(userId);
             if (user != null)
             {
+                // Changing the password or the email needs the current password.
+                // Resending the email you already have (the profile page does) doesn't count.
+                var changesPassword = !string.IsNullOrWhiteSpace(userToUpdate.Password);
+                var changesEmail = !string.IsNullOrWhiteSpace(userToUpdate.Email)
+                    && !string.Equals(userToUpdate.Email, user.Email, StringComparison.OrdinalIgnoreCase);
+                if ((changesPassword || changesEmail)
+                    && (string.IsNullOrEmpty(userToUpdate.CurrentPassword)
+                        || !await _userManager.CheckPasswordAsync(user, userToUpdate.CurrentPassword)))
+                {
+                    response.ErrorMessages.Add("The current password you entered is incorrect. Please try again.");
+                    return response;
+                }
 
                 // Map UpdateUserDto to User
                 _mapper.Map(userToUpdate, user);
 
-                if (!string.IsNullOrWhiteSpace(userToUpdate.Password))
+                if (changesPassword)
                 {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, userToUpdate.Password);
+                    var passwordResult = await _userManager.ChangePasswordAsync(
+                        user, userToUpdate.CurrentPassword!, userToUpdate.Password!);
                     if (!passwordResult.Succeeded)
                     {
                         response.ErrorMessages.AddRange(passwordResult.Errors.Select(e => e.Description));

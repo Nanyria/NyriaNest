@@ -41,11 +41,10 @@ namespace NyriaNest.Api.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        // Still trusts the userId in the URL: fixed separately (security finding 2, #48).
-        [HttpPut("update/{userId}")]
-        public async Task<IActionResult> UpdateUser([FromRoute] string userId, [FromBody] UpdateUserDto updateUserDto)
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
         {
-            var response = await _userActionsService.UpdateUserAsync(userId, updateUserDto);
+            var response = await _userActionsService.UpdateUserAsync(CurrentUserId, updateUserDto);
             return StatusCode((int)response.StatusCode, response);
         }
 

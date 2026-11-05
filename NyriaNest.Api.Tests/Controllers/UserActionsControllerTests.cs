@@ -35,7 +35,7 @@ public class UserActionsControllerTests(ApiFactory factory) : IClassFixture<ApiF
         { "GET", "api/UserActions/favorites" },
         { "PUT", "api/UserActions/favorite/1001" },
         { "DELETE", "api/UserActions/unfavorite/1001" },
-        { "PUT", "api/UserActions/update/some-user-id" },
+        { "PUT", "api/UserActions/update" },
     };
 
     [Theory]
