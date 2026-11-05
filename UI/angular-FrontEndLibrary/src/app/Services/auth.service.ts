@@ -23,7 +23,7 @@ constructor(private http: HttpClient, private userService: UserService, private 
   if (userId && storedUser) {
     this.currentUserSubject.next(JSON.parse(storedUser));
     // Optionally, refresh from backend:
-    this.userService.getUserById(userId).pipe(
+    this.userService.getMe().pipe(
       catchError(err => {
         if (err.status === 401) {
           this.logout();
@@ -40,7 +40,7 @@ constructor(private http: HttpClient, private userService: UserService, private 
     });
   } else if (userId) {
     // Fallback: fetch from backend if not in localStorage
-    this.userService.getUserById(userId).pipe(
+    this.userService.getMe().pipe(
       catchError(err => {
         if (err.status === 401) {
           this.logout();
@@ -66,7 +66,7 @@ constructor(private http: HttpClient, private userService: UserService, private 
           this.authStatus.next(true);
           const userId = this.getUserId();
           if (userId) {
-            this.userService.getUserById(userId).subscribe(res => {
+            this.userService.getMe().subscribe(res => {
               if (res.isSuccess) {
                 this.currentUserSubject.next(this.mapUserResponse(res.result));
               }
@@ -79,7 +79,7 @@ constructor(private http: HttpClient, private userService: UserService, private 
   refreshCurrentUser(): void {
     const userId = this.getUserId();
     if (userId) {
-      this.userService.getUserById(userId).subscribe(response => {
+      this.userService.getMe().subscribe(response => {
         if (response.isSuccess) {
           this.currentUserSubject.next(this.mapUserResponse(response.result));
         }
