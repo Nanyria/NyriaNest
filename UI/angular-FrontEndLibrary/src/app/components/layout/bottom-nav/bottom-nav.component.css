@@ -1,0 +1,210 @@
+/* Fixed to the bottom of the window by the app shell. Framed like the topbar
+   with the theme's nn-navbar-frame and the same space on every side; on phones
+   it docks to the bottom edge. The phone's home indicator gets its own room
+   inside the bar. */
+:host {
+  --bottom-nav-space: 8px; /* like the topbar's, see there */
+  --bottom-nav-height: 66px;
+  /* Where the sheet sits: above the bar */
+  --bottom-nav-top: calc(var(--bottom-nav-height) + 2 * var(--bottom-nav-space) + env(safe-area-inset-bottom, 0px));
+}
+
+.bottom-nav {
+  --nn-navbar-height: var(--bottom-nav-height);
+
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  justify-content: center; /* tablets: the tabs stay together in the middle */
+  height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  margin: var(--bottom-nav-space);
+  padding: 0 var(--nn-navbar-pad) env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 640px) {
+  :host {
+    --bottom-nav-space: 0px;
+  }
+}
+
+/* ---------- Tabs ---------- */
+/* The current tab gets a soft green square and a small gold diamond below */
+.bottom-nav__tab {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 128px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 6px 2px 10px;
+  padding: 0 2px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--nn-ink-muted);
+  font-family: var(--nn-font-body);
+  font-size: 0.8rem;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.bottom-nav__tab > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bottom-nav__tab > .bi {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.bottom-nav__tab:hover,
+.bottom-nav__tab.is-open {
+  background-color: var(--nn-surface-sunken);
+  color: var(--nn-ink-strong);
+}
+
+.bottom-nav__tab.is-active {
+  background-color: color-mix(in srgb, var(--nn-primary) 12%, transparent);
+  color: var(--nn-primary);
+  font-weight: 600;
+}
+
+.bottom-nav__tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--nn-gold);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.bottom-nav__tab:focus-visible {
+  outline: 2px solid var(--nn-primary);
+  outline-offset: -2px;
+}
+
+/* ---------- Sheet ---------- */
+.bottom-nav__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: rgba(42, 22, 14, 0.35);
+}
+
+.bottom-nav__sheet {
+  position: fixed;
+  left: var(--bottom-nav-space);
+  right: var(--bottom-nav-space);
+  bottom: calc(var(--bottom-nav-top) + var(--nn-space-1));
+  z-index: 1;
+  max-height: calc(100vh - var(--bottom-nav-top) - var(--nn-space-6));
+  overflow-y: auto;
+  padding: var(--nn-frame-pad);
+  box-shadow: var(--nn-shadow-raised);
+  animation: bottom-nav-sheet-in 180ms ease-out;
+}
+
+.bottom-nav__sheet-title {
+  margin: 0 0 var(--nn-space-2);
+  font-family: var(--nn-font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--nn-ink-strong);
+}
+
+
+.bottom-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Same items as the topbar's dropdowns */
+.bottom-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  padding: 10px 12px;
+  border-radius: var(--nn-radius-sm);
+  color: var(--nn-ink);
+  font-family: var(--nn-font-body);
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.bottom-nav__item .bi {
+  width: 1.25rem;
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+a.bottom-nav__item:hover {
+  background-color: var(--nn-surface-sunken);
+}
+
+.bottom-nav__item.is-current {
+  color: var(--nn-primary);
+  font-weight: 600;
+}
+
+.bottom-nav__item.is-placeholder {
+  color: var(--nn-ink-muted);
+  cursor: default;
+}
+
+.bottom-nav__soon {
+  margin-left: auto;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+
+/* Phones: a plain paper panel with the bars' thin gold line instead of the
+   card frame, which competes with the bar right below it */
+@media (max-width: 640px) {
+  .bottom-nav__sheet.nn-panel--framed {
+    left: var(--nn-space-2); /* the docked bar has no space around it */
+    right: var(--nn-space-2);
+    border: 1px solid var(--nn-frame-color);
+    border-radius: 6px;
+    background:
+      linear-gradient(rgba(250, 242, 226, 0.8), rgba(250, 242, 226, 0.8)),
+      url('/assets/images/webpage-images/backgrounds/paper%20background.png') center / cover,
+      var(--nn-surface);
+    padding: var(--nn-space-3) var(--nn-space-2);
+  }
+
+  .bottom-nav__sheet.nn-panel--framed::after {
+    display: none;
+  }
+}
+
+@keyframes bottom-nav-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-nav__sheet {
+    animation: none;
+  }
+}

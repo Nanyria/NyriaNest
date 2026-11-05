@@ -1,0 +1,52 @@
+@if (openTab?.group; as group) {
+  <!-- Dims the page; tapping it closes the sheet -->
+  <div class="bottom-nav__backdrop" (click)="openSheet = null"></div>
+
+  <nav id="bottom-nav-sheet" class="bottom-nav__sheet nn-panel nn-panel--framed" [attr.aria-label]="group.label">
+    <h2 class="bottom-nav__sheet-title">{{ group.label }}</h2>
+    <ul class="bottom-nav__list">
+      @for (item of group.items; track item.label) {
+        <li>
+          @if (item.route) {
+            <a class="bottom-nav__item" [routerLink]="item.route" routerLinkActive="is-current">
+              <i class="bi {{ item.icon }}"></i>{{ item.label }}
+            </a>
+          } @else {
+            <span class="bottom-nav__item is-placeholder" aria-disabled="true" title="Coming soon">
+              <i class="bi {{ item.icon }}"></i>{{ item.label }}
+              <span class="bottom-nav__soon">Soon</span>
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  </nav>
+}
+
+<nav class="bottom-nav nn-navbar-frame nn-navbar-frame--bottom" aria-label="Main navigation">
+  <span class="nn-navbar-frame__ornaments" aria-hidden="true"></span>
+  @for (tab of tabs; track tab.id) {
+    @if (tab.route) {
+      <a
+        class="bottom-nav__tab"
+        [routerLink]="tab.route"
+        [class.is-active]="isActive(tab)"
+        [attr.aria-current]="isActive(tab) ? 'page' : null"
+      >
+        <i class="bi {{ tab.icon }}"></i><span>{{ tab.label }}</span>
+      </a>
+    } @else {
+      <button
+        type="button"
+        class="bottom-nav__tab"
+        [class.is-active]="isActive(tab)"
+        [class.is-open]="openSheet === tab.id"
+        [attr.aria-expanded]="openSheet === tab.id"
+        aria-controls="bottom-nav-sheet"
+        (click)="toggleSheet(tab.id)"
+      >
+        <i class="bi {{ tab.icon }}"></i><span>{{ tab.label }}</span>
+      </button>
+    }
+  }
+</nav>

@@ -1,26 +1,15 @@
 <div class="library">
-  <!-- Search and filters for small screens; on desktop they live in the topbar -->
-  <div class="library__mobile-tools">
-    <div class="nn-field">
-      <i class="bi bi-search"></i>
-      <input
-        class="nn-input"
-        type="search"
-        placeholder="Search the library …"
-        aria-label="Search the library"
-        [(ngModel)]="searchTerm"
-        (ngModelChange)="updateQueryParams()"
-      />
+  <!-- Same header as Add book and Manage books: compass, breadcrumb, title, centred divider -->
+  <header class="nn-admin-header library__header">
+    <span class="nn-admin-header__compass" aria-hidden="true"></span>
+    <div class="nn-admin-header__heading">
+      <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/home">Home</a> / Library
+      </nav>
+      <h1 class="nn-admin-header__title">Library</h1>
     </div>
-    <button
-      type="button"
-      class="nn-btn nn-btn--outline"
-      aria-controls="library-filters"
-      (click)="filtersOpen ? closeFilters() : openFilters()"
-    >
-      <i class="bi bi-sliders"></i>Filters
-    </button>
-  </div>
+    <span class="nn-admin-header__divider" aria-hidden="true"></span>
+  </header>
 
   <ng-template #genreCard let-genre>
     <button
@@ -45,7 +34,7 @@
   </ng-template>
 
   <!-- Illustrated genre cards; the row scrolls sideways or expands to a grid -->
-  <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="genres-title">
+  <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="genres-title">
     <header class="nn-section-header">
       <svg class="library__section-icon" viewBox="0 0 64 64" aria-hidden="true" fill="none" stroke="currentColor" stroke-linejoin="round">
         <circle cx="32" cy="32" r="18" stroke-width="1" />
@@ -58,6 +47,7 @@
         <h2 id="genres-title" class="nn-section-header__title">Explore genres</h2>
         <p class="nn-section-header__subtitle">Find your next adventure by genre.</p>
       </div>
+      <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
       <button
         type="button"
         class="nn-link library__action"
@@ -84,11 +74,9 @@
     }
   </section>
 
-  <span class="library__joint" aria-hidden="true"></span>
-
   @if (isResultsMode) {
     <!-- Results: every book matching the search and filters -->
-    <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="results-title">
+    <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="results-title">
       <header class="nn-section-header">
         <i class="bi bi-search nn-section-header__icon library__section-icon"></i>
         <div>
@@ -99,6 +87,7 @@
             </p>
           }
         </div>
+        <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
         <button type="button" class="nn-link library__action" (click)="clearFilters()">
           <i class="bi bi-arrow-left"></i>
           {{ activeFilters.length ? 'Clear filters' : 'Back to browse' }}
@@ -154,10 +143,10 @@
       @if (loading) {
         <p class="library__message">Loading books …</p>
       } @else if (loadError) {
-        <p class="library__message">
-          <i class="bi bi-exclamation-circle"></i>
-          The library couldn't be loaded. Please try again later.
-        </p>
+        <div class="library__message" role="alert">
+          <p><i class="bi bi-exclamation-circle"></i> The library couldn't be loaded.</p>
+          <button type="button" class="nn-btn nn-btn--outline" (click)="retry()">Try again</button>
+        </div>
       } @else if (visibleBooks.length === 0) {
         <div class="library__message">
           <p>No books match your filters.</p>
@@ -177,27 +166,28 @@
       }
     </section>
   } @else if (loading || loadError || books.length === 0) {
-    <section class="nn-panel nn-panel--ornate library__section">
-      <p class="library__message">
-        @if (loading) {
-          Loading books …
-        } @else if (loadError) {
-          <i class="bi bi-exclamation-circle"></i>
-          The library couldn't be loaded. Please try again later.
-        } @else {
-          The library has no books yet.
-        }
-      </p>
+    <section class="nn-panel nn-panel--framed library__section">
+      @if (loading) {
+        <p class="library__message">Loading books …</p>
+      } @else if (loadError) {
+        <div class="library__message" role="alert">
+          <p><i class="bi bi-exclamation-circle"></i> The library couldn't be loaded.</p>
+          <button type="button" class="nn-btn nn-btn--outline" (click)="retry()">Try again</button>
+        </div>
+      } @else {
+        <p class="library__message">The library has no books yet.</p>
+      }
     </section>
   } @else {
     <!-- Browse: shelves that scroll sideways -->
-    <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="arrivals-title">
+    <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="arrivals-title">
       <header class="nn-section-header">
         <i class="bi bi-book-half nn-section-header__icon library__section-icon"></i>
         <div>
           <h2 id="arrivals-title" class="nn-section-header__title">New arrivals</h2>
           <p class="nn-section-header__subtitle">Recently added to the library.</p>
         </div>
+        <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
         <button type="button" class="nn-link library__action" (click)="seeAll('added')">
           See all <i class="bi bi-arrow-right"></i>
         </button>
@@ -214,15 +204,14 @@
       </app-scroll-strip>
     </section>
 
-    <span class="library__joint" aria-hidden="true"></span>
-
-    <section class="nn-panel nn-panel--ornate library__section" aria-labelledby="popular-title">
+    <section class="nn-panel nn-panel--framed nn-panel--titled library__section" aria-labelledby="popular-title">
       <header class="nn-section-header">
         <i class="bi bi-stars nn-section-header__icon library__section-icon"></i>
         <div>
           <h2 id="popular-title" class="nn-section-header__title">Reader favorites</h2>
           <p class="nn-section-header__subtitle">Titles with the most reviews from readers.</p>
         </div>
+        <span class="nn-section-title__rule library__rule" aria-hidden="true"></span>
         <button type="button" class="nn-link library__action" (click)="seeAll('popular')">
           See all <i class="bi bi-arrow-right"></i>
         </button>

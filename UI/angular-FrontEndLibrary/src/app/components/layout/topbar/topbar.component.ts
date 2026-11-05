@@ -1,9 +1,7 @@
 import {
   Component,
   ElementRef,
-  EventEmitter,
   HostListener,
-  Output,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -33,12 +31,16 @@ type TopbarEntry =
   imports: [RouterModule, NgTemplateOutlet],
 })
 export class TopbarComponent {
-  @Output() menuToggle = new EventEmitter<void>();
   currentUser: ILoggedInUser | null = null;
   openMenu: string | null = null; // id of the open dropdown, 'user' for the user menu
   searchQuery = '';
+  searchOpen = false; // small screens: the search field covers the bar
+  isScrolled = window.scrollY > 0; // phones: clear at the top, frosted below it
 
-  readonly entries: TopbarEntry[] = MAIN_NAV.map((entry) =>
+  // No Home link here: the logo leads home
+  readonly entries: TopbarEntry[] = MAIN_NAV.filter(
+    (entry) => isNavGroup(entry) || entry.route !== '/home',
+  ).map((entry) =>
     isNavGroup(entry)
       ? { kind: 'group', group: entry }
       : { kind: 'link', item: entry },
@@ -60,6 +62,7 @@ export class TopbarComponent {
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
         this.openMenu = null;
+        this.searchOpen = false;
         this.searchQuery = String(this.router.parseUrl(this.router.url).queryParams['q'] ?? '');
       });
   }
@@ -82,6 +85,7 @@ export class TopbarComponent {
   // Searching from anywhere opens the library filtered by the term
   search(event: Event, term: string) {
     event.preventDefault();
+    this.searchOpen = false;
     this.router.navigate(['/library'], {
       queryParams: { q: term.trim() || null },
     });
@@ -97,8 +101,26 @@ export class TopbarComponent {
     return this.router.url.startsWith('/admin');
   }
 
-  toggleFilters(): void {
-    this.libraryUi.toggleFilters();
+  // Focus after the field is shown; it can't take focus while hidden
+  openSearch(input: HTMLInputElement): void {
+    this.searchOpen = true;
+    setTimeout(() => input.focus());
+  }
+
+  get filtersOpen(): boolean {
+    return this.libraryUi.filtersOpen();
+  }
+
+  // On Library the panel opens in place; elsewhere Library opens with it,
+  // keeping what's typed in the search
+  openFilters(): void {
+    if (this.isLibraryPage) {
+      this.libraryUi.toggleFilters();
+      return;
+    }
+    this.router.navigate(['/library'], {
+      queryParams: { q: this.searchQuery.trim() || null, filters: 'open' },
+    });
   }
 
   toggleMenu(id: string) {
@@ -113,9 +135,15 @@ export class TopbarComponent {
     }
   }
 
+  @HostListener('window:scroll')
+  onScroll() {
+    this.isScrolled = window.scrollY > 0;
+  }
+
   @HostListener('document:keydown.escape')
   onEscape() {
     this.openMenu = null;
+    this.searchOpen = false;
   }
 
   logout() {

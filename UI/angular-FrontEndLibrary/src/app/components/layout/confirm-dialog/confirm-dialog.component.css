@@ -1,14 +1,9 @@
-/* Paper sheet (nn-parchment) with a gold edge, laid over the page */
+/* A framed card laid over the page; the frame, paper and rounding come from
+   the theme's nn-panel--framed */
 .confirm {
-  --frame-inset: 10px;
-  --frame-gap: 30px; /* half the break in the top and bottom lines, for the star */
-
-  position: relative;
   width: min(460px, calc(100vw - 2 * var(--nn-space-4)));
   padding: 0;
-  border: 1px solid var(--nn-gold);
-  border-radius: var(--nn-radius-lg);
-  box-shadow: inset 0 0 0 1px rgba(255, 252, 246, 0.6), var(--nn-shadow-raised);
+  box-shadow: var(--nn-shadow-raised);
   color: var(--nn-ink);
   font-family: var(--nn-font-body);
   overflow: visible;
@@ -21,56 +16,6 @@
 .confirm::backdrop {
   background-color: rgba(42, 22, 14, 0.4);
   backdrop-filter: blur(2px);
-}
-
-/* ---------- Frame ----------
-   Side lines are borders; the top and bottom lines are gradients that leave a
-   gap in the middle for the star. Corners and stars keep a fixed size, so only
-   the lines stretch with the dialog. */
-.confirm__frame {
-  position: absolute;
-  inset: var(--frame-inset);
-  pointer-events: none;
-  border-inline: 1px solid var(--nn-gold);
-  --line: linear-gradient(
-    to right,
-    var(--nn-gold) calc(50% - var(--frame-gap)),
-    transparent calc(50% - var(--frame-gap)) calc(50% + var(--frame-gap)),
-    var(--nn-gold) calc(50% + var(--frame-gap))
-  );
-  background: var(--line) top / 100% 1px no-repeat, var(--line) bottom / 100% 1px no-repeat;
-}
-
-.confirm__corner {
-  position: absolute;
-  width: 26px;
-  height: 26px;
-}
-
-.confirm__corner--tl { top: 0; left: 0; }
-.confirm__corner--tr { top: 0; right: 0; transform: scaleX(-1); }
-.confirm__corner--bl { bottom: 0; left: 0; transform: scaleY(-1); }
-.confirm__corner--br { bottom: 0; right: 0; transform: scale(-1); }
-
-.confirm__mark {
-  position: absolute;
-  left: 50%;
-  width: 44px;
-  height: 14px;
-  transform: translate(-50%, -50%);
-}
-
-.confirm__mark--top { top: 0; }
-.confirm__mark--bottom { top: 100%; }
-
-.confirm__line {
-  fill: none;
-  stroke: var(--nn-gold);
-  stroke-width: 1;
-}
-
-.confirm__fill {
-  fill: var(--nn-gold);
 }
 
 /* ---------- Content ---------- */

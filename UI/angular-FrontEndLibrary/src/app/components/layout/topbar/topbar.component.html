@@ -1,13 +1,6 @@
-<header class="topbar">
-  <button
-    class="nn-btn nn-btn--ghost nn-btn--icon topbar__menu"
-    aria-label="Open menu"
-    (click)="menuToggle.emit()"
-  >
-    <i class="bi bi-list"></i>
-  </button>
-
-  <a class="topbar__brand" routerLink="/home">
+<header class="topbar nn-navbar-frame" [class.is-searching]="searchOpen" [class.is-scrolled]="isScrolled">
+  <span class="nn-navbar-frame__ornaments" aria-hidden="true"></span>
+  <a class="topbar__brand" routerLink="/home" aria-label="NyriaNest, home" data-label="Home">
     <img src="assets/images/logos/HeaderLogo.svg" alt="" class="topbar__logo" />
     <span class="topbar__name">NyriaNest</span>
   </a>
@@ -57,6 +50,7 @@
       } @else {
         <span class="topbar__link is-placeholder nn-placeholder" title="Coming soon" [attr.data-label]="entry.item.label">
           <i class="bi {{ entry.item.icon }}"></i><span class="topbar__label">{{ entry.item.label }}</span>
+          <span class="topbar__soon-tag">Soon</span>
         </span>
       }
     }
@@ -66,6 +60,16 @@
   </nav>
 
   @if (!isAdminPage) {
+    <!-- Small screens: the search opens across the bar from this button -->
+    <button
+      type="button"
+      class="nn-btn nn-btn--ghost nn-btn--icon topbar__search-open"
+      aria-label="Search the library"
+      (click)="openSearch(searchInput)"
+    >
+      <i class="bi bi-search"></i>
+    </button>
+
     <form class="nn-field topbar__search" role="search" (submit)="search($event, searchInput.value)">
       <i class="bi bi-search"></i>
       <input
@@ -77,17 +81,26 @@
         [value]="searchQuery"
         (input)="searchQuery = searchInput.value"
       />
+      <!-- Library's filter panel; on other pages it opens Library with the panel -->
+      <button
+        type="button"
+        class="nn-field__action topbar__filter"
+        aria-label="Filters"
+        [attr.aria-controls]="isLibraryPage ? 'library-filters' : null"
+        [attr.aria-expanded]="isLibraryPage ? filtersOpen : null"
+        (click)="openFilters()"
+      >
+        <i class="bi bi-sliders"></i>
+      </button>
     </form>
-  }
 
-  @if (isLibraryPage) {
     <button
       type="button"
-      class="nn-btn nn-btn--outline topbar__filter"
-      aria-controls="library-filters"
-      (click)="toggleFilters()"
+      class="nn-btn nn-btn--ghost nn-btn--icon topbar__search-close"
+      aria-label="Close search"
+      (click)="searchOpen = false"
     >
-      <i class="bi bi-sliders"></i><span>Filters</span><i class="bi bi-chevron-down"></i>
+      <i class="bi bi-x-lg"></i>
     </button>
   }
 

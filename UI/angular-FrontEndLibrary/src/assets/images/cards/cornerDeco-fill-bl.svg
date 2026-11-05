@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="102" viewBox="14 24 1628 1656">
+<!-- Inside of the star in cornerDeco-bl, made to look like a gold ornament: a bright point in the middle warming to the frame gold (nn-gold, #b38a52) at the points. Change the stop colours to recolour. -->
+<defs>
+<radialGradient id="glow">
+<stop offset="0" stop-color="#ffffff"/>
+<stop offset="0.08" stop-color="#f6e7c3"/>
+<stop offset="0.22" stop-color="#d8b97a"/>
+<stop offset="0.4" stop-color="#b38a52"/>
+</radialGradient>
+</defs>
+<g transform="translate(1656,1704) scale(-1,-1)">
+<g transform="translate(0.000000,1695.000000) scale(0.100000,-0.100000)"
+fill="url(#glow)" stroke="#b38a52" stroke-width="60">
+<path d="M11028 13513c62 -129 164 -299 286 -481
+246 -366 603 -716 981 -963 86 -57 274 -169 282 -169 16 0 123 -74 116 -80 -4
+-4 -46 -28 -93 -52 -116 -61 -349 -206 -410 -255 -8 -6 -62 -48 -120 -93 -189
+-145 -370 -320 -536 -515 -90 -107 -244 -320 -310 -428 -16 -27 -37 -61 -46
+-75 -10 -15 -22 -36 -28 -47 -6 -11 -26 -47 -45 -80 -18 -33 -54 -101 -79
+-151 -65 -132 -65 -132 -120 -22 -25 51 -59 116 -76 143 -16 28 -33 57 -37 65
+-3 8 -18 33 -32 55 -14 22 -28 45 -31 50 -15 31 -134 204 -199 290 -176 234
+-432 496 -641 655 -25 19 -56 45 -70 57 -64 58 -362 254 -505 332 -72 40 -87
+53 -77 67 4 6 54 34 112 64 410 207 780 495 1071 830 77 89 229 280 229 288 0
+4 10 19 23 33 12 15 38 52 57 83 19 31 55 87 79 124 49 75 109 181 147 260 14
+28 32 52 39 52 8 0 23 -17 33 -37z"/>
+</g>
+</g>
+</svg>

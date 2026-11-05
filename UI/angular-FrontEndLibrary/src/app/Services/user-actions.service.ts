@@ -7,7 +7,7 @@ import { CreateUserDto } from '../Models/interfaces';
   providedIn: 'root',
 })
 export class UserActionsService {
-private apiUrl = 'api//UserActions'; // Base URL for the User API
+private apiUrl = 'api/UserActions'; // Base URL for the User API
 
   constructor(private http: HttpClient) {}
   // Add a new user

@@ -1,67 +1,98 @@
+/* Reaches over the shell's side padding (and adds it back inside), so page
+   decoration is clipped at the edge of the main area instead of making the page
+   scroll sideways, as on the admin pages. The filter panel and the book popup
+   are fixed to the window, so the clipping doesn't reach them. */
+:host {
+  display: block;
+  margin-inline: calc(-1 * var(--nn-space-6));
+  padding-inline: var(--nn-space-6);
+  overflow-x: clip;
+}
+
+@media (max-width: 991px) {
+  :host {
+    margin-inline: calc(-1 * var(--nn-space-4));
+    padding-inline: var(--nn-space-4);
+  }
+}
+
+/* Same width and side padding as Add book and Manage books, so the cards line up */
 .library {
-  max-width: 1500px;
+  max-width: 1360px;
   margin: 0 auto;
+  padding: var(--nn-space-2) var(--nn-space-4) 0;
 }
 
-/* ---------- Sections: framed panels joined by a small gold ornament ----------
-   Textured parchment inside, gold flourishes in all four corners: the top pair
-   is drawn by ::before, the bottom pair by ::after flipped upside down. */
+.library__header {
+  margin-bottom: var(--nn-space-3);
+}
+
+/* ---------- Sections: the theme's framed panels (nn-panel--framed) ---------- */
 .library__section {
-  --panel-padding: var(--nn-space-5);
-  /* Scroll arrows centred on the panel's side borders */
+  --panel-padding: 32px; /* clears the frame corners */
+  /* Scroll arrows centred on the panel's side edges */
   --strip-arrow-offset: calc(-1 * var(--panel-padding) - 21px);
-  position: relative;
-  padding: var(--panel-padding) var(--panel-padding) var(--nn-space-4);
-  border-color: var(--nn-gold-soft);
-  background:
-    linear-gradient(rgba(250, 242, 226, 0.8), rgba(250, 242, 226, 0.8)),
-    url('/assets/images/webpage-images/backgrounds/paper%20background.png') center / cover,
-    var(--nn-surface);
+  padding: 22px var(--panel-padding) 26px;
 }
 
-.library__section::before,
-.library__section::after {
-  content: '';
-  position: absolute;
-  left: 7px;
-  right: 7px;
-  height: 50px;
-  background:
-    url('/assets/images/login-page/corner-ornament-left.png') no-repeat left top / 44px auto,
-    url('/assets/images/login-page/corner-ornament-right.png') no-repeat right top / 44px auto;
-  pointer-events: none;
+.library__section + .library__section {
+  margin-top: var(--nn-space-3);
 }
 
-.library__section::before {
-  top: 7px;
-}
-
-.library__section::after {
-  bottom: 7px;
-  transform: scaleY(-1);
-}
-
-/* Keep the content above the corner flourishes */
+/* Content above the frame, so the scroll arrows on the side edges cover its line */
 .library__section > * {
   position: relative;
 }
 
+/* Icon, title, rule and action on one line; the subtitle under the title.
+   The title block is flattened (display: contents) so its title and subtitle
+   take part in the grid. */
 .library__section .nn-section-header {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
+  gap: 0 var(--nn-space-3); /* no gap between the title and subtitle rows */
+  margin-bottom: var(--nn-space-3);
+}
+
+.library__section .nn-section-header > div {
+  display: contents;
+}
+
+/* Overhangs its row, so the row is only as tall as the title and the
+   subtitle sits right under it */
+.library__section .nn-section-header > .library__section-icon {
+  margin-block: -6px;
 }
 
 .library__section-icon {
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   color: var(--nn-gold);
-  font-size: 2.4rem;
+  font-size: 1.8rem;
   text-align: center;
-  line-height: 52px;
+  line-height: 40px;
 }
 
 .library__section .nn-section-header__title {
-  font-size: clamp(1.5rem, 2.4vw, 1.9rem);
+  margin: 0;
+  font-size: clamp(1.3rem, 1.8vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.library__section .nn-section-header__subtitle {
+  grid-row: 2;
+  grid-column: 2 / -1;
+  font-size: 0.95rem;
+}
+
+/* The theme's title rule (gold diamond and line, as on Manage books), running
+   from the title to the action link */
+.library__rule {
+  align-self: center;
+  min-width: 24px;
+  margin-right: var(--nn-space-2);
 }
 
 .library__action {
@@ -75,28 +106,7 @@
   cursor: pointer;
 }
 
-/* Sits across the borders of the panels above and below */
-.library__joint {
-  display: block;
-  width: 110px;
-  height: 30px;
-  margin: -10px auto;
-  position: relative;
-  z-index: 1;
-  background: url('/assets/images/login-page/divider-small.png') no-repeat center / contain;
-}
-
 /* ---------- Search and filters on small screens ---------- */
-.library__mobile-tools {
-  display: none;
-  gap: var(--nn-space-2);
-  margin-bottom: var(--nn-space-4);
-}
-
-.library__mobile-tools .nn-field {
-  flex: 1;
-}
-
 /* ---------- Genre cards: tinted tile with an illustration and the name ---------- */
 .genre-grid {
   display: grid;
@@ -203,10 +213,15 @@
   text-align: center;
 }
 
+.library__message p {
+  margin: 0;
+}
+
 /* ---------- Filter panel ("Refine your search") ---------- */
+/* Between the topbar and, on small screens, the bottom nav bar */
 .filter-backdrop {
   position: fixed;
-  inset: var(--topbar-height, 80px) 0 0;
+  inset: var(--topbar-height, 84px) 0 var(--bottom-nav-total, 0px);
   z-index: 21;
 }
 
@@ -360,37 +375,35 @@
   padding: var(--nn-space-5);
 }
 
-/* The topbar hides its search and Filters button below lg */
-@media (max-width: 991px) {
-  .library__mobile-tools {
-    display: flex;
-  }
-}
-
 @media (max-width: 600px) {
   .library__section {
-    --panel-padding: var(--nn-space-3);
-    padding-top: var(--nn-space-4);
-  }
-
-  .library__section::before,
-  .library__section::after {
-    background-size: 32px auto;
+    --panel-padding: 20px;
+    padding-top: 18px;
+    padding-bottom: 22px;
   }
 
   .library__section-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 1.8rem;
-    line-height: 40px;
+    width: 34px;
+    height: 34px;
+    font-size: 1.5rem;
+    line-height: 34px;
   }
 
+  .library__section .nn-section-header > .library__section-icon {
+    margin-block: -4px;
+  }
+
+  /* No room for the rule on phones: the action takes the free space and sits at the end */
   .library__section .nn-section-header {
-    flex-wrap: wrap;
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .library__rule {
+    display: none;
   }
 
   .library__section .nn-section-header__subtitle {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .genre-card {

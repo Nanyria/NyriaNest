@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="47" viewBox="0 0 112 47">
+<!-- Inside of the star in star.svg, made to look like a gold ornament like the corner stars: a bright point in the middle warming to the frame gold at the points. Change the stop colours to recolour. -->
+<defs>
+<radialGradient id="glow">
+<stop offset="0" stop-color="#ffffff"/>
+<stop offset="0.08" stop-color="#f6e7c3"/>
+<stop offset="0.22" stop-color="#d8b97a"/>
+<stop offset="0.4" stop-color="#b38a52"/>
+</radialGradient>
+</defs>
+<g transform="translate(0.000000,47.000000) scale(0.100000,-0.100000)"
+fill="url(#glow)" stroke="#b38a52" stroke-width="20">
+<path d="M569 321c20 -21
+43 -41 51 -44 12 -5 12 -9 -5 -19 -11 -7 -33 -28 -50 -45 -18 -18 -36 -33 -41
+-33 -5 0 -18 14 -28 31 -10 17 -29 35 -42 41 -29 14 -31 25 -4 33 11 3 32 22
+46 41 15 19 29 34 32 34 3 0 21 -17 41 -39z"/>
+</g>
+</svg>

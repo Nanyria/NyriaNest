@@ -21,15 +21,6 @@ export class ConfirmDialogComponent {
   readonly confirm = inject(ConfirmService);
   private dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
-  // The frame ornaments; CSS mirrors the one corner drawing into each corner
-  readonly corners = ['tl', 'tr', 'bl', 'br'];
-  readonly edges = ['top', 'bottom'];
-
-  // Four-point star like the site's other ornaments: sides curve in to the centre
-  starPath(x: number, y: number, r: number): string {
-    return `M${x} ${y - r} Q${x} ${y} ${x + r} ${y} Q${x} ${y} ${x} ${y + r} Q${x} ${y} ${x - r} ${y} Q${x} ${y} ${x} ${y - r}Z`;
-  }
-
   constructor() {
     // After render, so the buttons exist and autofocus lands on Cancel
     afterRenderEffect(() => {

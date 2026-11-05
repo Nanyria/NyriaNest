@@ -36,7 +36,7 @@
           <div class="book__tags">
             <span class="nn-tag">{{ genreOptions.displayNames[book.genre] }}</span>
             @if (statusBadge(book); as status) {
-              <span class="nn-tag book__status">{{ status }}</span>
+              <span class="nn-tag" [class]="statusClass(book)">{{ status }}</span>
             }
           </div>
           <p class="book__reviews">

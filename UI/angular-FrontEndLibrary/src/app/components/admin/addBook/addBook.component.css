@@ -114,7 +114,7 @@
 
 /* ---------- Panels ---------- */
 .add-book__panel {
-  padding: var(--nn-space-3) var(--nn-space-4) 14px;
+  padding: var(--nn-frame-pad); /* clears the frame (nn-panel--framed) */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -125,8 +125,6 @@
 /* ---------- Format ---------- */
 .add-book__format {
   gap: var(--nn-space-2);
-  padding-top: 10px;
-  padding-bottom: var(--nn-space-3);
 }
 
 .add-book__format-head {
@@ -297,10 +295,10 @@
   font-size: 0.9rem;
 }
 
-/* After a save attempt with no format chosen. Two classes, to beat .nn-panel.
+/* After a save attempt with no format chosen: the gold frame turns red.
    (The EPUB drop area's version is with the drop styles.) */
-.nn-panel.add-book__panel--invalid {
-  border-color: #d99a93;
+.add-book__panel--invalid {
+  --nn-frame-color: #c4655d;
 }
 
 /* ---------- Cover ----------

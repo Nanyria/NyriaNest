@@ -20,15 +20,15 @@
 
   <!-- Edit mode loads the book first -->
   @if (loadState === 'loading') {
-    <p class="nn-panel add-book__panel add-book__state" aria-busy="true">Loading book…</p>
+    <p class="nn-panel nn-panel--framed add-book__panel add-book__state" aria-busy="true">Loading book…</p>
   } @else if (loadState === 'error') {
-    <div class="nn-panel add-book__panel add-book__state" role="alert">
+    <div class="nn-panel nn-panel--framed add-book__panel add-book__state" role="alert">
       <p>Couldn't load this book. It may have been deleted.</p>
       <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Back to Manage books</a>
     </div>
   } @else {
     <!-- Format: physical/digital first, then the matching types -->
-    <section class="nn-panel add-book__panel add-book__format" [class.add-book__panel--invalid]="showFormatError" aria-labelledby="format-label">
+    <section class="nn-panel nn-panel--framed nn-panel--titled add-book__panel add-book__format" [class.add-book__panel--invalid]="showFormatError" aria-labelledby="format-label">
       <div class="add-book__format-head">
         <h2 id="format-label" class="add-book__format-title">
           <i class="bi bi-layers" aria-hidden="true"></i><span>Format<span class="nn-required" aria-hidden="true">*</span></span>
@@ -84,7 +84,7 @@
 
     <div class="add-book__columns">
       <!-- Left: what the admin types -->
-      <section class="nn-panel add-book__panel add-book__details" aria-labelledby="details-title">
+      <section class="nn-panel nn-panel--framed nn-panel--titled add-book__panel add-book__details" aria-labelledby="details-title">
         <h2 id="details-title" class="nn-section-title">
           <i class="bi bi-book" aria-hidden="true"></i>Book details
           <span class="nn-section-title__rule" aria-hidden="true"></span>
@@ -148,7 +148,7 @@
 
       <!-- Right: cover and files -->
       <!-- E-books also need the EPUB field, so the cover gets a compact layout to keep the page short -->
-      <section class="nn-panel add-book__panel add-book__files" [class.add-book__files--compact]="isEbook" aria-labelledby="files-title">
+      <section class="nn-panel nn-panel--framed nn-panel--titled add-book__panel add-book__files" [class.add-book__files--compact]="isEbook" aria-labelledby="files-title">
         <h2 id="files-title" class="nn-section-title">
           <i class="bi bi-file-earmark" aria-hidden="true"></i>Files and cover
           <span class="nn-section-title__rule" aria-hidden="true"></span>
