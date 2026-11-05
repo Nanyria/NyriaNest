@@ -81,8 +81,8 @@ private apiUrl = 'api/UserActions'; // Base URL for the User API
   removeFromFavorites(bookId: string): Observable<any> {
     return this.http.delete<any>(`${this.apiUrl}/unfavorite/${bookId}`);
   }
-  // Still sends the user ID: fixed with security finding 2 (#48)
-  updateUser(userId: string, user: any): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/update/${userId}`, user);
+  // Updates the logged-in user. Changing password or email also needs currentPassword.
+  updateUser(user: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/update`, user);
   }
 }
