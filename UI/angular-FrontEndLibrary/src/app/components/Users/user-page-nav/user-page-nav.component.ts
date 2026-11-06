@@ -6,8 +6,7 @@ import {
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { ILoggedInUser } from '../../../Models/interfaces';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 @Component({
   selector: 'app-user-page-nav',
   standalone: true,

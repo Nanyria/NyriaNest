@@ -102,7 +102,7 @@ constructor(private http: HttpClient, private userService: UserService, private 
   private mapUserResponse(result: any): ILoggedInUser {
     return {
       ...result,
-      userId: result.userId ?? result.id ?? '',
+      userId: result.userId ?? '',
       adminRole: this.isAdminFromToken(),
       isSuperAdmin: this.isSuperAdminFromToken()
     };

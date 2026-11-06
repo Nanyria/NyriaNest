@@ -17,7 +17,6 @@ import {
   Router,
   RouterModule,
   NavigationEnd,
-  ActivatedRoute,
 } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { UserPageNavComponent } from '../user-page-nav/user-page-nav.component';
@@ -47,8 +46,7 @@ export class UserPageComponent implements OnInit {
   constructor(
     private userService: UserActionsService,
     private authService: AuthService,
-    private router: Router, // <-- inject Router
-    private route: ActivatedRoute,
+    private router: Router,
   ) {
     // Subscribe to router events to update currentUrl
     this.router.events

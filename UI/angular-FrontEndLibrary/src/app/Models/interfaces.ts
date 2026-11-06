@@ -136,7 +136,6 @@ export interface CatalogueQuery {
 }
 // User interfaces
 export interface UserDto {
-    id: string;
     userId: string;
     userName: string;
     firstName: string;

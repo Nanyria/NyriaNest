@@ -6,7 +6,6 @@ using NyriaNest.Api.Models.Books.BookDTOs;
 using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Services;
 using System.Security.Claims;
-using static NyriaNest.Api.Models.Books.BookDTOs.BookDto;
 
 
 [Route("api/[controller]")]
