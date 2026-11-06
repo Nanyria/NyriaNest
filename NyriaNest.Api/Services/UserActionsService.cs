@@ -88,8 +88,7 @@ namespace NyriaNest.Api.Services
             await _emailService.SendRegistrationEmailAsync(
                 createUserDTO.Email,
                 createUserDTO.FirstName,
-                createUserDTO.UserName,
-                createUserDTO.Password
+                createUserDTO.UserName
             );
 
             var createdUserDto = _mapper.Map<CreateUserDto>(user);
