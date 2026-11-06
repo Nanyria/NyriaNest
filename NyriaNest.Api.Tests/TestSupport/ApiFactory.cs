@@ -28,6 +28,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string JwtIssuer = "NyriaNest.Api";
     public const string JwtAudience = "NyriaNest.Client";
     public const string SeedAdminEmail = "superadmin@test.local";
+    public const string AllowedOrigin = "https://frontend.test.local";
     public const string SeedAdminPassword = "Test-SuperAdmin-123!";
 
     private readonly SqliteConnection _connection = SqliteDb.OpenConnection();
@@ -48,6 +49,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("SeedAdmin:Email", SeedAdminEmail);
         builder.UseSetting("SeedAdmin:Password", SeedAdminPassword);
         builder.UseSetting("ConnectionStrings:ConnectionToDB", "not-used-in-tests");
+        builder.UseSetting("Cors:AllowedOrigins:0", AllowedOrigin);
 
         builder.ConfigureServices(services =>
         {

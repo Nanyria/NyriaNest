@@ -61,9 +61,13 @@ namespace NyriaNest.Api
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionToDB")));
 
+            // The app normally calls the API from its own origin (the dev proxy, or the
+            // Angular build served from wwwroot), which needs no CORS. Only the origins
+            // listed in Cors:AllowedOrigins may call it from another site.
+            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
             builder.Services.AddCors(setup => setup.AddPolicy("default", options =>
             {
-                options.AllowAnyMethod().AllowAnyHeader().AllowAnyOrigin();
+                options.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader();
             }));
 
             builder.Services.AddIdentity<User, IdentityRole>()
@@ -110,8 +114,12 @@ namespace NyriaNest.Api
                 Helper.AssignUserRoleToUsersWithoutRoleAsync(services).GetAwaiter().GetResult();
             }
 
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            // Swagger lists every endpoint and lets anyone try them, so only in Development
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
 
             app.UseCors("default");
 
