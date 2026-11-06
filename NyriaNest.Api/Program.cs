@@ -3,15 +3,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers;
-using NyriaNest.Api.Repositories;
-using NyriaNest.Api.Services;
-using NyriaNest.Api.Storage;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Application.Mapping;
 using NyriaNest.Application.Services;
 using NyriaNest.Domain.Entities;
+using NyriaNest.Infrastructure.Data;
+using NyriaNest.Infrastructure.Repositories;
+using NyriaNest.Infrastructure.Services;
+using NyriaNest.Infrastructure.Storage;
 using System.Text;
 
 namespace NyriaNest.Api
@@ -115,8 +114,8 @@ namespace NyriaNest.Api
                     db.Database.EnsureCreated();
 
                 var services = scope.ServiceProvider;
-                Helper.SeedRolesAndAdminAsync(services).GetAwaiter().GetResult();
-                Helper.AssignUserRoleToUsersWithoutRoleAsync(services).GetAwaiter().GetResult();
+                DatabaseSeeder.SeedRolesAndAdminAsync(services).GetAwaiter().GetResult();
+                DatabaseSeeder.AssignUserRoleToUsersWithoutRoleAsync(services).GetAwaiter().GetResult();
             }
 
             // Swagger lists every endpoint and lets anyone try them, so only in Development

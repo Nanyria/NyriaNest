@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
-using NyriaNest.Api.Data;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Infrastructure.Data;
 
 namespace NyriaNest.Api.Tests.TestSupport;
 
