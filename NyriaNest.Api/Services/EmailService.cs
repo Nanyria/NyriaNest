@@ -1,4 +1,4 @@
-using System.Net;
+ï»¿using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 
@@ -7,8 +7,8 @@ namespace NyriaNest.Api.Services
     public interface IEmailService
     {
         Task SendEmailAsync(string to, string subject, string body);
-        Task SendRegistrationEmailAsync(string to, string firstame, string userName, string password);
-        Task SendRetrievePasswordEmailAsync(string to, string firstname, string userName, string password);
+        // No password parameters: a password is never sent by email or written to a log
+        Task SendRegistrationEmailAsync(string to, string firstName, string userName);
         Task SendBookBorrowedEmailAsync(string to, string firstname, string userName, string bookTitle, DateTime returnDate);
         Task SendBookReturnedEmailAsync(string to, string firstname, string userName, string bookTitle);
         Task SendBookOverdueEmailAsync(string to, string firstname, string userName, string bookTitle, DateTime dueDate);
@@ -35,7 +35,6 @@ namespace NyriaNest.Api.Services
 
         public async Task SendEmailAsync(string to, string subject, string body)
         {
-            Console.WriteLine($"From: {_fromAddress}, To: {to}");
             if (string.IsNullOrWhiteSpace(_fromAddress))
                 throw new InvalidOperationException("From address is not configured.");
 
@@ -60,42 +59,32 @@ namespace NyriaNest.Api.Services
             }
         }
 
-        public async Task SendRegistrationEmailAsync(string to, string firstame, string userName, string password)
+        public async Task SendRegistrationEmailAsync(string to, string firstName, string userName)
         {
-            Console.WriteLine($"From: {_fromAddress}, To: {to}, firstname: {firstame}, username {userName} password: {password}");
-            var subject = "Välkommen till NyriaNest!";
-            var body = $"Hallå där, {firstame},\n\nKul att du vill bli medlem på NyriaNest!\n\n" +
-                $"Här är dina inloggningsuppgifter:\nAnvändarnamn: {userName}\nLösenord: {password}.";
-            await SendEmailAsync(to, subject, body);
-        }
-
-        public async Task SendRetrievePasswordEmailAsync(string to, string firstname, string userName, string password)
-        {
-            var subject = "Glömt lösenord";
-            var body = $"Hej {firstname},\n\n" +
-                $"Du har begärt att återställa ditt lösenord.\n\n" +
-                $"Här är dina inloggningsuppgifter:\nAnvändarnamn: {userName}\nLösenord: {password}.";
+            var subject = "Welcome to NyriaNest!";
+            var body = $"Hi {firstName},\n\nWelcome to NyriaNest, we're glad you joined!\n\n" +
+                $"Your username is {userName}. Log in with the password you chose when you signed up.";
             await SendEmailAsync(to, subject, body);
         }
         public async Task SendBookBorrowedEmailAsync(string to, string firstname, string userName, string bookTitle, DateTime returnDate)
         {
-            var subject = "Bekräftelse av lån";
-            var body = $"Hej {firstname},\n\nHär en en bekräftelse av ditt lån av \"{bookTitle}\"." +
-                $"\n Återlämningsdatum:{returnDate:yyyy-MM-dd}\n Hoppas du gillar boken, lämna gärna en recession!";
+            var subject = "BekrÃ¤ftelse av lÃ¥n";
+            var body = $"Hej {firstname},\n\nHÃ¤r en en bekrÃ¤ftelse av ditt lÃ¥n av \"{bookTitle}\"." +
+                $"\n Ã…terlÃ¤mningsdatum:{returnDate:yyyy-MM-dd}\n Hoppas du gillar boken, lÃ¤mna gÃ¤rna en recession!";
             await SendEmailAsync(to, subject, body);
         }
 
         public async Task SendBookReturnedEmailAsync(string to, string firstname, string userName, string bookTitle)
         {
-            var subject = "Bekräftelse av återlämning av bok";
-            var body = $"Hej {userName},\n\nDu har precis återlämnat \"{bookTitle}\". Tack!\n Lämna gärna en recenssion";
+            var subject = "BekrÃ¤ftelse av Ã¥terlÃ¤mning av bok";
+            var body = $"Hej {userName},\n\nDu har precis Ã¥terlÃ¤mnat \"{bookTitle}\". Tack!\n LÃ¤mna gÃ¤rna en recenssion";
             await SendEmailAsync(to, subject, body);
         }
 
         public async Task SendBookOverdueEmailAsync(string to, string firstname, string userName, string bookTitle, DateTime dueDate)
         {
-            var subject = "Återlämningsdatum passerat";
-            var body = $"Hej {firstname},\n\nBoken \"{bookTitle}\" skulle vara återlämnad {dueDate:yyyy-MM-dd}. Vänligen lämna tillbaka boken så fort som möjligt.";
+            var subject = "Ã…terlÃ¤mningsdatum passerat";
+            var body = $"Hej {firstname},\n\nBoken \"{bookTitle}\" skulle vara Ã¥terlÃ¤mnad {dueDate:yyyy-MM-dd}. VÃ¤nligen lÃ¤mna tillbaka boken sÃ¥ fort som mÃ¶jligt.";
             await SendEmailAsync(to, subject, body);
         }
     }

@@ -3,6 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CreateReviewItemDto, CreateRatingItemDto, ReviewItemDto, RatingItemDto } from '../Models/interfaces';
 import { CreateUserDto } from '../Models/interfaces';
+
+// Every action applies to the logged-in user: the API takes the user from the
+// token the auth interceptor sends, so no user ID goes in the URL.
 @Injectable({
   providedIn: 'root',
 })
@@ -15,41 +18,38 @@ private apiUrl = 'api/UserActions'; // Base URL for the User API
     return this.http.post<any>(this.apiUrl, user);
   }
   // Borrow a book
-  borrowBook(userId: string, bookId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/borrow/${userId}/${bookId}`, {});
+  borrowBook(bookId: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/borrow/${bookId}`, {});
   }
 
   // Reserve a book
-  reserveBook(userId: string, bookId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/reserve/${userId}/${bookId}`, {});
+  reserveBook(bookId: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/reserve/${bookId}`, {});
   }
 
   // Unreserve a book
-  unreserveBook(userId: string, bookId: string): Observable<any> {
-    return this.http.put<any>(
-      `${this.apiUrl}/unreserve/${userId}/${bookId}`,
-      {},
-    );
+  unreserveBook(bookId: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/unreserve/${bookId}`, {});
   }
 
   // Return a book
-  returnBook(userId: string, bookId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/return/${userId}/${bookId}`, {});
+  returnBook(bookId: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/return/${bookId}`, {});
   }
 
   // To add - list of borrowed books
-  getBorrowedBooks(userId: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/checkedout/${userId}`);
+  getBorrowedBooks(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/checkedout`);
   }
 
   // To add - list of reserved books
-  getReservedBooks(userId: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/reserved/${userId}`);
+  getReservedBooks(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/reserved`);
   }
 
   // Reviews
-  getUserReviews(userId: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/reviews/${userId}`); 
+  getUserReviews(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/reviews`);
   }
 
   addReview(review: CreateReviewItemDto): Observable<any> {
@@ -72,16 +72,17 @@ private apiUrl = 'api/UserActions'; // Base URL for the User API
   }
 
   // Favorites
-  getUserFavorites(userId: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/favorites/${userId}`);
+  getUserFavorites(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/favorites`);
   }
-  addToFavorites(userId: string, bookId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/favorite/${userId}/${bookId}`, {});
+  addToFavorites(bookId: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/favorite/${bookId}`, {});
   }
-  removeFromFavorites(userId: string, bookId: string): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/unfavorite/${userId}/${bookId}`);
+  removeFromFavorites(bookId: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/unfavorite/${bookId}`);
   }
-  updateUser(userId: string, user: any): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/update/${userId}`, user);
+  // Updates the logged-in user. Changing password or email also needs currentPassword.
+  updateUser(user: any): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/update`, user);
   }
 }

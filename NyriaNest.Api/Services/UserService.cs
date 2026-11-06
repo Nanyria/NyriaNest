@@ -18,11 +18,12 @@ namespace NyriaNest.Api.Services
 {
     public interface IUserService
     {
-        Task<APIResponse<User>> DeleteUserAsync(string userId);
-        Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string userId, UpdateUserAsAdminDto userToUpdate);
+        // callerId / callerIsSuperAdmin = the admin asking. The rules are in AdminMayNotUpdate/-Delete.
+        Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
+        Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
         Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
         Task<APIResponse<UserDto>> GetUserByIdAsync(string userId);
-        Task<APIResponse<List<User>>> GetAllUsersAsync();
+        Task<APIResponse<List<UserDto>>> GetAllUsersAsync();
         Task<APIResponse<CreateAdminUserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto);
         Task<APIResponse<List<StatusHistoryItem>>> GetUserHistoryAsync(string userId);
     }
@@ -98,9 +99,9 @@ namespace NyriaNest.Api.Services
                 throw new Exception("UserName already exists.");
             }
         }
-        public async Task<APIResponse<User>> DeleteUserAsync(string userId)
+        public async Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId)
         {
-            var response = new APIResponse<User>
+            var response = new APIResponse<UserDto>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -114,7 +115,14 @@ namespace NyriaNest.Api.Services
                 .Include(u => u.UserHistory)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (user != null)
+            var refusal = user == null ? null
+                : AdminMayNotDelete(callerIsSuperAdmin, await _userManager.GetRolesAsync(user));
+            if (refusal != null)
+            {
+                response.ErrorMessages.Add(refusal);
+                response.StatusCode = HttpStatusCode.Forbidden;
+            }
+            else if (user != null)
             {
                 // Remove all ReservationItems for this user
                 var reservations = await _dbContext.ReservationItems.Where(r => r.UserId == userId).ToListAsync();
@@ -167,7 +175,7 @@ namespace NyriaNest.Api.Services
 
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
-                response.Result = user;
+                response.Result = _mapper.Map<UserDto>(user);
             }
             else
             {
@@ -177,7 +185,40 @@ namespace NyriaNest.Api.Services
             return response;
         }
 
-        public async Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string userId, UpdateUserAsAdminDto userToUpdate)
+        // What an Admin or SuperAdmin may do to another user (finding 4, #48).
+        // Returns why not, or null when it's allowed.
+        //   Admin:      only regular users' details. No passwords, no roles.
+        //   SuperAdmin: anyone's details and password and any role, except another
+        //               SuperAdmin, and never their own role (so nobody locks themselves out).
+        private static string? AdminMayNotUpdate(string callerId, bool callerIsSuperAdmin,
+            string targetId, IList<string> targetRoles, bool changesRole, bool setsPassword)
+        {
+            const string NoPermission = "You do not have permission to change this user.";
+            var targetIsSuperAdmin = targetRoles.Contains(Roles.SuperAdmin);
+            var targetIsAdmin = targetRoles.Contains(Roles.Admin);
+
+            if (callerIsSuperAdmin)
+            {
+                if (targetIsSuperAdmin && targetId != callerId) return NoPermission;
+                if (changesRole && targetId == callerId) return "You can't change your own role.";
+                return null;
+            }
+            if (targetIsSuperAdmin || targetIsAdmin) return NoPermission;
+            if (changesRole) return "Only a SuperAdmin can change roles.";
+            if (setsPassword) return "Only a SuperAdmin can set another user's password.";
+            return null;
+        }
+
+        // Admin: regular users only. SuperAdmin: anyone except a SuperAdmin, themselves included.
+        private static string? AdminMayNotDelete(bool callerIsSuperAdmin, IList<string> targetRoles)
+        {
+            const string NoPermission = "You do not have permission to delete this user.";
+            if (targetRoles.Contains(Roles.SuperAdmin)) return NoPermission;
+            if (targetRoles.Contains(Roles.Admin) && !callerIsSuperAdmin) return NoPermission;
+            return null;
+        }
+
+        public async Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate)
         {
             var response = new APIResponse<UpdateUserAsAdminDto>
             {
@@ -187,6 +228,26 @@ namespace NyriaNest.Api.Services
             var user = await _userRepo.GetByIdAsync<User>(userId);
             if (user != null)
             {
+                // Decide before anything changes. The Manage users page sends the whole
+                // user, so a role equal to the current one is not a role change.
+                var targetRoles = await _userManager.GetRolesAsync(user);
+                var changesRole = !string.IsNullOrWhiteSpace(userToUpdate.Role)
+                    && !targetRoles.Contains(userToUpdate.Role);
+                var setsPassword = !string.IsNullOrWhiteSpace(userToUpdate.Password);
+
+                if (changesRole && !Roles.AllRoles.Contains(userToUpdate.Role!))
+                {
+                    response.ErrorMessages.Add("Unknown role.");
+                    return response;
+                }
+                var refusal = AdminMayNotUpdate(callerId, callerIsSuperAdmin, user.Id, targetRoles, changesRole, setsPassword);
+                if (refusal != null)
+                {
+                    response.ErrorMessages.Add(refusal);
+                    response.StatusCode = HttpStatusCode.Forbidden;
+                    return response;
+                }
+
                 // Map UpdateUserAsAdminDto to User
                 _mapper.Map(userToUpdate, user);
                 // If password is being changed, use UserManager
@@ -201,9 +262,9 @@ namespace NyriaNest.Api.Services
                         return response;
                     }
                 }
-                if (!string.IsNullOrWhiteSpace(userToUpdate.Role))
+                if (changesRole)
                 {
-                    var currentRoles = await _userManager.GetRolesAsync(user);
+                    var currentRoles = targetRoles;
                     // Remove all current roles
                     if (currentRoles.Any())
                     {
@@ -310,9 +371,10 @@ namespace NyriaNest.Api.Services
             }
             return response;
         }
-        public async Task<APIResponse<List<User>>> GetAllUsersAsync()
+        // DTOs, never the Identity users themselves: those carry PasswordHash and SecurityStamp
+        public async Task<APIResponse<List<UserDto>>> GetAllUsersAsync()
         {
-            var response = new APIResponse<List<User>>
+            var response = new APIResponse<List<UserDto>>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -322,7 +384,7 @@ namespace NyriaNest.Api.Services
                 var users = await _userRepo.GetAllAsync<User>();
                 if (users != null)
                 {
-                    response.Result = users.ToList();
+                    response.Result = _mapper.Map<List<UserDto>>(users);
                     response.IsSuccess = true;
                     response.StatusCode = HttpStatusCode.OK;
                 }

@@ -13,40 +13,40 @@
     @for (user of users; track user) {
       <div class="row user-row">
         <div class="col-2 table-cell-s">
-          @if (editUser && editUser.id === user.id) {
+          @if (editUser && editUser.userId === user.userId) {
             <input [(ngModel)]="editUser.userName" />
           }
-          @if (!editUser || editUser.id !== user.id) {
+          @if (!editUser || editUser.userId !== user.userId) {
             <span>{{ user.userName }}</span>
           }
         </div>
         <div class="col-2 table-cell-s">
-          @if (editUser && editUser.id === user.id) {
+          @if (editUser && editUser.userId === user.userId) {
             <input [(ngModel)]="editUser.firstName" />
           }
-          @if (!editUser || editUser.id !== user.id) {
+          @if (!editUser || editUser.userId !== user.userId) {
             <span>{{ user.firstName }}</span>
           }
         </div>
         <div class="col-2 table-cell-s">
-          @if (editUser && editUser.id === user.id) {
+          @if (editUser && editUser.userId === user.userId) {
             <input [(ngModel)]="editUser.lastName" />
           }
-          @if (!editUser || editUser.id !== user.id) {
+          @if (!editUser || editUser.userId !== user.userId) {
             <span>{{ user.lastName }}</span>
           }
         </div>
         <div class="col-2 table-cell">
-          @if (editUser && editUser.id === user.id) {
+          @if (editUser && editUser.userId === user.userId) {
             <input [(ngModel)]="editUser.email" />
           }
-          @if (!editUser || editUser.id !== user.id) {
+          @if (!editUser || editUser.userId !== user.userId) {
             <span>{{ user.email }}</span>
           }
         </div>
         <div class="col-2 table-cell">
-          @if (editUser && editUser.id === user.id) {
-            <select [(ngModel)]="editUser.role" name="role-{{ user.id }}">
+          @if (editUser && editUser.userId === user.userId) {
+            <select [(ngModel)]="editUser.role" name="role-{{ user.userId }}">
               @for (role of roleOptions; track role) {
                 <option [value]="role.value">
                   {{ role.label }}
@@ -54,29 +54,29 @@
               }
             </select>
           }
-          @if (!editUser || editUser.id !== user.id) {
+          @if (!editUser || editUser.userId !== user.userId) {
             <span>
               {{ getRoleLabel(user.role) }}
             </span>
           }
         </div>
         <div class="table-cell-s">
-          @if (!editUser || editUser.id !== user.id) {
+          @if (!editUser || editUser.userId !== user.userId) {
             <button class="btn-edit" (click)="populateForm(user)">
               <i class="bi bi-pen"></i>
             </button>
           }
-          @if (editUser && editUser.id === user.id) {
+          @if (editUser && editUser.userId === user.userId) {
             <button class="btn-save" (click)="saveUser(editUser)">
               <i class="bi bi-floppy"></i>
             </button>
           }
-          @if (editUser && editUser.id === user.id) {
+          @if (editUser && editUser.userId === user.userId) {
             <button class="btn-cancel" (click)="cancelEdit()">
               <i class="bi bi-x-circle"></i>
             </button>
           }
-          <button class="btn-delete" (click)="deleteUser(user.id)">
+          <button class="btn-delete" (click)="deleteUser(user)">
             <i class="bi bi-trash"></i>
           </button>
         </div>

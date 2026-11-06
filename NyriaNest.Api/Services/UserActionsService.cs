@@ -31,10 +31,13 @@ namespace NyriaNest.Api.Services
         // ReviewItem methods
         Task<APIResponse<List<ReviewItemDto>>> GetUserReviewsAsync(string userId);
         Task<APIResponse<CreateReviewItemDto>> CreateReviewAsync(CreateReviewItemDto reviewItemDto);
-        Task<APIResponse<ReviewItemDto>> EditReviewAsync(int reviewId, ReviewItemDto reviewItemDto);
-        Task<APIResponse<ReviewItemDto>> RemoveReviewItemAsync(int reviewId);
-        Task<APIResponse<RatingItemDto>> EditRatingAsync(int reviewId, RatingItemDto ratingItemDto);
-        Task<APIResponse<RatingItemDto>> RemoveRatingAsync(int reviewId);
+        // userId = who is asking. Only the review's author may change or delete it,
+        // except isModerator: true lets any review or rating be deleted. Only admin
+        // endpoints pass it (#50); UserActionsController never does.
+        Task<APIResponse<ReviewItemDto>> EditReviewAsync(string userId, int reviewId, ReviewItemDto reviewItemDto);
+        Task<APIResponse<ReviewItemDto>> RemoveReviewItemAsync(string userId, int reviewId, bool isModerator = false);
+        Task<APIResponse<RatingItemDto>> EditRatingAsync(string userId, int reviewId, RatingItemDto ratingItemDto);
+        Task<APIResponse<RatingItemDto>> RemoveRatingAsync(string userId, int reviewId, bool isModerator = false);
 
         // FavoriteItem methods
         Task<APIResponse<List<FavoriteItemDto>>> GetFavoriteItemsAsync(string userId);
@@ -73,6 +76,7 @@ namespace NyriaNest.Api.Services
             CheckIfExists(createUserDTO.Email, createUserDTO.UserName);
 
             var user = _mapper.Map<User>(createUserDTO);
+            user.Role = Roles.User; // always, whatever the request contains
             // Create user with password
             var result = await _userManager.CreateAsync(user, createUserDTO.Password);
             if (!result.Succeeded)
@@ -84,8 +88,7 @@ namespace NyriaNest.Api.Services
             await _emailService.SendRegistrationEmailAsync(
                 createUserDTO.Email,
                 createUserDTO.FirstName,
-                createUserDTO.UserName,
-                createUserDTO.Password
+                createUserDTO.UserName
             );
 
             var createdUserDto = _mapper.Map<CreateUserDto>(user);
@@ -105,14 +108,26 @@ namespace NyriaNest.Api.Services
             var user = await _userRepo.GetByIdAsync<User>(userId);
             if (user != null)
             {
+                // Changing the password or the email needs the current password.
+                // Resending the email you already have (the profile page does) doesn't count.
+                var changesPassword = !string.IsNullOrWhiteSpace(userToUpdate.Password);
+                var changesEmail = !string.IsNullOrWhiteSpace(userToUpdate.Email)
+                    && !string.Equals(userToUpdate.Email, user.Email, StringComparison.OrdinalIgnoreCase);
+                if ((changesPassword || changesEmail)
+                    && (string.IsNullOrEmpty(userToUpdate.CurrentPassword)
+                        || !await _userManager.CheckPasswordAsync(user, userToUpdate.CurrentPassword)))
+                {
+                    response.ErrorMessages.Add("The current password you entered is incorrect. Please try again.");
+                    return response;
+                }
 
                 // Map UpdateUserDto to User
                 _mapper.Map(userToUpdate, user);
 
-                if (!string.IsNullOrWhiteSpace(userToUpdate.Password))
+                if (changesPassword)
                 {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, userToUpdate.Password);
+                    var passwordResult = await _userManager.ChangePasswordAsync(
+                        user, userToUpdate.CurrentPassword!, userToUpdate.Password!);
                     if (!passwordResult.Succeeded)
                     {
                         response.ErrorMessages.AddRange(passwordResult.Errors.Select(e => e.Description));
@@ -586,18 +601,20 @@ namespace NyriaNest.Api.Services
             response.Result = resultDto;
             return response;
         }
-        public async Task<APIResponse<ReviewItemDto>> EditReviewAsync(int reviewId, ReviewItemDto reviewItemDto)
+        public async Task<APIResponse<ReviewItemDto>> EditReviewAsync(string userId, int reviewId, ReviewItemDto reviewItemDto)
         {
             var response = new APIResponse<ReviewItemDto>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
             };
-            var user = _userRepo.GetByIdAsync<User>(reviewItemDto.UserId).Result;
-            var book = _bookRepo.GetByIdAsync(reviewItemDto.BookId).Result;
             var reviewToEdit = await _dbContext.ReviewItems.FindAsync(reviewId);
 
-            if (reviewToEdit != null)
+            if (reviewToEdit != null && reviewToEdit.UserId != userId)
+            {
+                SetNoReviewPermission(response);
+            }
+            else if (reviewToEdit != null)
             {
                 reviewToEdit.ReviewHeader = reviewItemDto.ReviewHeader;
                 reviewToEdit.ReviewText = reviewItemDto.ReviewText;
@@ -613,7 +630,7 @@ namespace NyriaNest.Api.Services
             }
             return response;
         }
-        public async Task<APIResponse<ReviewItemDto>> RemoveReviewItemAsync(int reviewId)
+        public async Task<APIResponse<ReviewItemDto>> RemoveReviewItemAsync(string userId, int reviewId, bool isModerator = false)
         {
             var response = new APIResponse<ReviewItemDto>
             {
@@ -624,7 +641,11 @@ namespace NyriaNest.Api.Services
                 .Include(r => r.User)
                 .Include(r => r.Book)
                 .FirstOrDefaultAsync(r => r.Id == reviewId);
-            if (reviewToDelete != null)
+            if (reviewToDelete != null && reviewToDelete.UserId != userId && !isModerator)
+            {
+                SetNoReviewPermission(response);
+            }
+            else if (reviewToDelete != null)
             {
                 // Remove from User's Reviews
                 if (reviewToDelete.User != null)
@@ -650,7 +671,7 @@ namespace NyriaNest.Api.Services
             }
             return response;
         }
-        public async Task<APIResponse<RatingItemDto>> EditRatingAsync(int reviewId, RatingItemDto ratingItemDto)
+        public async Task<APIResponse<RatingItemDto>> EditRatingAsync(string userId, int reviewId, RatingItemDto ratingItemDto)
         {
             var response = new APIResponse<RatingItemDto>
             {
@@ -667,6 +688,11 @@ namespace NyriaNest.Api.Services
             {
                 response.ErrorMessages.Add("Review or Rating not found.");
                 response.StatusCode = HttpStatusCode.NotFound;
+                return response;
+            }
+            if (reviewToEdit.UserId != userId)
+            {
+                SetNoReviewPermission(response);
                 return response;
             }
 
@@ -692,7 +718,7 @@ namespace NyriaNest.Api.Services
             response.Result = resultDto;
             return response;
         }
-        public async Task<APIResponse<RatingItemDto>> RemoveRatingAsync(int reviewId)
+        public async Task<APIResponse<RatingItemDto>> RemoveRatingAsync(string userId, int reviewId, bool isModerator = false)
         {
             var response = new APIResponse<RatingItemDto>
             {
@@ -711,6 +737,11 @@ namespace NyriaNest.Api.Services
                 response.StatusCode = HttpStatusCode.NotFound;
                 return response;
             }
+            if (review.UserId != userId && !isModerator)
+            {
+                SetNoReviewPermission(response);
+                return response;
+            }
 
             // Remove the RatingItem from the DbContext
             _dbContext.RatingItems.Remove(review.RatingItem);
@@ -724,6 +755,12 @@ namespace NyriaNest.Api.Services
             response.StatusCode = HttpStatusCode.OK;
             response.Result = null; // Rating is deleted, so return null
             return response;
+        }
+
+        private static void SetNoReviewPermission<T>(APIResponse<T> response)
+        {
+            response.ErrorMessages.Add("You do not have permission to change this review.");
+            response.StatusCode = HttpStatusCode.Forbidden;
         }
 
         // FavoriteItem methods

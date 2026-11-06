@@ -16,9 +16,14 @@ private apiUrl = 'api/User'; // Base URL for the User API
     return this.http.get<{ isSuccess: boolean; result: UserDto[] }>(this.apiUrl);
   }
 
-  // Get user by ID
+  // Get user by ID (admin only)
   getUserById(userId: string): Observable<{ isSuccess: boolean; result: UserDto }> {
     return this.http.get<{ isSuccess: boolean; result: UserDto }>(`${this.apiUrl}/${userId}`);
+  }
+
+  // The logged-in user's own profile, for every role (the user comes from the token)
+  getMe(): Observable<{ isSuccess: boolean; result: UserDto }> {
+    return this.http.get<{ isSuccess: boolean; result: UserDto }>('api/UserActions/me');
   }
 
 

@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace NyriaNest.Api.Controllers
 {
+    // Everything here needs a login, except registering. The user an action applies to
+    // is always the logged-in one, taken from the token – never from the URL or the body.
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class UserActionsController : ControllerBase
@@ -20,7 +23,17 @@ namespace NyriaNest.Api.Controllers
             _userService = userService;
             _userActionsService = userActionsService;
         }
-        
+
+        // Set by AuthController when it issues the token. [Authorize] guarantees a valid
+        // token, and every token we issue has this claim.
+        private string CurrentUserId =>
+            User.FindFirst("userId")?.Value
+            ?? throw new InvalidOperationException("The token has no userId claim.");
+
+        // Own things only, for every role. What admins do for or to other users
+        // (e.g. removing a review) lives in admin endpoints instead (#50).
+
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> AddUser([FromBody] CreateUserDto createUserDto)
         {
@@ -28,81 +41,92 @@ namespace NyriaNest.Api.Controllers
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPut("update/{userId}")]
-        public async Task<IActionResult> UpdateUser([FromRoute] string userId, [FromBody] UpdateUserDto updateUserDto)
+        // The logged-in user's own profile, for every role. GET api/User/{id} is admin-only,
+        // so this is what the frontend loads the current user with.
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMe()
         {
-            var response = await _userActionsService.UpdateUserAsync(userId, updateUserDto);
+            var response = await _userService.GetUserByIdAsync(CurrentUserId);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
+        {
+            var response = await _userActionsService.UpdateUserAsync(CurrentUserId, updateUserDto);
             return StatusCode((int)response.StatusCode, response);
         }
 
         // Borrow methods
 
-        [HttpGet("checkedout/{userId}")]
-        public async Task<IActionResult> GetCheckedOutBooks([FromRoute] string userId)
+        [HttpGet("checkedout")]
+        public async Task<IActionResult> GetCheckedOutBooks()
         {
-            var response = await _userActionsService.GetCheckedOutBooksAsync(userId);
+            var response = await _userActionsService.GetCheckedOutBooksAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPut("borrow/{userId}/{bookId}")]
-        public async Task<IActionResult> BorrowBook([FromRoute] string userId, [FromRoute] int bookId)
+        [HttpPut("borrow/{bookId}")]
+        public async Task<IActionResult> BorrowBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.CheckOutBookAsync(userId, bookId);
+            var response = await _userActionsService.CheckOutBookAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPut("return/{userId}/{bookId}")]
-        public async Task<IActionResult> ReturnBook([FromRoute] string userId, [FromRoute] int bookId)
+        [HttpPut("return/{bookId}")]
+        public async Task<IActionResult> ReturnBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.ReturnBookAsync(userId, bookId);
+            var response = await _userActionsService.ReturnBookAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
 
         // Reserve methods
 
-        [HttpGet("reserved/{userId}")]
-        public async Task<IActionResult> GetReservedBooks([FromRoute] string userId)
+        [HttpGet("reserved")]
+        public async Task<IActionResult> GetReservedBooks()
         {
-            var response = await _userActionsService.GetReservedBooksAsync(userId);
+            var response = await _userActionsService.GetReservedBooksAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
-        [HttpPut("reserve/{userId}/{bookId}")]
-        public async Task<IActionResult> ReserveBook([FromRoute] string userId, [FromRoute] int bookId)
+        [HttpPut("reserve/{bookId}")]
+        public async Task<IActionResult> ReserveBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.ReserveBookAsync(userId, bookId);
+            var response = await _userActionsService.ReserveBookAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
-        [HttpPut("unreserve/{userId}/{bookId}")]
-        public async Task<IActionResult> UnreserveBook([FromRoute] string userId, [FromRoute] int bookId)
+        [HttpPut("unreserve/{bookId}")]
+        public async Task<IActionResult> UnreserveBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.CancelReservationAsync(userId, bookId);
+            var response = await _userActionsService.CancelReservationAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
         // Review methods
-        [HttpGet("reviews/{userId}")]
-        public async Task<IActionResult> GetUserReviews([FromRoute] string userId)
+        [HttpGet("reviews")]
+        public async Task<IActionResult> GetUserReviews()
         {
-            var response = await _userActionsService.GetUserReviewsAsync(userId);
+            var response = await _userActionsService.GetUserReviewsAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPost("newReview")]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewItemDto createReviewDto)
         {
+            // Whatever userId the body says, the review is written by the logged-in user
+            createReviewDto.UserId = CurrentUserId;
             var response = await _userActionsService.CreateReviewAsync(createReviewDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("editReview/{reviewId}")]
         public async Task<IActionResult> EditReview([FromRoute] int reviewId, [FromBody] ReviewItemDto updateReviewDto)
         {
-            var response = await _userActionsService.EditReviewAsync(reviewId, updateReviewDto);
+            var response = await _userActionsService.EditReviewAsync(CurrentUserId, reviewId, updateReviewDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("deleteReview/{reviewId}")]
         public async Task<IActionResult> DeleteReview([FromRoute] int reviewId)
         {
-            var response = await _userActionsService.RemoveReviewItemAsync(reviewId);
+            var response = await _userActionsService.RemoveReviewItemAsync(CurrentUserId, reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -110,35 +134,35 @@ namespace NyriaNest.Api.Controllers
         [HttpPut("editRating/{reviewId}")]
         public async Task<IActionResult> EditRating([FromRoute] int reviewId, [FromBody] RatingItemDto ratingDto)
         {
-            var response = await _userActionsService.EditRatingAsync(reviewId, ratingDto);
+            var response = await _userActionsService.EditRatingAsync(CurrentUserId, reviewId, ratingDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("deleteRating/{reviewId}")]
         public async Task<IActionResult> DeleteRating([FromRoute] int reviewId)
         {
-            var response = await _userActionsService.RemoveRatingAsync(reviewId);
+            var response = await _userActionsService.RemoveRatingAsync(CurrentUserId, reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
 
         // Favorite methods
 
-        [HttpGet("favorites/{userId}")]
-        public async Task<IActionResult> GetFavoriteBooks([FromRoute] string userId)
+        [HttpGet("favorites")]
+        public async Task<IActionResult> GetFavoriteBooks()
         {
-            var response = await _userActionsService.GetFavoriteItemsAsync(userId);
+            var response = await _userActionsService.GetFavoriteItemsAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
 
-        [HttpPut("favorite/{userId}/{bookId}")]
-        public async Task<IActionResult> AddToFavorites([FromRoute] string userId, [FromRoute] int bookId)
+        [HttpPut("favorite/{bookId}")]
+        public async Task<IActionResult> AddToFavorites([FromRoute] int bookId)
         {
-            var response = await _userActionsService.AddToFavoritesAsync(userId, bookId);
+            var response = await _userActionsService.AddToFavoritesAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
-        [HttpDelete("unfavorite/{userId}/{bookId}")]
-        public async Task<IActionResult> RemoveFromFavorites([FromRoute] string userId, [FromRoute] int bookId)
+        [HttpDelete("unfavorite/{bookId}")]
+        public async Task<IActionResult> RemoveFromFavorites([FromRoute] int bookId)
         {
-            var response = await _userActionsService.RemoveFromFavoritesAsync(userId, bookId);
+            var response = await _userActionsService.RemoveFromFavoritesAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 

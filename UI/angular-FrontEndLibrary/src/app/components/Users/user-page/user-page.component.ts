@@ -75,9 +75,8 @@ export class UserPageComponent implements OnInit {
   }
 
   updateUserInfo() {
-    const userId = this.authService.getUserId();
-    if (this.user && userId) {
-      this.userService.updateUser(userId, this.user).subscribe((updated) => {
+    if (this.user) {
+      this.userService.updateUser(this.user).subscribe((updated) => {
         this.user = updated;
         this.editMode = false;
         this.reservedBooks = updated.reservedBooks || [];

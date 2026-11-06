@@ -44,14 +44,14 @@ export class UserSettingsComponent {
     }
 
     // Prepare the update payload
+    // The API checks currentPassword before it changes the password
     const updatePayload = {
-      userId: this.user!.userId,
-      Password: this.newPassword,
-      ldPassword: this.oldPassword,
+      password: this.newPassword,
+      currentPassword: this.oldPassword,
     };
 
     this.userActionsService
-      .updateUser(this.user!.userId, updatePayload)
+      .updateUser(updatePayload)
       .subscribe({
         next: () => {
           alert('Lösenordet har ändrats!');
@@ -60,8 +60,14 @@ export class UserSettingsComponent {
           this.newPassword = '';
           this.confirmPassword = '';
         },
-        error: () => {
-          alert('Kunde inte ändra lösenordet.');
+        // Show the API's reason, e.g. a wrong current password or a too weak new one
+        error: (err) => {
+          const messages: string[] = err?.error?.errorMessages ?? [];
+          alert(
+            messages.length
+              ? messages.join('\n')
+              : "Your password couldn't be changed. Please try again.",
+          );
         },
       });
   }
@@ -74,7 +80,6 @@ export class UserSettingsComponent {
     }
 
     const updatePayload = {
-      userId: this.user.userId,
       firstName: this.user.firstName,
       lastName: this.user.lastName,
       profilePictureUrl: this.user.profilePictureUrl,
@@ -82,7 +87,7 @@ export class UserSettingsComponent {
     };
 
     this.userActionsService
-      .updateUser(this.user.userId, updatePayload)
+      .updateUser(updatePayload)
       .subscribe({
         next: () => {
           alert('Info har uppdaterats!');

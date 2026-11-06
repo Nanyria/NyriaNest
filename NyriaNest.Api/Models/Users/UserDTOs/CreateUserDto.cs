@@ -10,6 +10,6 @@ namespace NyriaNest.Api.Models.Users.UserDTOs
         public required string LastName { get; set; }
         public required string Email { get; set; }
         public required string Password { get; set; }
-        public required string Role { get; set; }
+        // No Role: everyone who registers is a User. Admins are made by a SuperAdmin.
     }
 }
