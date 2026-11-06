@@ -1,13 +1,11 @@
 ﻿using AutoMapper;
 using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Repositories;
 using NyriaNest.Api.Storage;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 using System.Net;
 
 
@@ -19,13 +17,13 @@ namespace NyriaNest.Api.Services
         Task<APIResponse<Book>> GetBookByIdAsync(int id);
         // Accept optional userId of the actor who adds the book
         Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
-        Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, IFormFile file, CancellationToken ct = default);
+        Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
         Task<APIResponse<Book>> DeleteBookAsync(int id);
         Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId);
-        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync (int bookId);
+        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId);
         void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
@@ -41,12 +39,12 @@ namespace NyriaNest.Api.Services
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IUserRepo _userRepo;
-        private readonly AppDbContext _dbContext;
+        private readonly IAppDbContext _dbContext;
         private readonly IFileStorage _fileStorage;
         private readonly ILogger<BookService> _logger;
         private readonly IEpubService _epubService;
 
-        public BookService(IBookRepo bookRepo, IMapper mapper, IUserRepo userRepo, AppDbContext dbContext,
+        public BookService(IBookRepo bookRepo, IMapper mapper, IUserRepo userRepo, IAppDbContext dbContext,
             IFileStorage fileStorage, ILogger<BookService> logger, IEpubService epubService)
         {
             _bookRepo = bookRepo;
@@ -234,7 +232,7 @@ namespace NyriaNest.Api.Services
 
             return response;
         }
-        public async Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, IFormFile file, CancellationToken ct = default)
+        public async Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default)
         {
             var response = new APIResponse<Book>
             {
@@ -254,7 +252,7 @@ namespace NyriaNest.Api.Services
             bookDto.BookType = BookTypeEnums.EBook;
 
             // Disposing the transaction without a commit rolls back the book and its history
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = await _dbContext.BeginTransactionAsync(ct);
 
             var created = await AddBookAsync(bookDto);
             if (!created.IsSuccess || created.Result is null)
@@ -490,7 +488,7 @@ namespace NyriaNest.Api.Services
             _dbContext.StatusHistoryItems.Add(statusHistoryItem);
             user.UserHistory.Add(statusHistoryItem);
             book.StatusHistory.Add(statusHistoryItem);
-            
+
         }
         public Book GetBookStatus(Book book, BookStatusEnum bookStatus)
         {

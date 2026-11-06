@@ -1,4 +1,4 @@
-﻿namespace NyriaNest.Api.Helpers.Enums
+﻿namespace NyriaNest.Domain.Constants
 {
     // The role names, used everywhere: [Authorize], seeding and the database.
     // They were Swedish ("Administratör", "Användare") until the
@@ -8,6 +8,6 @@
         public const string SuperAdmin = "SuperAdmin";
         public const string Admin = "Admin";
         public const string User = "User";
-        public static readonly List<string> AllRoles = new() { SuperAdmin, Admin, User};
+        public static readonly List<string> AllRoles = new() { SuperAdmin, Admin, User };
     }
 }

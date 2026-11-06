@@ -1,8 +1,5 @@
-﻿using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.History.HistoryDTOs;
+﻿using NyriaNest.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
 
 namespace NyriaNest.Api.Models.Books.BookDTOs
 {

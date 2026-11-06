@@ -1,15 +1,13 @@
 ﻿using AutoMapper;
-using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.Users;
-using NyriaNest.Api.Models.Users.UserDTOs;
-using NyriaNest.Api.Repositories;
-using NyriaNest.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using NyriaNest.Api.Data;
+using NyriaNest.Api.Models;
+using NyriaNest.Api.Models.Users.UserDTOs;
+using NyriaNest.Api.Repositories;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 using System.Net;
 
 namespace NyriaNest.Api.Services
@@ -42,7 +40,7 @@ namespace NyriaNest.Api.Services
         // FavoriteItem methods
         Task<APIResponse<List<FavoriteItemDto>>> GetFavoriteItemsAsync(string userId);
         Task<APIResponse<FavoriteItemDto>> AddToFavoritesAsync(string userId, int bookId);
-        Task<APIResponse<FavoriteItemDto>> RemoveFromFavoritesAsync( string userId, int bookId);
+        Task<APIResponse<FavoriteItemDto>> RemoveFromFavoritesAsync(string userId, int bookId);
     }
 
     public class UserActionsService : IUserActionsService
@@ -51,11 +49,11 @@ namespace NyriaNest.Api.Services
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IBookService _bookService;
-        private readonly AppDbContext _dbContext;
+        private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
 
-        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, AppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
+        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
         {
             _userRepo = userRepo;
             _bookRepo = bookRepo;
@@ -328,7 +326,7 @@ namespace NyriaNest.Api.Services
 
                     response.IsSuccess = true;
                     response.StatusCode = HttpStatusCode.OK;
-                    response.Result = _mapper.Map<UserDto>(user); 
+                    response.Result = _mapper.Map<UserDto>(user);
                 }
                 else
                 {
@@ -579,7 +577,7 @@ namespace NyriaNest.Api.Services
                 ReviewText = reviewItemDto.ReviewText
             };
             // Add review to context and save to get Id
-            _dbContext.Add(newReview);
+            _dbContext.ReviewItems.Add(newReview);
             user.Reviews.Add(newReview);
             book.Reviews.Add(newReview);
             await _dbContext.SaveChangesAsync();
@@ -589,7 +587,7 @@ namespace NyriaNest.Api.Services
             {
                 var rating = _mapper.Map<RatingItem>(reviewItemDto.RatingItem);
                 rating.ReviewItemId = newReview.Id; // Set the FK after review is saved
-                _dbContext.Add(rating);
+                _dbContext.RatingItems.Add(rating);
                 await _dbContext.SaveChangesAsync();
 
                 newReview.RatingItem = rating;
@@ -680,7 +678,7 @@ namespace NyriaNest.Api.Services
             };
 
             // Find the review by ReviewItemId
-            var reviewToEdit = await _dbContext.Set<ReviewItem>()
+            var reviewToEdit = await _dbContext.ReviewItems
                 .Include(r => r.RatingItem)
                 .FirstOrDefaultAsync(r => r.Id == reviewId);
 
@@ -824,7 +822,7 @@ namespace NyriaNest.Api.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _dbContext.Add(newFavorite);
+            _dbContext.FavoriteItems.Add(newFavorite);
             user.ReadList.Add(newFavorite);
             await _dbContext.SaveChangesAsync();
 

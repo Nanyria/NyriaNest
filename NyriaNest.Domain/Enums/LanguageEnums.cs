@@ -1,4 +1,4 @@
-﻿namespace NyriaNest.Api.Helpers.Enums
+﻿namespace NyriaNest.Domain.Enums
 {
     public enum LanguageEnums
     {

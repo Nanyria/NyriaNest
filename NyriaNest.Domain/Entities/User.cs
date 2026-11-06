@@ -1,9 +1,7 @@
-﻿using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.History;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
-namespace NyriaNest.Api.Models.Users
+namespace NyriaNest.Domain.Entities
 {
     public class User : IdentityUser
     {
@@ -28,6 +26,6 @@ namespace NyriaNest.Api.Models.Users
         public List<ReservationItem> ReservedBooks { get; set; } = new List<ReservationItem>();
         public List<StatusHistoryItem> UserHistory { get; set; } = new List<StatusHistoryItem>();
         public List<NotificationItem> Notifications { get; set; } = new();
-        
+
     }
 }

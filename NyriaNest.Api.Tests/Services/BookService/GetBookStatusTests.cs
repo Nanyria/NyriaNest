@@ -2,11 +2,11 @@ using AutoMapper;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Repositories;
 using NyriaNest.Api.Services;
 using NyriaNest.Api.Storage;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Tests.Services.BookService;
 

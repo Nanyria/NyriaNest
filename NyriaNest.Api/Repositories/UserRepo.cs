@@ -1,6 +1,6 @@
-﻿using NyriaNest.Api.Data;
-using NyriaNest.Api.Models.Users;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using NyriaNest.Api.Data;
+using NyriaNest.Domain.Entities;
 using System.Linq.Expressions;
 
 namespace NyriaNest.Api.Repositories

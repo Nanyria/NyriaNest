@@ -1,9 +1,9 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Users;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace NyriaNest.Api.Tests.TestSupport;
 

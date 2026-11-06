@@ -1,19 +1,20 @@
-﻿using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.Users;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Data
 {
-    public class AppDbContext : IdentityDbContext<User>
+    public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
 
         }
+
+        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
+            Database.BeginTransactionAsync(cancellationToken);
 
         public DbSet<Book> Books { get; set; }
         public DbSet<ReviewItem> ReviewItems { get; set; }
@@ -24,7 +25,7 @@ namespace NyriaNest.Api.Data
         public DbSet<ReservationItem> ReservationItems { get; set; }
         public DbSet<NotificationItem> NotificationItems { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {   
+        {
             base.OnModelCreating(modelBuilder);
 
             // ReviewItem: User (many reviews per user)
@@ -157,7 +158,7 @@ namespace NyriaNest.Api.Data
                 {
                     BookId = 1001,
                     Title = "The Great Gatsby",
-                    Author = "F. Scott Fitzgerald", 
+                    Author = "F. Scott Fitzgerald",
                     Genre = GenreEnums.Fiction,
                     PublicationYear = 1925,
                     BookDescription = "Lorem Ipsum",

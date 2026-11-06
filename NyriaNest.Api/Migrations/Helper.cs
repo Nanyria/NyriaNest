@@ -1,6 +1,6 @@
-﻿using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Users;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api.Helpers
 {

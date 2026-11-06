@@ -1,6 +1,5 @@
 ﻿
 using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.Users.UserDTOs;
 
 namespace NyriaNest.Api.Models
 {

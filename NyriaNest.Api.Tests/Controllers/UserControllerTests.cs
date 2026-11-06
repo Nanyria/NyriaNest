@@ -1,9 +1,9 @@
-using System.Net;
-using System.Net.Http.Json;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Domain.Constants;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace NyriaNest.Api.Tests.Controllers;
 

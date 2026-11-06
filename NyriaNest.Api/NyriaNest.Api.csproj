@@ -44,6 +44,10 @@
     <Folder Include="Migrations\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NyriaNest.Domain\NyriaNest.Domain.csproj" />
+  </ItemGroup>
+
   <Target Name="BuildAngularApp" BeforeTargets="Publish">
     <Exec Command="npm install" WorkingDirectory="..\UI\angular-FrontEndLibrary" />
     <Exec Command="npm run build -- --output-path=dist/angular-FrontEndLibrary --configuration=production" WorkingDirectory="..\UI\angular-FrontEndLibrary" />

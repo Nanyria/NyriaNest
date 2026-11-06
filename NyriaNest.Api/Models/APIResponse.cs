@@ -4,9 +4,9 @@ namespace NyriaNest.Api.Models
 {
     public class APIResponse<T>
     {
-        public APIResponse() 
+        public APIResponse()
         {
-            ErrorMessages= new List<string>();
+            ErrorMessages = new List<string>();
         }
         public bool IsSuccess { get; set; }
         public T Result { get; set; }

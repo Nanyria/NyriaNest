@@ -1,10 +1,8 @@
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Users;
-using NyriaNest.Api.Models.Users.UserDTOs;
-using NyriaNest.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Api.Models;
+using NyriaNest.Api.Models.Users.UserDTOs;
+using NyriaNest.Api.Services;
 
 namespace NyriaNest.Api.Controllers
 {

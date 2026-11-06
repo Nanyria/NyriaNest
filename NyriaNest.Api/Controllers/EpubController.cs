@@ -1,8 +1,8 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Services;
+using NyriaNest.Domain.Constants;
+using System.Security.Claims;
 
 namespace NyriaNest.Api.Controllers
 {
@@ -24,7 +24,7 @@ namespace NyriaNest.Api.Controllers
         [RequestFormLimits(MultipartBodyLengthLimit = EpubService.MaxFileSize)]
         public async Task<IActionResult> Upload(int bookId, IFormFile file, CancellationToken ct)
         {
-            var response = await _epubService.UploadAsync(bookId, file, ct);
+            var response = await _epubService.UploadAsync(bookId, file.ToUploadedFile(), ct);
             return StatusCode((int)response.StatusCode, response);
         }
 

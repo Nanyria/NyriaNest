@@ -1,12 +1,9 @@
 ﻿using AutoMapper;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.History;
 using NyriaNest.Api.Models.History.HistoryDTOs;
-using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Models.Users.UserDTOs;
+using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api
 {
@@ -33,7 +30,7 @@ namespace NyriaNest.Api
                 .ForMember(dest => dest.Reservations, opt => opt.Ignore())
                 .ForMember(dest => dest.CheckedOutBy, opt => opt.Ignore())
                 .ForMember(dest => dest.Reviews, opt => opt.Ignore());
-            
+
             CreateMap<User, CreateUserDto>();
             CreateMap<CreateUserDto, User>();
 

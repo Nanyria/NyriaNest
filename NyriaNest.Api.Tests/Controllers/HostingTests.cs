@@ -1,4 +1,3 @@
-using System.Net;
 using AwesomeAssertions;
 using NyriaNest.Api.Tests.TestSupport;
 

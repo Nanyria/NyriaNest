@@ -1,13 +1,13 @@
+using AwesomeAssertions;
+using Microsoft.IdentityModel.Tokens;
+using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Domain.Constants;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
-using AwesomeAssertions;
-using Microsoft.IdentityModel.Tokens;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Tests.TestSupport;
 
 namespace NyriaNest.Api.Tests.Controllers;
 

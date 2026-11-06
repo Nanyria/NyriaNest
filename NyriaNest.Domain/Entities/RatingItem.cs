@@ -1,10 +1,8 @@
-﻿using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Users;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace NyriaNest.Api.Models
+namespace NyriaNest.Domain.Entities
 {
     public class RatingItem
     {
