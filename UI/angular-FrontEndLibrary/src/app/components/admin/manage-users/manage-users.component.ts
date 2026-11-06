@@ -1,14 +1,7 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  OnInit,
-  ChangeDetectionStrategy,
-} from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { ILoggedInUser, UserDto } from '../../../Models/interfaces';
+import { UserDto } from '../../../Models/interfaces';
 import { UserService } from '../../../Services/user.service';
 import { ConfirmService } from '../../../Services/confirm.service';
 @Component({
@@ -62,22 +55,6 @@ export class ManageUsersComponent implements OnInit {
     const found = this.roleOptions.find((r) => r.value === roleValue);
     return found ? found.label : roleValue;
   }
-  handleFormSubmit(user: UserDto) {
-    if (this.editUser) {
-      this.userService
-        .updateUserAsAdmin(this.editUser.userId, user)
-        .subscribe(() => {
-          this.getAllUsers();
-          this.resetForm();
-        });
-    } else {
-      this.userService.createAdminUser(user).subscribe(() => {
-        this.getAllUsers();
-        this.resetForm();
-      });
-    }
-  }
-
   populateForm(user: UserDto) {
     this.editUser = { ...user };
   }

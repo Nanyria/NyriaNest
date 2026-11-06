@@ -6,7 +6,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ILoggedInUser } from '../../../Models/interfaces';
 import { AuthService } from '../../../Services/auth.service';
 @Component({
   selector: 'app-user-readlist',

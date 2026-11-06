@@ -3,7 +3,6 @@ import {
   Component,
   DestroyRef,
   HostListener,
-  Input,
   ViewChild,
   ChangeDetectionStrategy,
   inject,
@@ -210,7 +209,7 @@ export class LibraryComponent implements AfterViewInit {
           }
         }
       },
-      (error) => {
+      () => {
         this.books = [];
         this.loading = false;
         this.loadError = true;

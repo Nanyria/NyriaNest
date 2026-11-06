@@ -1,7 +1,6 @@
 import {
   Component,
   OnInit,
-  Input,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';

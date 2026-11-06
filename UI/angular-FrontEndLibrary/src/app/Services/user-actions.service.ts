@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateReviewItemDto, CreateRatingItemDto, ReviewItemDto, RatingItemDto } from '../Models/interfaces';
+import { CreateReviewItemDto, ReviewItemDto, RatingItemDto } from '../Models/interfaces';
 import { CreateUserDto } from '../Models/interfaces';
 
 // Every action applies to the logged-in user: the API takes the user from the
