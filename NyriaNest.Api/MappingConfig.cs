@@ -7,7 +7,6 @@ using NyriaNest.Api.Models.History;
 using NyriaNest.Api.Models.History.HistoryDTOs;
 using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Models.Users.UserDTOs;
-using static NyriaNest.Api.Models.Books.BookDTOs.BookDto;
 
 namespace NyriaNest.Api
 {
@@ -15,16 +14,6 @@ namespace NyriaNest.Api
     {
         public MappingConfig()
         {
-
-            CreateMap<BookDto, Book>()
-                .ForMember(dest => dest.BookId, opt => opt.Ignore())
-                .ForMember(dest => dest.StatusHistory, opt => opt.Ignore())
-                .ForMember(dest => dest.Reservations, opt => opt.Ignore())
-                .ForMember(dest => dest.CheckedOutBy, opt => opt.Ignore())
-                .ForMember(dest => dest.Reviews, opt => opt.Ignore());
-
-            CreateMap<Book, BookDto>();
-
             CreateMap<User, UserDto>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id)); // Only needed for Id/UserId
 
