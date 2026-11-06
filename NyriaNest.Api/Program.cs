@@ -1,16 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using NyriaNest.Application.Interfaces;
-using NyriaNest.Application.Mapping;
-using NyriaNest.Application.Services;
+using NyriaNest.Application;
 using NyriaNest.Domain.Entities;
+using NyriaNest.Infrastructure;
 using NyriaNest.Infrastructure.Data;
-using NyriaNest.Infrastructure.Repositories;
-using NyriaNest.Infrastructure.Services;
-using NyriaNest.Infrastructure.Storage;
 using System.Text;
 
 namespace NyriaNest.Api
@@ -46,24 +41,9 @@ namespace NyriaNest.Api
                 });
             });
 
-            builder.Services.AddScoped<IBookService, BookService>();
-            builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IUserActionsService, UserActionsService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IUserRepo, UserRepo>();
-            builder.Services.AddScoped<IBookRepo, BookRepo>();
-            builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
-            builder.Services.AddScoped<IEpubService, EpubService>();
-
-            builder.Services.AddAutoMapper(cfg =>
-            {
-                cfg.LicenseKey = builder.Configuration["AutoMapper:LicenseKey"];
-            }, typeof(MappingConfig));
-
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionToDB")));
-            // The same AppDbContext instance as the repositories get, not a second one
-            builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+            // Each layer registers its own classes (see DependencyInjection.cs in each project)
+            builder.Services.AddApplication(builder.Configuration);
+            builder.Services.AddInfrastructure(builder.Configuration);
 
             // The app normally calls the API from its own origin (the dev proxy, or the
             // Angular build served from wwwroot), which needs no CORS. Only the origins
@@ -103,20 +83,7 @@ namespace NyriaNest.Api
 
             var app = builder.Build();
 
-            using (var scope = app.Services.CreateScope())
-            {
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                // The migrations are written for SQL Server. Any other provider (the SQLite
-                // database the tests use) gets its schema straight from the model instead.
-                if (db.Database.IsSqlServer())
-                    db.Database.Migrate(); // Ensures DB is created and up-to-date
-                else
-                    db.Database.EnsureCreated();
-
-                var services = scope.ServiceProvider;
-                DatabaseSeeder.SeedRolesAndAdminAsync(services).GetAwaiter().GetResult();
-                DatabaseSeeder.AssignUserRoleToUsersWithoutRoleAsync(services).GetAwaiter().GetResult();
-            }
+            app.Services.InitialiseDatabaseAsync().GetAwaiter().GetResult();
 
             // Swagger lists every endpoint and lets anyone try them, so only in Development
             if (app.Environment.IsDevelopment())
