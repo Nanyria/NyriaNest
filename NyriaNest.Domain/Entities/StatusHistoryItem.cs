@@ -1,11 +1,9 @@
-﻿using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Users;
+﻿using NyriaNest.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
-namespace NyriaNest.Api.Models.History
+namespace NyriaNest.Domain.Entities
 {
     public class StatusHistoryItem
     {

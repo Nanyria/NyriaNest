@@ -1,5 +1,5 @@
-﻿using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Books.BookDTOs;
+﻿using NyriaNest.Api.Models.Books.BookDTOs;
+using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api.Repositories
 {

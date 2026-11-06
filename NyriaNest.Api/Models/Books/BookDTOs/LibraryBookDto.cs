@@ -1,4 +1,4 @@
-﻿using NyriaNest.Api.Helpers.Enums;
+﻿using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Models.Books.BookDTOs
 {

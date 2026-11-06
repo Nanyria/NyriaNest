@@ -1,8 +1,7 @@
-﻿using NyriaNest.Api.Models.Users;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace NyriaNest.Api.Models
+namespace NyriaNest.Domain.Entities
 {
     public class NotificationItem
     {

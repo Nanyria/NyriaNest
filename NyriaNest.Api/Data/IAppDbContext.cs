@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.History;
+using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api.Data
 {

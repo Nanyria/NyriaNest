@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.11.12315.225 stable
+VisualStudioVersion = 18.11.12315.225
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NyriaNest.Api", "NyriaNest.Api\NyriaNest.Api.csproj", "{9C2AB947-1B3F-489F-81AB-F82EFA3FA10B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NyriaNest.Api.Tests", "NyriaNest.Api.Tests\NyriaNest.Api.Tests.csproj", "{4C24796A-9973-4A29-BB6A-23C84C3D125B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NyriaNest.Domain", "NyriaNest.Domain\NyriaNest.Domain.csproj", "{ADD806F2-1065-456D-8715-DEE1B8F17E44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{4C24796A-9973-4A29-BB6A-23C84C3D125B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C24796A-9973-4A29-BB6A-23C84C3D125B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C24796A-9973-4A29-BB6A-23C84C3D125B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

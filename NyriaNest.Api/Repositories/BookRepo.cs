@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Repositories
 {
@@ -108,12 +108,12 @@ namespace NyriaNest.Api.Repositories
             // (Returned and Added are rejected by the service before we get here)
             books = q.Status switch
             {
-                BookStatusEnum.Available  => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
+                BookStatusEnum.Available => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
                 BookStatusEnum.CheckedOut => books.Where(b => b.CheckedOutBy != null),
-                BookStatusEnum.Overdue    => books.Where(b => b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now),
-                BookStatusEnum.Reserved   => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && b.Reservations.Any()),
-                BookStatusEnum.Lost       => books.Where(b => b.AdminStatus == BookStatusEnum.Lost),
-                BookStatusEnum.Removed    => books.Where(b => b.AdminStatus == BookStatusEnum.Removed),
+                BookStatusEnum.Overdue => books.Where(b => b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now),
+                BookStatusEnum.Reserved => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && b.Reservations.Any()),
+                BookStatusEnum.Lost => books.Where(b => b.AdminStatus == BookStatusEnum.Lost),
+                BookStatusEnum.Removed => books.Where(b => b.AdminStatus == BookStatusEnum.Removed),
                 _ => books // no status filter
             };
 
@@ -123,9 +123,9 @@ namespace NyriaNest.Api.Repositories
             {
                 CatalogueSort.TitleDesc => books.OrderByDescending(b => b.Title).ThenBy(b => b.BookId),
                 CatalogueSort.AuthorAsc => books.OrderBy(b => b.Author).ThenBy(b => b.Title).ThenBy(b => b.BookId),
-                CatalogueSort.YearDesc  => books.OrderByDescending(b => b.PublicationYear).ThenBy(b => b.Title).ThenBy(b => b.BookId),
-                CatalogueSort.YearAsc   => books.OrderBy(b => b.PublicationYear).ThenBy(b => b.Title).ThenBy(b => b.BookId),
-                _                       => books.OrderBy(b => b.Title).ThenBy(b => b.BookId), // TitleAsc
+                CatalogueSort.YearDesc => books.OrderByDescending(b => b.PublicationYear).ThenBy(b => b.Title).ThenBy(b => b.BookId),
+                CatalogueSort.YearAsc => books.OrderBy(b => b.PublicationYear).ThenBy(b => b.Title).ThenBy(b => b.BookId),
+                _ => books.OrderBy(b => b.Title).ThenBy(b => b.BookId), // TitleAsc
             };
 
             var total = await books.CountAsync();
@@ -161,7 +161,7 @@ namespace NyriaNest.Api.Repositories
 
         public async Task SaveAsync()
         {
-            await _db.SaveChangesAsync(); 
+            await _db.SaveChangesAsync();
         }
 
         // Only marks the book as changed; SaveAsync writes it to the database

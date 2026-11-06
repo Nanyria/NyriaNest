@@ -1,17 +1,12 @@
 ﻿using AutoMapper;
-using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.History.HistoryDTOs;
-using NyriaNest.Api.Models.Users;
-using NyriaNest.Api.Models.Users.UserDTOs;
-using NyriaNest.Api.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using NyriaNest.Api.Data;
+using NyriaNest.Api.Models;
+using NyriaNest.Api.Models.Users.UserDTOs;
+using NyriaNest.Api.Repositories;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
 using System.Net;
 
 namespace NyriaNest.Api.Services
@@ -403,7 +398,7 @@ namespace NyriaNest.Api.Services
 
             return response;
         }
-        
+
         public async Task<APIResponse<List<StatusHistoryItem>>> GetUserHistoryAsync(string userId)
         {
             var response = new APIResponse<List<StatusHistoryItem>>
@@ -432,4 +427,4 @@ namespace NyriaNest.Api.Services
     }
 }
 
-    
+

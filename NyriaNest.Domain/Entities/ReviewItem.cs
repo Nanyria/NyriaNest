@@ -1,10 +1,7 @@
-﻿using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Users;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace NyriaNest.Api.Models
+namespace NyriaNest.Domain.Entities
 {
     public class ReviewItem
     {
@@ -18,8 +15,8 @@ namespace NyriaNest.Api.Models
         public int BookId { get; set; }
         [JsonIgnore]
         public Book Book { get; set; }
-        public string? ReviewHeader { get; set; } 
-        public string? ReviewText { get; set; } 
+        public string? ReviewHeader { get; set; }
+        public string? ReviewText { get; set; }
         public RatingItem? RatingItem { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

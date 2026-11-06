@@ -1,11 +1,12 @@
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Enums;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace NyriaNest.Api.Tests.Controllers;
 

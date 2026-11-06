@@ -1,13 +1,11 @@
 ﻿using AutoMapper;
 using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Repositories;
 using NyriaNest.Api.Storage;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 using System.Net;
 
 
@@ -25,7 +23,7 @@ namespace NyriaNest.Api.Services
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId);
-        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync (int bookId);
+        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId);
         void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
@@ -490,7 +488,7 @@ namespace NyriaNest.Api.Services
             _dbContext.StatusHistoryItems.Add(statusHistoryItem);
             user.UserHistory.Add(statusHistoryItem);
             book.StatusHistory.Add(statusHistoryItem);
-            
+
         }
         public Book GetBookStatus(Book book, BookStatusEnum bookStatus)
         {

@@ -1,7 +1,7 @@
-﻿using NyriaNest.Api.Models.Users;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using NyriaNest.Domain.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -32,7 +32,7 @@ namespace NyriaNest.Api.Controllers
                 var authClaims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, user.UserName),
-	                new Claim(JwtRegisteredClaimNames.Jti, user.Id), // Use user.Id here
+                    new Claim(JwtRegisteredClaimNames.Jti, user.Id), // Use user.Id here
 	                new Claim("userId", user.Id), // Custom claim for clarity
                 };
 

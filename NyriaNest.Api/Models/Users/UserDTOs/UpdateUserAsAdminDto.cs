@@ -1,5 +1,4 @@
-﻿using NyriaNest.Api.Models.Books;
-using System.ComponentModel.DataAnnotations;
+﻿using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api.Models.Users.UserDTOs
 {

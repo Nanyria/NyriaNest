@@ -1,7 +1,6 @@
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.Users;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Tests.TestSupport;
 
@@ -16,15 +15,15 @@ public static class TestData
         string title = "Test book",
         BookTypeEnums type = BookTypeEnums.Paperback,
         BookStatusEnum status = BookStatusEnum.Available) => new()
-    {
-        Title = title,
-        Author = "Test Author",
-        BookType = type,
-        BookStatus = status,
-        Genre = GenreEnums.Fiction,
-        Language = LanguageEnums.English,
-        PublicationYear = 2020,
-    };
+        {
+            Title = title,
+            Author = "Test Author",
+            BookType = type,
+            BookStatus = status,
+            Genre = GenreEnums.Fiction,
+            Language = LanguageEnums.English,
+            PublicationYear = 2020,
+        };
 
     public static Book Ebook(string title = "Test e-book") =>
         Book(title, BookTypeEnums.EBook);

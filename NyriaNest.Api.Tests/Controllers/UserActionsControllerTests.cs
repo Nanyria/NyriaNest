@@ -1,12 +1,11 @@
-using System.Net;
-using System.Net.Http.Json;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace NyriaNest.Api.Tests.Controllers;
 

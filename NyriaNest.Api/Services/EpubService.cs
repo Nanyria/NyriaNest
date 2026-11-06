@@ -1,10 +1,10 @@
-﻿using System.Net;
-using System.Text;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models;
 using NyriaNest.Api.Storage;
+using NyriaNest.Domain.Enums;
+using System.Net;
+using System.Text;
 
 namespace NyriaNest.Api.Services
 {

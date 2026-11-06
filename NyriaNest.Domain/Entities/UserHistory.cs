@@ -1,7 +1,6 @@
-﻿using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Books;
+﻿using NyriaNest.Domain.Enums;
 
-namespace NyriaNest.Api.Models.Users
+namespace NyriaNest.Domain.Entities
 {
     public class UserHistory
     {

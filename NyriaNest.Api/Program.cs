@@ -5,10 +5,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using NyriaNest.Api.Data;
 using NyriaNest.Api.Helpers;
-using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Repositories;
 using NyriaNest.Api.Services;
 using NyriaNest.Api.Storage;
+using NyriaNest.Domain.Entities;
 using System.Text;
 
 namespace NyriaNest.Api

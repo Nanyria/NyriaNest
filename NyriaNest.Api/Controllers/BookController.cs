@@ -1,11 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.Users;
 using NyriaNest.Api.Controllers;
+using NyriaNest.Api.Models.Books.BookDTOs;
 using NyriaNest.Api.Services;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Enums;
 using System.Security.Claims;
 
 

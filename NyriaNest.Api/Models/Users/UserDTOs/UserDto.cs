@@ -1,19 +1,17 @@
-﻿using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.History.HistoryDTOs;
+﻿using NyriaNest.Api.Models.History.HistoryDTOs;
 using System.ComponentModel.DataAnnotations;
 
 namespace NyriaNest.Api.Models.Users.UserDTOs
 {
     public class UserDto
     {
-		public string UserId { get; set; }
-		public required string UserName { get; set; }
-		public required string FirstName { get; set; }
-		public required string LastName { get; set; }
+        public string UserId { get; set; }
+        public required string UserName { get; set; }
+        public required string FirstName { get; set; }
+        public required string LastName { get; set; }
 
-		public required string Email { get; set; }
-		// No Password: a user's password (or its hash) is never sent to a client
+        public required string Email { get; set; }
+        // No Password: a user's password (or its hash) is never sent to a client
         public string? ProfilePictureUrl { get; set; } // or ProfilePictureName
         [MaxLength(500)]
         public string? Bio { get; set; }
@@ -21,8 +19,8 @@ namespace NyriaNest.Api.Models.Users.UserDTOs
         public List<FavoriteItemDto> ReadList { get; set; } = new List<FavoriteItemDto>();
         public List<ReviewItemDto> Reviews { get; set; } = new List<ReviewItemDto>();
         public List<CheckedOutItemDto> CheckedOutBooks { get; set; } = new List<CheckedOutItemDto>();
-		public List<ReservationItemDto> ReservedBooks { get; set; } = new List<ReservationItemDto>();
-		public List<StatusHistoryItemDto> UserHistory { get; set; } = new List<StatusHistoryItemDto>();
+        public List<ReservationItemDto> ReservedBooks { get; set; } = new List<ReservationItemDto>();
+        public List<StatusHistoryItemDto> UserHistory { get; set; } = new List<StatusHistoryItemDto>();
         public List<NotificationItemDto> Notifications { get; set; } = new();
 
     }

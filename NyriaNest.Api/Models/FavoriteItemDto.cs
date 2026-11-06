@@ -1,8 +1,5 @@
-﻿using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.Books.BookDTOs;
-using NyriaNest.Api.Models.Users;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using NyriaNest.Api.Models.Books.BookDTOs;
+
 
 namespace NyriaNest.Api.Models
 {

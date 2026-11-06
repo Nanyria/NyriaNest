@@ -1,8 +1,8 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Services;
+using NyriaNest.Domain.Constants;
+using System.Security.Claims;
 
 namespace NyriaNest.Api.Controllers
 {

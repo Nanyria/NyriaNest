@@ -1,15 +1,13 @@
 ﻿using AutoMapper;
-using NyriaNest.Api.Data;
-using NyriaNest.Api.Helpers.Enums;
-using NyriaNest.Api.Models;
-using NyriaNest.Api.Models.Books;
-using NyriaNest.Api.Models.History;
-using NyriaNest.Api.Models.Users;
-using NyriaNest.Api.Models.Users.UserDTOs;
-using NyriaNest.Api.Repositories;
-using NyriaNest.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using NyriaNest.Api.Data;
+using NyriaNest.Api.Models;
+using NyriaNest.Api.Models.Users.UserDTOs;
+using NyriaNest.Api.Repositories;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 using System.Net;
 
 namespace NyriaNest.Api.Services
@@ -42,7 +40,7 @@ namespace NyriaNest.Api.Services
         // FavoriteItem methods
         Task<APIResponse<List<FavoriteItemDto>>> GetFavoriteItemsAsync(string userId);
         Task<APIResponse<FavoriteItemDto>> AddToFavoritesAsync(string userId, int bookId);
-        Task<APIResponse<FavoriteItemDto>> RemoveFromFavoritesAsync( string userId, int bookId);
+        Task<APIResponse<FavoriteItemDto>> RemoveFromFavoritesAsync(string userId, int bookId);
     }
 
     public class UserActionsService : IUserActionsService
@@ -328,7 +326,7 @@ namespace NyriaNest.Api.Services
 
                     response.IsSuccess = true;
                     response.StatusCode = HttpStatusCode.OK;
-                    response.Result = _mapper.Map<UserDto>(user); 
+                    response.Result = _mapper.Map<UserDto>(user);
                 }
                 else
                 {

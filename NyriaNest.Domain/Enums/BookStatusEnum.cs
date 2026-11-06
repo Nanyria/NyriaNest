@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace NyriaNest.Api.Helpers.Enums
+namespace NyriaNest.Domain.Enums
 {
     public enum BookStatusEnum
     {
