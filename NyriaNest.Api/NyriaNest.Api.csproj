@@ -45,6 +45,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NyriaNest.Application\NyriaNest.Application.csproj" />
     <ProjectReference Include="..\NyriaNest.Domain\NyriaNest.Domain.csproj" />
   </ItemGroup>
 

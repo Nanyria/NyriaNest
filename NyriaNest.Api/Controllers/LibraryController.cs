@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Api.Services;
+using NyriaNest.Application.Services;
 using System.Security.Claims;
 
 

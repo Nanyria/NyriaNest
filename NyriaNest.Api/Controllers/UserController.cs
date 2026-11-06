@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Api.Models.Users.UserDTOs;
-using NyriaNest.Api.Services;
+using NyriaNest.Application.DTOs.Users;
+using NyriaNest.Application.Services;
 using NyriaNest.Domain.Constants;
 
 namespace NyriaNest.Api.Controllers
