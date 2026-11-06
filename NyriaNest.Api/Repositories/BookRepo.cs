@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Data;
-using NyriaNest.Api.Models.Books.BookDTOs;
+using NyriaNest.Application.DTOs.Books;
+using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 

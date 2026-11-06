@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Api.Services;
+using NyriaNest.Application.Services;
 using NyriaNest.Domain.Constants;
 using System.Security.Claims;
 

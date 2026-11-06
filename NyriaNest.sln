@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NyriaNest.Api.Tests", "Nyri
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NyriaNest.Domain", "NyriaNest.Domain\NyriaNest.Domain.csproj", "{ADD806F2-1065-456D-8715-DEE1B8F17E44}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NyriaNest.Application", "NyriaNest.Application\NyriaNest.Application.csproj", "{8717D308-03AF-4FB4-B163-4FD74E7101EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADD806F2-1065-456D-8715-DEE1B8F17E44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8717D308-03AF-4FB4-B163-4FD74E7101EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8717D308-03AF-4FB4-B163-4FD74E7101EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8717D308-03AF-4FB4-B163-4FD74E7101EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8717D308-03AF-4FB4-B163-4FD74E7101EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

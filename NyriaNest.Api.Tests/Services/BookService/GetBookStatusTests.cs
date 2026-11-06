@@ -2,10 +2,9 @@ using AutoMapper;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using NyriaNest.Api.Repositories;
-using NyriaNest.Api.Services;
-using NyriaNest.Api.Storage;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Services;
 using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Tests.Services.BookService;
@@ -18,13 +17,13 @@ public class GetBookStatusTests
 {
     // GetBookStatus doesn't touch any dependency, so empty mocks are enough.
     // The database context is null on purpose: if the method ever starts using it, these tests will fail loudly.
-    private readonly Api.Services.BookService _service = new(
+    private readonly Application.Services.BookService _service = new(
         Mock.Of<IBookRepo>(),
         Mock.Of<IMapper>(),
         Mock.Of<IUserRepo>(),
         dbContext: null!,
         Mock.Of<IFileStorage>(),
-        NullLogger<Api.Services.BookService>.Instance,
+        NullLogger<Application.Services.BookService>.Instance,
         Mock.Of<IEpubService>());
 
     [Theory]

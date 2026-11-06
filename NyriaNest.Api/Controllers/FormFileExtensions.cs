@@ -1,4 +1,4 @@
-using NyriaNest.Api.Storage;
+using NyriaNest.Application.Common;
 
 namespace NyriaNest.Api.Controllers
 {

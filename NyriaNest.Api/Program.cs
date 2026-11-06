@@ -8,6 +8,9 @@ using NyriaNest.Api.Helpers;
 using NyriaNest.Api.Repositories;
 using NyriaNest.Api.Services;
 using NyriaNest.Api.Storage;
+using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Mapping;
+using NyriaNest.Application.Services;
 using NyriaNest.Domain.Entities;
 using System.Text;
 

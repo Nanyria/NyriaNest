@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Data;
+using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using System.Linq.Expressions;
 

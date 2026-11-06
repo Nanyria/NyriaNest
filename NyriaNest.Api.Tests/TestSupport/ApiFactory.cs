@@ -7,8 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using NyriaNest.Api.Data;
-using NyriaNest.Api.Services;
-using NyriaNest.Api.Storage;
+using NyriaNest.Application.Interfaces;
 
 namespace NyriaNest.Api.Tests.TestSupport;
 

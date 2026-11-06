@@ -1,4 +1,6 @@
-﻿namespace NyriaNest.Api.Storage
+﻿using NyriaNest.Application.Interfaces;
+
+namespace NyriaNest.Api.Storage
 {
     /// <summary>
     /// Saves files on local disk, outside wwwroot, so they can only be
