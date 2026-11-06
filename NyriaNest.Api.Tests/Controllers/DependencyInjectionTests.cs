@@ -1,8 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using NyriaNest.Api.Data;
 using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Infrastructure.Data;
 
 namespace NyriaNest.Api.Tests.Controllers;
 

@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using NyriaNest.Api.Data;
+using NyriaNest.Infrastructure.Data;
 
 namespace NyriaNest.Api.Tests.TestSupport;
 
