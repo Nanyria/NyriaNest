@@ -12,8 +12,8 @@ namespace NyriaNest.Api.Services
 
     public interface IEpubService
     {
-        Task<string?> ValidateAsync(IFormFile? file, CancellationToken ct = default);
-        Task<APIResponse<string>> UploadAsync(int bookId, IFormFile file, CancellationToken ct = default);
+        Task<string?> ValidateAsync(UploadedFile? file, CancellationToken ct = default);
+        Task<APIResponse<string>> UploadAsync(int bookId, UploadedFile file, CancellationToken ct = default);
         Task<APIResponse<bool>> DeleteAsync(int bookId, CancellationToken ct = default);
         Task<(HttpStatusCode Status, EpubDownload? Download)> GetForUserAsync(int bookId, string userId, bool isAdmin, CancellationToken ct = default);
     }
@@ -38,7 +38,7 @@ namespace NyriaNest.Api.Services
         }
 
         /// <summary>Returns an error message, or null if the file is a valid EPUB.</summary>
-        public async Task<string?> ValidateAsync(IFormFile? file, CancellationToken ct = default)
+        public async Task<string?> ValidateAsync(UploadedFile? file, CancellationToken ct = default)
         {
             if (file is null || file.Length == 0)
                 return "No file was uploaded.";
@@ -51,7 +51,7 @@ namespace NyriaNest.Api.Services
             return null;
         }
 
-        public async Task<APIResponse<string>> UploadAsync(int bookId, IFormFile file, CancellationToken ct = default)
+        public async Task<APIResponse<string>> UploadAsync(int bookId, UploadedFile file, CancellationToken ct = default)
         {
             var response = new APIResponse<string>();
 
@@ -144,7 +144,7 @@ namespace NyriaNest.Api.Services
             return (HttpStatusCode.OK, new EpubDownload(stream, ToFileName(book.Title)));
         }
 
-        private static async Task<bool> LooksLikeEpubAsync(IFormFile file, CancellationToken ct)
+        private static async Task<bool> LooksLikeEpubAsync(UploadedFile file, CancellationToken ct)
         {
             // ZIP local file header is 30 bytes; the "mimetype" name and its content follow directly
             var header = new byte[30 + EpubSignature.Length];

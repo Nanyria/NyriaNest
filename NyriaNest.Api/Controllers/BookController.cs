@@ -4,6 +4,7 @@ using NyriaNest.Api.Helpers.Enums;
 using NyriaNest.Api.Models.Books;
 using NyriaNest.Api.Models.Books.BookDTOs;
 using NyriaNest.Api.Models.Users;
+using NyriaNest.Api.Controllers;
 using NyriaNest.Api.Services;
 using System.Security.Claims;
 
@@ -48,7 +49,7 @@ public class BookController : ControllerBase
     [RequestFormLimits(MultipartBodyLengthLimit = EpubService.MaxFileSize + 1024 * 1024)]
     public async Task<IActionResult> AddEbook([FromForm] SlimBookDto book, IFormFile file, CancellationToken ct)
     {
-        var response = await _bookService.AddEbookAsync(book, file, ct);
+        var response = await _bookService.AddEbookAsync(book, file.ToUploadedFile(), ct);
         return StatusCode((int)response.StatusCode, response);
     }
 

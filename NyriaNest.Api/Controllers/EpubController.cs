@@ -24,7 +24,7 @@ namespace NyriaNest.Api.Controllers
         [RequestFormLimits(MultipartBodyLengthLimit = EpubService.MaxFileSize)]
         public async Task<IActionResult> Upload(int bookId, IFormFile file, CancellationToken ct)
         {
-            var response = await _epubService.UploadAsync(bookId, file, ct);
+            var response = await _epubService.UploadAsync(bookId, file.ToUploadedFile(), ct);
             return StatusCode((int)response.StatusCode, response);
         }
 

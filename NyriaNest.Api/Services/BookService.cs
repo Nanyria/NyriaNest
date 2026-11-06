@@ -19,7 +19,7 @@ namespace NyriaNest.Api.Services
         Task<APIResponse<Book>> GetBookByIdAsync(int id);
         // Accept optional userId of the actor who adds the book
         Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
-        Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, IFormFile file, CancellationToken ct = default);
+        Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
         Task<APIResponse<Book>> DeleteBookAsync(int id);
         Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
@@ -234,7 +234,7 @@ namespace NyriaNest.Api.Services
 
             return response;
         }
-        public async Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, IFormFile file, CancellationToken ct = default)
+        public async Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default)
         {
             var response = new APIResponse<Book>
             {
