@@ -34,10 +34,10 @@ namespace NyriaNest.Api.Services
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IBookService _bookService;
-        private readonly AppDbContext _dbContext;
+        private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
-        public UserService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, AppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
+        public UserService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
         {
             _userRepo = userRepo;
             _bookRepo = bookRepo;

@@ -41,12 +41,12 @@ namespace NyriaNest.Api.Services
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IUserRepo _userRepo;
-        private readonly AppDbContext _dbContext;
+        private readonly IAppDbContext _dbContext;
         private readonly IFileStorage _fileStorage;
         private readonly ILogger<BookService> _logger;
         private readonly IEpubService _epubService;
 
-        public BookService(IBookRepo bookRepo, IMapper mapper, IUserRepo userRepo, AppDbContext dbContext,
+        public BookService(IBookRepo bookRepo, IMapper mapper, IUserRepo userRepo, IAppDbContext dbContext,
             IFileStorage fileStorage, ILogger<BookService> logger, IEpubService epubService)
         {
             _bookRepo = bookRepo;
@@ -254,7 +254,7 @@ namespace NyriaNest.Api.Services
             bookDto.BookType = BookTypeEnums.EBook;
 
             // Disposing the transaction without a commit rolls back the book and its history
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+            await using var transaction = await _dbContext.BeginTransactionAsync(ct);
 
             var created = await AddBookAsync(bookDto);
             if (!created.IsSuccess || created.Result is null)

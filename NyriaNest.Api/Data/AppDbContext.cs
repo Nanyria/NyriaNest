@@ -5,15 +5,19 @@ using NyriaNest.Api.Models.History;
 using NyriaNest.Api.Models.Users;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace NyriaNest.Api.Data
 {
-    public class AppDbContext : IdentityDbContext<User>
+    public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
 
         }
+
+        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
+            Database.BeginTransactionAsync(cancellationToken);
 
         public DbSet<Book> Books { get; set; }
         public DbSet<ReviewItem> ReviewItems { get; set; }

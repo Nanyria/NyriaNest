@@ -26,11 +26,11 @@ namespace NyriaNest.Api.Services
         // containing "application/epub+zip". Checking this stops renamed non-EPUB files.
         private static readonly byte[] EpubSignature = Encoding.ASCII.GetBytes("mimetypeapplication/epub+zip");
 
-        private readonly AppDbContext _db;
+        private readonly IAppDbContext _db;
         private readonly IFileStorage _storage;
         private readonly ILogger<EpubService> _logger;
 
-        public EpubService(AppDbContext db, IFileStorage storage, ILogger<EpubService> logger)
+        public EpubService(IAppDbContext db, IFileStorage storage, ILogger<EpubService> logger)
         {
             _db = db;
             _storage = storage;

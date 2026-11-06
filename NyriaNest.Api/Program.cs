@@ -60,6 +60,8 @@ namespace NyriaNest.Api
 
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionToDB")));
+            // The same AppDbContext instance as the repositories get, not a second one
+            builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
             // The app normally calls the API from its own origin (the dev proxy, or the
             // Angular build served from wwwroot), which needs no CORS. Only the origins
