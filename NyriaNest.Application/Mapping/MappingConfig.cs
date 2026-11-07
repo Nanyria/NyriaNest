@@ -35,7 +35,6 @@ namespace NyriaNest.Application.Mapping
             CreateMap<CreateUserDto, User>();
 
 
-            CreateMap<User, UpdateUserAsAdminDto>();
             CreateMap<UpdateUserAsAdminDto, User>()
                             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
