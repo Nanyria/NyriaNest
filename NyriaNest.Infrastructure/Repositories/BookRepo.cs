@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NyriaNest.Application.DTOs.Books;
+using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
@@ -61,6 +62,28 @@ namespace NyriaNest.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<BookReservationDto>> GetReservationQueueAsync(int bookId)
+        {
+            var queue = await _db.ReservationItems
+                .AsNoTracking()
+                .Where(r => r.BookId == bookId)
+                .OrderBy(r => r.ReservationDate)
+                .Select(r => new BookReservationDto
+                {
+                    ReservationId = r.Id,
+                    UserId = r.UserId,
+                    UserName = r.User.UserName ?? "",
+                    FullName = r.User.FirstName + " " + r.User.LastName,
+                    ReservationDate = r.ReservationDate,
+                    AvailabilityDate = r.AvailabilityDate,
+                })
+                .ToListAsync();
+
+            for (var i = 0; i < queue.Count; i++)
+                queue[i].QueuePosition = i + 1;
+            return queue;
+        }
+
         public async Task<List<LibraryBookDto>> GetLibraryListAsync(string? userId)
         {
             return await _db.Books
@@ -95,6 +118,12 @@ namespace NyriaNest.Infrastructure.Repositories
                     MyReservationAvailableDate = b.Reservations
                         .Where(r => r.UserId == userId)
                         .Select(r => r.AvailabilityDate)
+                        .FirstOrDefault(),
+                    // The queue is oldest reservation first: my place is the number
+                    // of reservations made before mine, plus one
+                    MyQueuePosition = b.Reservations
+                        .Where(r => r.UserId == userId)
+                        .Select(mine => (int?)(b.Reservations.Count(other => other.ReservationDate < mine.ReservationDate) + 1))
                         .FirstOrDefault()
                 })
                 .ToListAsync();

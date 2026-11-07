@@ -37,5 +37,7 @@ namespace NyriaNest.Application.DTOs.Books
         public bool IsCheckedOutByMe { get; set; }
         public bool IsReservedByMe { get; set; }
         public DateTime? MyReservationAvailableDate { get; set; }
+        // 1 = next in line; null when I haven't reserved the book
+        public int? MyQueuePosition { get; set; }
     }
 }
