@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
 import {
   AdminBook,
   ApiResponse,
-  Book,
+  EditBookDto,
   CatalogueQuery,
   PagedResult,
   SlimBookDto,
@@ -22,8 +22,8 @@ export class BookService {
 
   constructor(private http: HttpClient) {}
 
-  getBookById(bookID: string): Observable<{ isSuccess: boolean; result: Book }> {
-    return this.http.get<{ isSuccess: boolean; result: Book }>(`${this.apiUrl}/${bookID}`);
+  getBookById(bookID: string): Observable<{ isSuccess: boolean; result: EditBookDto }> {
+    return this.http.get<{ isSuccess: boolean; result: EditBookDto }>(`${this.apiUrl}/${bookID}`);
   }
 
   addBook(book: SlimBookDto): Observable<any> {

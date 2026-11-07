@@ -16,9 +16,10 @@ namespace NyriaNest.Application.Services
     {
         Task<APIResponse<List<Book>>> GetAllBooksAsync();
         Task<APIResponse<Book>> GetBookByIdAsync(int id);
+        Task<APIResponse<EditBookDto>> GetBookForEditAsync(int id);
         // Accept optional userId of the actor who adds the book
-        Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
-        Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
+        Task<APIResponse<int>> AddBookAsync(SlimBookDto book, string? userId = null);
+        Task<APIResponse<int>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
         Task<APIResponse<bool>> DeleteBookAsync(int id);
         Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
@@ -28,8 +29,8 @@ namespace NyriaNest.Application.Services
         void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
-        Task<APIResponse<Book>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
-        Task<APIResponse<Book>> ClearAdminStatusAsync(int bookId, string? adminUserId);
+        Task<APIResponse<bool>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
+        Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId);
     }
     public class BookService : IBookService
     {
@@ -101,16 +102,54 @@ namespace NyriaNest.Application.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Could not load book {BookId}.", id);
                 response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
+                response.ErrorMessages.Add("The book couldn't be loaded.");
                 response.StatusCode = HttpStatusCode.InternalServerError;
             }
 
             return response;
         }
-        public async Task<APIResponse<Book>> AddBookAsync(SlimBookDto bookDto, string? userId = null)
+
+        // For the edit book page (GET api/Book/{id}). GetBookByIdAsync above stays for the
+        // services that need the tracked entity (borrow, return, cancel); returning that
+        // entity to a client looped for books with reservations (#76).
+        public async Task<APIResponse<EditBookDto>> GetBookForEditAsync(int id)
         {
-            var response = new APIResponse<Book>
+            var response = new APIResponse<EditBookDto>();
+            var book = await _bookRepo.GetByIdAsync(id);
+            if (book == null)
+            {
+                response.IsSuccess = false;
+                response.ErrorMessages.Add($"Book {id} was not found.");
+                response.StatusCode = HttpStatusCode.NotFound;
+                return response;
+            }
+
+            response.Result = new EditBookDto
+            {
+                BookId = book.BookId,
+                Title = book.Title,
+                Author = book.Author,
+                BookDescription = book.BookDescription,
+                PublicationYear = book.PublicationYear,
+                CoverImagePath = book.CoverImagePath,
+                Genre = book.Genre,
+                BookType = book.BookType,
+                Language = book.Language,
+                HasEpub = book.HasEpub,
+                EpubFileName = book.EpubFileName,
+                EpubFileSize = book.EpubFileSize,
+            };
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.OK;
+            return response;
+        }
+
+        // Returns the new book's id: the entity itself isn't sent to clients (#76)
+        public async Task<APIResponse<int>> AddBookAsync(SlimBookDto bookDto, string? userId = null)
+        {
+            var response = new APIResponse<int>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -221,21 +260,22 @@ namespace NyriaNest.Application.Services
                     await _bookRepo.SaveAsync();
                 }
 
-                response.Result = book;
+                response.Result = book.BookId;
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.Created;
             }
             catch (Exception ex)
             {
-                response.ErrorMessages.Add(ex.Message);
+                _logger.LogError(ex, "Could not add book {Title}.", bookDto.Title);
+                response.ErrorMessages.Add("The book couldn't be added.");
                 response.StatusCode = HttpStatusCode.InternalServerError;
             }
 
             return response;
         }
-        public async Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default)
+        public async Task<APIResponse<int>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default)
         {
-            var response = new APIResponse<Book>
+            var response = new APIResponse<int>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -256,10 +296,10 @@ namespace NyriaNest.Application.Services
             await using var transaction = await _dbContext.BeginTransactionAsync(ct);
 
             var created = await AddBookAsync(bookDto);
-            if (!created.IsSuccess || created.Result is null)
+            if (!created.IsSuccess)
                 return created;
 
-            var upload = await _epubService.UploadAsync(created.Result.BookId, file, ct);
+            var upload = await _epubService.UploadAsync(created.Result, file, ct);
             if (!upload.IsSuccess)
             {
                 response.StatusCode = upload.StatusCode;
@@ -278,7 +318,7 @@ namespace NyriaNest.Application.Services
                 throw;
             }
 
-            // UploadAsync set EpubFileKey on the same tracked Book, so HasEpub is true here
+            // created holds the new book's id, and the book now has its EPUB
             return created;
         }
         public async Task<APIResponse<bool>> DeleteBookAsync(int id)
@@ -655,9 +695,9 @@ namespace NyriaNest.Application.Services
             return response;
         }
 
-        public async Task<APIResponse<Book>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes)
+        public async Task<APIResponse<bool>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes)
         {
-            var response = new APIResponse<Book> { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest };
+            var response = new APIResponse<bool> { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest };
 
             if (status is not (BookStatusEnum.Lost or BookStatusEnum.Removed))
             {
@@ -687,15 +727,15 @@ namespace NyriaNest.Application.Services
             await _bookRepo.UpdateAsync(book);
             await _bookRepo.SaveAsync();
 
-            response.Result = book;
+            response.Result = true; // not the entity: it loops for books with reservations (#76)
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
             return response;
         }
 
-        public async Task<APIResponse<Book>> ClearAdminStatusAsync(int bookId, string? adminUserId)
+        public async Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId)
         {
-            var response = new APIResponse<Book> { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+            var response = new APIResponse<bool> { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
             var book = await _bookRepo.GetByIdAsync(bookId);
             if (book == null) { response.ErrorMessages.Add("Book not found."); return response; }
 
@@ -709,7 +749,7 @@ namespace NyriaNest.Application.Services
             await _bookRepo.UpdateAsync(book);
             await _bookRepo.SaveAsync();
 
-            response.Result = book;
+            response.Result = true; // not the entity: it loops for books with reservations (#76)
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
             return response;
