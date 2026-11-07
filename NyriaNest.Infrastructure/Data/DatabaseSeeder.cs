@@ -64,10 +64,16 @@ namespace NyriaNest.Infrastructure.Data
                 if (roles == null || roles.Count == 0)
                 {
                     await userManager.AddToRoleAsync(user, Roles.User);
-
                 }
-                user.Role = roles != null && roles.Count > 0 ? roles[0] : Roles.User;
-                await userManager.UpdateAsync(user);
+
+                // Only save when the Role column is out of date. This runs at every
+                // startup, and saving gives the user a new ConcurrencyStamp (#60).
+                var role = roles != null && roles.Count > 0 ? roles[0] : Roles.User;
+                if (user.Role != role)
+                {
+                    user.Role = role;
+                    await userManager.UpdateAsync(user);
+                }
             }
         }
     }
