@@ -509,10 +509,10 @@ namespace NyriaNest.Application.Services
             }
             else if (bookStatus == BookStatusEnum.Returned)
             {
-                // Set to Reserved if there are reservations, otherwise Available
-                book.BookStatus = (book.Reservations != null && book.Reservations.Any())
-                    ? BookStatusEnum.Reserved
-                    : BookStatusEnum.Available;
+                // Returned while someone still has the book: a cancelled reservation,
+                // not a return (a return clears CheckedOutBy first and is handled above).
+                // The loan still decides, so the book stays checked out (#39).
+                book.BookStatus = BookStatusEnum.CheckedOut;
             }
             else if (book.BookStatus != bookStatus)
             {

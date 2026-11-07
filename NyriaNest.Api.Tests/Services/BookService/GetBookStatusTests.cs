@@ -62,6 +62,19 @@ public class GetBookStatusTests
     }
 
     [Fact]
+    public void Returned_WhileStillOnLoan_StaysCheckedOut()
+    {
+        // Cancelling a reservation sends Returned while someone else still has the book
+        var book = TestData.Book(status: BookStatusEnum.CheckedOut);
+        book.CheckedOutBy = TestData.Loan(book, TestData.User("holder"));
+        book.Reservations.Add(TestData.Reservation(book, TestData.User("next")));
+
+        var result = _service.GetBookStatus(book, BookStatusEnum.Returned);
+
+        result.BookStatus.Should().Be(BookStatusEnum.CheckedOut);
+    }
+
+    [Fact]
     public void CheckedOut_WithALoan_IsCheckedOut()
     {
         var book = TestData.Book();
