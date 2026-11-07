@@ -23,7 +23,7 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
-        Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId);
+        Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId);
         Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId);
         void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
@@ -548,9 +548,10 @@ namespace NyriaNest.Application.Services
             }
             return response;
         }
-        public async Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId)
+        // Admins only (BookController). Readers see their own place as MyQueuePosition (#71)
+        public async Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId)
         {
-            var response = new APIResponse<List<ReservationItem>>
+            var response = new APIResponse<List<BookReservationDto>>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -560,13 +561,11 @@ namespace NyriaNest.Application.Services
             {
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
-                response.Result = book.Reservations
-                    .OrderByDescending(r => r.ReservationDate)
-                    .ToList();
+                response.Result = await _bookRepo.GetReservationQueueAsync(bookId);
             }
             else
             {
-                response.ErrorMessages.Add("User not found.");
+                response.ErrorMessages.Add($"Book {bookId} was not found.");
                 response.StatusCode = HttpStatusCode.NotFound;
             }
             return response;

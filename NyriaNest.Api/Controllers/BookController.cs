@@ -88,6 +88,14 @@ public class BookController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
+    /// <summary>The whole reservation queue, oldest first, with each reader's name (admins only, #71).</summary>
+    [HttpGet("{bookId:int}/reservations")]
+    public async Task<IActionResult> GetBookReservations(int bookId)
+    {
+        var response = await _bookService.GetBookReservationsAsync(bookId);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
     public record AdminStatusRequest(BookStatusEnum Status, string? Notes);
 
 
