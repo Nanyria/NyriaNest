@@ -19,7 +19,7 @@ namespace NyriaNest.Application.Services
         // Accept optional userId of the actor who adds the book
         Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
         Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
-        Task<APIResponse<Book>> DeleteBookAsync(int id);
+        Task<APIResponse<bool>> DeleteBookAsync(int id);
         Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
@@ -281,9 +281,9 @@ namespace NyriaNest.Application.Services
             // UploadAsync set EpubFileKey on the same tracked Book, so HasEpub is true here
             return created;
         }
-        public async Task<APIResponse<Book>> DeleteBookAsync(int id)
+        public async Task<APIResponse<bool>> DeleteBookAsync(int id)
         {
-            var response = new APIResponse<Book>();
+            var response = new APIResponse<bool>();
 
             try
             {
@@ -301,6 +301,10 @@ namespace NyriaNest.Application.Services
 
                 if (bookToDelete != null)
                 {
+                    // Reservations go with the book (decided in #39). Their FK is Restrict,
+                    // so they have to be removed explicitly, in the same save as the book.
+                    // Telling the readers is #75.
+                    _dbContext.ReservationItems.RemoveRange(bookToDelete.Reservations);
                     await _bookRepo.DeleteAsync(bookToDelete);
                     await _bookRepo.SaveAsync();
 
@@ -319,7 +323,8 @@ namespace NyriaNest.Application.Services
                         }
                     }
 
-                    response.Result = bookToDelete;
+                    // No entity in the response: it's deleted, and its navigations would loop
+                    response.Result = true;
                     response.IsSuccess = true;
                     response.StatusCode = HttpStatusCode.OK;
                 }
@@ -332,7 +337,10 @@ namespace NyriaNest.Application.Services
             }
             catch (Exception ex)
             {
-                response.ErrorMessages.Add(ex.Message);
+                // Log the real error; the client only gets a plain message, never
+                // EF's internal text about the data model
+                _logger.LogError(ex, "Could not delete book {BookId}.", id);
+                response.ErrorMessages.Add("The book couldn't be deleted.");
                 response.StatusCode = HttpStatusCode.InternalServerError;
             }
 
