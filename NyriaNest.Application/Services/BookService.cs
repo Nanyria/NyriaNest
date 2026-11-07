@@ -20,7 +20,7 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<Book>> AddBookAsync(SlimBookDto book, string? userId = null);
         Task<APIResponse<Book>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
         Task<APIResponse<bool>> DeleteBookAsync(int id);
-        Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
+        Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId);
@@ -346,9 +346,9 @@ namespace NyriaNest.Application.Services
 
             return response;
         }
-        public async Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto updatedBook)
+        public async Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto updatedBook)
         {
-            var response = new APIResponse<Book>
+            var response = new APIResponse<bool>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -396,7 +396,9 @@ namespace NyriaNest.Application.Services
                         }
                     }
 
-                    response.Result = existingBook;
+                    // No entity in the response: with reservations its navigations loop.
+                    // The edit page only needs to know that it was saved.
+                    response.Result = true;
                     response.IsSuccess = true;
                     response.StatusCode = HttpStatusCode.OK;
                 }
@@ -408,7 +410,9 @@ namespace NyriaNest.Application.Services
             }
             catch (Exception ex)
             {
-                response.ErrorMessages.Add(ex.Message);
+                // As in DeleteBookAsync: log the real error, give the client a plain message
+                _logger.LogError(ex, "Could not update book {BookId}.", id);
+                response.ErrorMessages.Add("The book couldn't be saved.");
                 response.StatusCode = HttpStatusCode.InternalServerError;
             }
 
