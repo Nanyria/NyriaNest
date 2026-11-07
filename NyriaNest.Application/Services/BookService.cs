@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NyriaNest.Application.Common;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Books;
+using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
@@ -21,7 +22,7 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<Book>> DeleteBookAsync(int id);
         Task<APIResponse<Book>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
-        Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId);
+        Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<ReservationItem>>> GetBookReservationsAsync(int bookId);
         Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId);
         void RecalculateAvailabilityDates(Book book);
@@ -525,9 +526,9 @@ namespace NyriaNest.Application.Services
 
             return book;
         }
-        public async Task<APIResponse<List<StatusHistoryItem>>> GetBookHistoryAsync(int bookId)
+        public async Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId)
         {
-            var response = new APIResponse<List<StatusHistoryItem>>
+            var response = new APIResponse<List<StatusHistoryItemDto>>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -535,15 +536,14 @@ namespace NyriaNest.Application.Services
             var book = await _bookRepo.GetByIdAsync(bookId);
             if (book != null)
             {
+                var history = await _bookRepo.GetStatusHistoryAsync(bookId);
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
-                response.Result = book.StatusHistory
-                    .OrderByDescending(r => r.Timestamp)
-                    .ToList();
+                response.Result = _mapper.Map<List<StatusHistoryItemDto>>(history);
             }
             else
             {
-                response.ErrorMessages.Add("User not found.");
+                response.ErrorMessages.Add($"Book {bookId} was not found.");
                 response.StatusCode = HttpStatusCode.NotFound;
             }
             return response;
