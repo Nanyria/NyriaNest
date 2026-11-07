@@ -2,8 +2,10 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 
 namespace NyriaNest.Api.Tests.Controllers;
 
@@ -251,6 +253,77 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         foreach (var field in new[] { "passwordHash", "securityStamp", "concurrencyStamp", "\"password\"" })
             body.Should().NotContainEquivalentOf(field);
     }
+
+    // ---- #56: editing a user keeps their loans, reservations and history ----
+
+    [Fact]
+    public async Task Admin_RenamingAUser_KeepsTheirLoansReservationsFavouritesAndHistory()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+        await GiveUserLibraryDataAsync(target.Id);
+
+        var response = await Update(admin, target.Id, new { firstName = "Renamed" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await LibraryDataOf(target.Id)).Should().Be((Loans: 1, Reservations: 1, Favourites: 1, History: 1));
+    }
+
+    [Fact]
+    public async Task Admin_SavingWhatManageUsersSends_KeepsTheUsersLibraryData()
+    {
+        // Manage users sends back the whole user from GET api/User, lists included
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+        await GiveUserLibraryDataAsync(target.Id);
+        var listed = await admin.GetFromJsonAsync<JsonObject>("api/User", Ct);
+        var user = listed!["result"]!.AsArray().Single(u => (string?)u!["userId"] == target.Id)!.AsObject();
+        user["firstName"] = "Renamed";
+
+        var response = await admin.PutAsJsonAsync($"api/User/updateAsAdmin/{target.Id}", user, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        (await FirstNameOf(target.Id)).Should().Be("Renamed");
+        (await LibraryDataOf(target.Id)).Should().Be((Loans: 1, Reservations: 1, Favourites: 1, History: 1));
+    }
+
+    [Fact]
+    public async Task UpdateAsAdmin_ReturnsTheUserAsAUserDto()
+    {
+        // Like GET api/User and DELETE: a UserDto, not the request DTO with entity lists
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+
+        var response = await Update(admin, target.Id, new { firstName = "Renamed" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        body.Should().Contain($"\"userId\": \"{target.Id}\"").And.Contain("\"firstName\": \"Renamed\"");
+        body.Should().NotContainEquivalentOf("\"borrowedBooks\"");
+        AssertNoIdentityInternals(body);
+    }
+
+    /// <summary>One loan, one reservation, one favourite and one history entry for the user.</summary>
+    private Task GiveUserLibraryDataAsync(string userId) => factory.WithDbAsync(async db =>
+    {
+        var loaned = TestData.Book(status: BookStatusEnum.CheckedOut);
+        var reserved = TestData.Book(status: BookStatusEnum.CheckedOut);
+        db.Books.AddRange(loaned, reserved);
+        await db.SaveChangesAsync(Ct);
+
+        db.CheckOutItems.Add(new() { BookId = loaned.BookId, UserId = userId, CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
+        db.ReservationItems.Add(new() { BookId = reserved.BookId, UserId = userId, ReservationDate = DateTime.UtcNow });
+        db.FavoriteItems.Add(new() { BookId = loaned.BookId, UserId = userId, CreatedAt = DateTime.UtcNow });
+        db.StatusHistoryItems.Add(new() { BookId = loaned.BookId, UserId = userId, BookStatus = BookStatusEnum.CheckedOut });
+        await db.SaveChangesAsync(Ct);
+    });
+
+    private Task<(int Loans, int Reservations, int Favourites, int History)> LibraryDataOf(string userId) =>
+        factory.WithDbAsync(async db => (
+            await db.CheckOutItems.CountAsync(c => c.UserId == userId, Ct),
+            await db.ReservationItems.CountAsync(r => r.UserId == userId, Ct),
+            await db.FavoriteItems.CountAsync(f => f.UserId == userId, Ct),
+            await db.StatusHistoryItems.CountAsync(h => h.UserId == userId, Ct)));
 
     // ---- Helpers ----
 

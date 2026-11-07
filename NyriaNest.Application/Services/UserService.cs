@@ -14,7 +14,7 @@ namespace NyriaNest.Application.Services
     {
         // callerId / callerIsSuperAdmin = the admin asking. The rules are in AdminMayNotUpdate/-Delete.
         Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
-        Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
+        Task<APIResponse<UserDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
         Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
         Task<APIResponse<UserDto>> GetUserByIdAsync(string userId);
         Task<APIResponse<List<UserDto>>> GetAllUsersAsync();
@@ -212,9 +212,9 @@ namespace NyriaNest.Application.Services
             return null;
         }
 
-        public async Task<APIResponse<UpdateUserAsAdminDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate)
+        public async Task<APIResponse<UserDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate)
         {
-            var response = new APIResponse<UpdateUserAsAdminDto>
+            var response = new APIResponse<UserDto>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -286,8 +286,8 @@ namespace NyriaNest.Application.Services
                     return response;
                 }
 
-                // Map updated User to UpdateUserAsAdminDto for the response
-                var updatedUserDto = _mapper.Map<UpdateUserAsAdminDto>(user);
+                // The same shape as GET api/User returns, without Identity internals
+                var updatedUserDto = _mapper.Map<UserDto>(user);
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
                 response.Result = updatedUserDto;

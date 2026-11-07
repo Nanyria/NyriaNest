@@ -1,7 +1,10 @@
-﻿using NyriaNest.Domain.Entities;
-
-namespace NyriaNest.Application.DTOs.Users
+﻿namespace NyriaNest.Application.DTOs.Users
 {
+    /// <summary>
+    /// What an admin may change on another user. Null means "leave as it is".
+    /// No lists: a user's loans, reservations and history are changed through
+    /// their own endpoints (#50), never by editing the user (#56).
+    /// </summary>
     public class UpdateUserAsAdminDto
     {
         public string? UserName { get; set; }
@@ -10,9 +13,5 @@ namespace NyriaNest.Application.DTOs.Users
         public string? Email { get; set; }
         public string? Password { get; set; }
         public string? Role { get; set; }
-
-        public List<Book>? BorrowedBooks { get; set; } = new List<Book>();
-        public List<Book>? ReservedBooks { get; set; } = new List<Book>();
-        public List<UserHistory>? UserHistory { get; set; } = new List<UserHistory>();
     }
 }
