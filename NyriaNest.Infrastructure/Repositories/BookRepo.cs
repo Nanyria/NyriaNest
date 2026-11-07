@@ -49,6 +49,18 @@ namespace NyriaNest.Infrastructure.Repositories
                 .FirstOrDefaultAsync(b => b.BookId == id);
         }
 
+        // Queried directly: GetByIdAsync doesn't load StatusHistory (#32), and the
+        // history can grow long, so it shouldn't come along with every book load
+        public async Task<List<StatusHistoryItem>> GetStatusHistoryAsync(int bookId)
+        {
+            return await _db.StatusHistoryItems
+                .AsNoTracking()
+                .Include(h => h.Book)
+                .Where(h => h.BookId == bookId)
+                .OrderByDescending(h => h.Timestamp)
+                .ToListAsync();
+        }
+
         public async Task<List<LibraryBookDto>> GetLibraryListAsync(string? userId)
         {
             return await _db.Books

@@ -7,6 +7,8 @@ namespace NyriaNest.Application.Interfaces
     {
         Task<IEnumerable<Book>> GetAllAsync();
         Task<Book?> GetByIdAsync(int bookId);
+        /// <summary>The book's status history, newest first, with the book loaded. Read-only.</summary>
+        Task<List<StatusHistoryItem>> GetStatusHistoryAsync(int bookId);
         Task<List<LibraryBookDto>> GetLibraryListAsync(string? userId);
         Task<PagedResult<AdminBookDto>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
         Task CreateBookAsync(Book book);
