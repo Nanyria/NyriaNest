@@ -14,7 +14,7 @@ import { BookService } from '../../../Services/book.services';
 import { HasUnsavedChanges } from '../../../Services/unsaved-changes.guard';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
-import { Book, SlimBookDto } from '../../../Models/interfaces';
+import { EditBookDto, SlimBookDto } from '../../../Models/interfaces';
 import {
   GenreEnums,
   GenreDisplayNames,
@@ -176,7 +176,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   // reset() instead of patchValue() so the loaded values count as unchanged.
   // Old books may lack a genre, language or type; those start empty so the admin picks one.
-  private fillForm(book: Book): void {
+  private fillForm(book: EditBookDto): void {
     const type = book.bookType === BookTypeEnums.Undefined ? null : book.bookType;
     const digital = type === BookTypeEnums.EBook || type === BookTypeEnums.Audiobook;
     this.addBookForm.reset({

@@ -31,7 +31,7 @@ public class BookController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetBookByID(int id)
     {
-        var response = await _bookService.GetBookByIdAsync(id);
+        var response = await _bookService.GetBookForEditAsync(id);
         return StatusCode((int)response.StatusCode, response);
     }
     [HttpPost]

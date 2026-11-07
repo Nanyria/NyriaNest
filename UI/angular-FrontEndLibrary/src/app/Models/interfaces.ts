@@ -57,6 +57,22 @@ export interface SlimBookDto {
 
 }
 
+// What the edit book page loads (GET api/Book/{id}): no loans, reservations or reviews
+export interface EditBookDto {
+  bookId: string;
+  title: string;
+  author: string;
+  bookDescription?: string;
+  publicationYear: string;
+  coverImagePath?: string;
+  genre: GenreEnums;
+  bookType: BookTypeEnums;
+  language: LanguageEnums;
+  hasEpub: boolean;
+  epubFileName?: string | null;
+  epubFileSize?: number | null;
+}
+
 export interface LibraryBook {
   bookId: string;
   title: string;
