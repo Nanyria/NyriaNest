@@ -10,6 +10,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../../Services/auth.service';
 import { LibraryUiService } from '../../../Services/library-ui.service';
 import { ILoggedInUser } from '../../../Models/interfaces';
+import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
 import {
   ADMIN_NAV,
   MAIN_NAV,
@@ -47,6 +48,7 @@ export class TopbarComponent {
       : { kind: 'link', item: entry },
   );
   readonly adminGroup = ADMIN_NAV;
+  readonly defaultPicture = DEFAULT_PROFILE_PICTURE;
 
   constructor(
     private authService: AuthService,
@@ -66,6 +68,13 @@ export class TopbarComponent {
         this.searchOpen = false;
         this.searchQuery = String(this.router.parseUrl(this.router.url).queryParams['q'] ?? '');
       });
+  }
+
+  // A picture that can't be loaded (removed, or a deleted upload) shows the default
+  // instead of a broken image. Only once, so a missing default can't loop.
+  onAvatarError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (!img.src.endsWith(this.defaultPicture)) img.src = this.defaultPicture;
   }
 
   get hasNewNotification(): boolean {

@@ -123,7 +123,8 @@
         (click)="toggleMenu('user')"
       >
         <img
-          [src]="currentUser?.profilePictureUrl || 'assets/images/profile-pictures/BlueKidDragon.svg'"
+          [src]="currentUser?.profilePictureUrl || defaultPicture"
+          (error)="onAvatarError($event)"
           alt=""
           class="topbar__avatar"
         />

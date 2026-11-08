@@ -155,7 +155,7 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.Books.Book", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.Book", b =>
                 {
                     b.Property<int>("BookId")
                         .ValueGeneratedOnAdd()
@@ -288,34 +288,7 @@ namespace NyriaNest.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.FavoriteItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1001L);
-
-                    b.Property<int>("BookId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("FavoriteItems");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.History.CheckedOutItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.CheckedOutItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -349,7 +322,88 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.ToTable("CheckOutItems");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.History.ReservationItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.FavoriteItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1001L);
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("FavoriteItems");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.NotificationItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("NotificationItems");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.RatingItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1001L);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReviewItemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewItemId")
+                        .IsUnique();
+
+                    b.ToTable("RatingItems");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.ReservationItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -382,7 +436,40 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.ToTable("ReservationItems");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.History.StatusHistoryItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.ReviewItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1001L);
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewHeader")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReviewText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ReviewItems");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.StatusHistoryItem", b =>
                 {
                     b.Property<int>("StatusHistoryItemId")
                         .ValueGeneratedOnAdd()
@@ -448,94 +535,7 @@ namespace NyriaNest.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.NotificationItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("NotificationItems");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.RatingItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1001L);
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReviewItemId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReviewItemId")
-                        .IsUnique();
-
-                    b.ToTable("RatingItems");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.ReviewItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1001L);
-
-                    b.Property<int>("BookId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReviewHeader")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReviewText")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ReviewItems");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.Users.User", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -633,7 +633,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("NyriaNest.Api.Models.Users.User", null)
+                    b.HasOne("NyriaNest.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -642,7 +642,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("NyriaNest.Api.Models.Users.User", null)
+                    b.HasOne("NyriaNest.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -657,7 +657,7 @@ namespace NyriaNest.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("NyriaNest.Api.Models.Users.User", null)
+                    b.HasOne("NyriaNest.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -666,41 +666,22 @@ namespace NyriaNest.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("NyriaNest.Api.Models.Users.User", null)
+                    b.HasOne("NyriaNest.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.FavoriteItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.CheckedOutItem", b =>
                 {
-                    b.HasOne("NyriaNest.Api.Models.Books.Book", "Book")
-                        .WithMany()
-                        .HasForeignKey("BookId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NyriaNest.Api.Models.Users.User", "User")
-                        .WithMany("ReadList")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.History.CheckedOutItem", b =>
-                {
-                    b.HasOne("NyriaNest.Api.Models.Books.Book", "Book")
+                    b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
                         .WithOne("CheckedOutBy")
-                        .HasForeignKey("NyriaNest.Api.Models.History.CheckedOutItem", "BookId")
+                        .HasForeignKey("NyriaNest.Domain.Entities.CheckedOutItem", "BookId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("NyriaNest.Api.Models.Users.User", "User")
+                    b.HasOne("NyriaNest.Domain.Entities.User", "User")
                         .WithMany("CheckedOutBooks")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -711,15 +692,56 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.History.ReservationItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.FavoriteItem", b =>
                 {
-                    b.HasOne("NyriaNest.Api.Models.Books.Book", "Book")
+                    b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NyriaNest.Domain.Entities.User", "User")
+                        .WithMany("ReadList")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.NotificationItem", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.RatingItem", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.ReviewItem", "ReviewItem")
+                        .WithOne("RatingItem")
+                        .HasForeignKey("NyriaNest.Domain.Entities.RatingItem", "ReviewItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReviewItem");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.ReservationItem", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
                         .WithMany("Reservations")
                         .HasForeignKey("BookId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("NyriaNest.Api.Models.Users.User", "User")
+                    b.HasOne("NyriaNest.Domain.Entities.User", "User")
                         .WithMany("ReservedBooks")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -730,15 +752,34 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.History.StatusHistoryItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.ReviewItem", b =>
                 {
-                    b.HasOne("NyriaNest.Api.Models.Books.Book", "Book")
+                    b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
+                        .WithMany("Reviews")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NyriaNest.Domain.Entities.User", "User")
+                        .WithMany("Reviews")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.StatusHistoryItem", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
                         .WithMany("StatusHistory")
                         .HasForeignKey("BookId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("NyriaNest.Api.Models.Users.User", "User")
+                    b.HasOne("NyriaNest.Domain.Entities.User", "User")
                         .WithMany("UserHistory")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -748,48 +789,7 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.NotificationItem", b =>
-                {
-                    b.HasOne("NyriaNest.Api.Models.Users.User", "User")
-                        .WithMany("Notifications")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.RatingItem", b =>
-                {
-                    b.HasOne("NyriaNest.Api.Models.ReviewItem", "ReviewItem")
-                        .WithOne("RatingItem")
-                        .HasForeignKey("NyriaNest.Api.Models.RatingItem", "ReviewItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ReviewItem");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.ReviewItem", b =>
-                {
-                    b.HasOne("NyriaNest.Api.Models.Books.Book", "Book")
-                        .WithMany("Reviews")
-                        .HasForeignKey("BookId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NyriaNest.Api.Models.Users.User", "User")
-                        .WithMany("Reviews")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Book");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NyriaNest.Api.Models.Books.Book", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.Book", b =>
                 {
                     b.Navigation("CheckedOutBy");
 
@@ -800,12 +800,12 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Navigation("StatusHistory");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.ReviewItem", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.ReviewItem", b =>
                 {
                     b.Navigation("RatingItem");
                 });
 
-            modelBuilder.Entity("NyriaNest.Api.Models.Users.User", b =>
+            modelBuilder.Entity("NyriaNest.Domain.Entities.User", b =>
                 {
                     b.Navigation("CheckedOutBooks");
 

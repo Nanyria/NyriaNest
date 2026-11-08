@@ -155,14 +155,14 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var (client, me) = await factory.LoginAsAsync();
 
         var response = await client.PutAsJsonAsync(Url,
-            new { profilePictureUrl = "assets/images/profile-pictures/RedDragon.svg", bio = "Dragons" }, Ct);
+            new { profilePictureUrl = "assets/images/profile-pictures/RedDragon.png", bio = "Dragons" }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var (picture, bio) = await factory.WithDbAsync(db => db.Users
             .Where(u => u.Id == me.Id)
             .Select(u => new ValueTuple<string?, string?>(u.ProfilePictureUrl, u.Bio))
             .SingleAsync(Ct));
-        picture.Should().Be("assets/images/profile-pictures/RedDragon.svg");
+        picture.Should().Be("assets/images/profile-pictures/RedDragon.png");
         bio.Should().Be("Dragons");
     }
 
