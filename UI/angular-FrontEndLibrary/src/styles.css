@@ -27,10 +27,6 @@ body {
   display: flex;
   flex-direction: column;
   background-color: rgba(17, 24, 39, 1);
-  /* background-image: url('assets/images/webpage-images/backgrounds/webpagebg.svg');
-  background-size: 100%, 10%;        
-  background-repeat: no-repeat;  
-  background-position: bottom;     */
   margin: 0;
   padding: 20px;
 
