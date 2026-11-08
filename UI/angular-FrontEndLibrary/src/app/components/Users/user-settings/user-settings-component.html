@@ -1,129 +1,354 @@
-@if (user) {
-<div class="settings-flex-row">
-  <!-- Left column: two custom boxes stacked vertically -->
-  <div class="settings-left-col">
-    <div class="profile-picture-box">
-      <img
-        [src]="user.profilePictureUrl || 'assets/images/profile-pictures/BlueKidDragon.svg'"
-        alt="Profilbild"
-        class="profile-picture-img"
-      />
-      <!-- Profile picture selection, only in edit mode -->
-      @if (editMode) {
-      <div class="profile-picture-selection">
-        <label>Välj profilbild:</label>
-        <div class="profile-picture-options">
-          @for (pic of profilePictures; track pic) {
-          <img
-            [src]="pic"
-            [class.selected]="user.profilePictureUrl === pic"
-            (click)="selectProfilePicture(pic)"
-            class="profile-picture-option"
-            alt="Profilbild val"
-          />
-          }
-        </div>
-      </div>
+<div class="settings">
+  <!-- Same header as Library and Add book: compass, breadcrumb, title, centred divider -->
+  <header class="nn-admin-header">
+    <span class="nn-admin-header__compass" aria-hidden="true"></span>
+    <div class="nn-admin-header__heading">
+      <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/home">Home</a> / Settings
+      </nav>
+      <h1 class="nn-admin-header__title">Settings</h1>
+    </div>
+    <span class="nn-admin-header__divider" aria-hidden="true"></span>
+
+    <!-- Links between the two Settings pages, on the right of the header.
+         Hidden on phones, which show both on one page. -->
+    <nav class="settings__sections" aria-label="Settings pages">
+      @for (section of sections; track section.id) {
+        <a
+          class="settings__section-link"
+          [routerLink]="['/settings', section.id]"
+          [class.is-active]="activeSection === section.id"
+          [attr.aria-current]="activeSection === section.id ? 'page' : null"
+        >
+          <i class="bi" [class]="'bi-' + section.icon" aria-hidden="true"></i>{{ section.label }}
+        </a>
       }
-    </div>
-    <div class="bio-box">
-      <label>Bio</label>
-      <textarea
-        class="form-control"
-        [readonly]="!editMode"
-        [(ngModel)]="user.bio"
-        name="bio"
-        rows="4"
-      ></textarea>
-    </div>
-  </div>
-  <!-- Right column: rest of the form (unchanged) -->
-  <div class="settings-right-col">
-    <div class="settings-actions">
-      <button class="btn btn-primary" (click)="editMode = !editMode">
-        {{ editMode ? 'Avbryt' : 'Ändra inställningar' }}
-      </button>
-    </div>
-    <div class="form-group">
-      <label>Användarnamn</label>
-      <input
-        class="form-control readonly-field"
-        [value]="user.userName"
-        readonly
-        tabindex="-1"
-      />
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Förnamn</label>
-        <input
-          class="form-control"
-          [readonly]="!editMode"
-          [(ngModel)]="user.firstName"
-          name="firstName"
-        />
-      </div>
-      <div class="form-group">
-        <label>Efternamn</label>
-        <input
-          class="form-control"
-          [readonly]="!editMode"
-          [(ngModel)]="user.lastName"
-          name="lastName"
-        />
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input
-        class="form-control readonly-field"
-        [value]="user.email"
-        readonly
-        tabindex="-1"
-      />
-    </div>
-    @if (!changePasswordMode) {
-    <div class="form-group">
-      <label>Lösenord</label>
-      <input class="form-control" type="password" value="********" disabled />
-      @if (editMode) {
-      <button class="btn btn-link" (click)="changePasswordMode = true">
-        Byt lösenord
-      </button>
-      }
-    </div>
-    } @if (changePasswordMode) {
-    <div>
-      <div class="form-group">
-        <label>Nuvarande lösenord</label>
-        <input class="form-control" type="password" [(ngModel)]="oldPassword" />
-      </div>
-      <div class="form-group">
-        <label>Nytt lösenord</label>
-        <input class="form-control" type="password" [(ngModel)]="newPassword" />
-      </div>
-      <div class="form-group">
-        <label>Bekräfta nytt lösenord</label>
-        <input
-          class="form-control"
-          type="password"
-          [(ngModel)]="confirmPassword"
-        />
-      </div>
-      <button class="btn btn-success" (click)="submitPasswordChange()">
-        Spara nytt lösenord
-      </button>
-      <button class="btn btn-link" (click)="changePasswordMode = false">
-        Avbryt
-      </button>
-    </div>
-    } @if (editMode) {
-    <div class="settings-actions">
-      <button class="btn btn-success" (click)="submitNameChange()">
-        Spara namnändringar
-      </button>
-    </div>
+    </nav>
+  </header>
+
+  @switch (loadState) {
+    @case ('loading') {
+      <p class="nn-panel nn-panel--framed settings__state" aria-busy="true">Loading your settings…</p>
     }
-  </div>
+    @case ('error') {
+      <div class="nn-panel nn-panel--framed settings__state" role="alert">
+        <p>Your settings couldn't be loaded.</p>
+        <button type="button" class="nn-btn nn-btn--primary" (click)="load()">
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>Try again
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <div class="settings__column">
+        <!-- ===== Profile: what other readers see ===== -->
+        <form
+          id="profile"
+          class="nn-panel nn-panel--framed nn-panel--titled settings__card settings__section"
+          [class.is-current]="activeSection === 'profile'"
+          [formGroup]="profileForm"
+          (ngSubmit)="saveProfile()"
+          novalidate
+          aria-labelledby="profile-title"
+        >
+          <h2 id="profile-title" class="nn-section-title">
+            <i class="bi bi-person" aria-hidden="true"></i>Profile
+            <span class="nn-section-title__rule" aria-hidden="true"></span>
+          </h2>
+
+          <div class="settings__profile-body">
+            <!-- The picture is saved as soon as it's chosen; the pencil opens the choices -->
+            <div class="settings__picture-col" #pictureArea>
+              <div class="settings__avatar-wrap">
+                <img class="settings__avatar" [src]="pictureUrl" alt="Your profile picture" (error)="onPictureError()" />
+                @if (pictureSaving) {
+                  <span class="settings__avatar-busy" role="status">
+                    <span class="spinner-border" aria-hidden="true"></span>
+                    <span class="visually-hidden">Saving your picture…</span>
+                  </span>
+                }
+                <button
+                  #pictureButton
+                  type="button"
+                  class="settings__avatar-edit"
+                  aria-label="Change profile picture"
+                  aria-haspopup="dialog"
+                  aria-controls="picture-menu"
+                  [attr.aria-expanded]="pictureMenuOpen"
+                  [disabled]="pictureSaving"
+                  (click)="togglePictureMenu()"
+                >
+                  <i class="bi bi-pencil" aria-hidden="true"></i>
+                </button>
+
+                @if (pictureMenuOpen) {
+                  <div id="picture-menu" class="settings__picture-menu" role="dialog" aria-labelledby="picture-menu-title">
+                    <p id="picture-menu-title" class="settings__picture-menu-title">Choose a picture</p>
+                    <div class="settings__picture-options">
+                      @for (pic of profilePictures; track pic.url) {
+                        <button
+                          type="button"
+                          class="settings__picture"
+                          [class.is-selected]="pictureUrl === pic.url"
+                          [attr.aria-pressed]="pictureUrl === pic.url"
+                          (click)="choosePreset(pic.url)"
+                        >
+                          <img [src]="pic.url" [alt]="pic.label" />
+                        </button>
+                      }
+                    </div>
+                    <span class="settings__picture-menu-rule" aria-hidden="true"></span>
+                    <button type="button" class="nn-btn nn-btn--outline settings__upload" (click)="fileInput.click()">
+                      <i class="bi bi-upload" aria-hidden="true"></i>Upload your own
+                    </button>
+                  </div>
+                }
+              </div>
+              <input #fileInput type="file" accept="image/*" hidden (change)="onPictureFileChosen($event)" />
+            </div>
+
+            <div class="settings__fields">
+              <!-- Read-only: usernames can't be changed -->
+              <div class="settings__field settings__username">
+                <span class="nn-field-label">Username</span>
+                <span class="settings__username-value">{{ userName }}</span>
+              </div>
+
+              <div class="settings__row">
+                <div class="settings__field">
+                  <label class="nn-field-label" for="firstName">First name<span class="nn-required" aria-hidden="true">*</span></label>
+                  <input id="firstName" class="nn-input" formControlName="firstName" autocomplete="given-name" (blur)="leftField(profileForm.controls.firstName, $event)" required />
+                  @if (showError('profile', profileForm.controls.firstName)) {
+                    <span class="settings__error">First name is required.</span>
+                  }
+                </div>
+                <div class="settings__field">
+                  <label class="nn-field-label" for="lastName">Last name<span class="nn-required" aria-hidden="true">*</span></label>
+                  <input id="lastName" class="nn-input" formControlName="lastName" autocomplete="family-name" (blur)="leftField(profileForm.controls.lastName, $event)" required />
+                  @if (showError('profile', profileForm.controls.lastName)) {
+                    <span class="settings__error">Last name is required.</span>
+                  }
+                </div>
+              </div>
+
+              <div class="settings__field">
+                <div class="settings__label-row">
+                  <label class="nn-field-label" for="bio">Bio</label>
+                  <span
+                    id="bio-count"
+                    class="settings__counter"
+                    [class.is-over]="profileForm.controls.bio.value.length > bioMaxLength"
+                  >
+                    {{ profileForm.controls.bio.value.length }} / {{ bioMaxLength }}
+                  </span>
+                </div>
+                <textarea
+                  id="bio"
+                  class="nn-input settings__textarea"
+                  formControlName="bio"
+                  rows="4"
+                  aria-describedby="bio-count"
+                  placeholder="Tell other readers a little about yourself…"
+                ></textarea>
+                @if (profileForm.controls.bio.hasError('maxlength')) {
+                  <span class="settings__error">The bio can be at most {{ bioMaxLength }} characters.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          @for (message of apiErrors.profile; track message) {
+            <p class="settings__api-error" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+          }
+          <div class="settings__actions">
+            @if (profileForm.dirty) {
+              <button type="button" class="nn-btn nn-btn--ghost" (click)="cancelProfile()">Cancel</button>
+            }
+            <!-- The note says why Save is grey. It keeps its space while hidden, so the
+                 button doesn't move when editing starts. -->
+            <div class="settings__save">
+              <button type="submit" class="nn-btn nn-btn--primary" [disabled]="!profileForm.dirty || saving.profile">
+                <i class="bi bi-person-check" aria-hidden="true"></i>{{ saving.profile ? 'Saving…' : 'Save profile' }}
+              </button>
+              <span class="settings__no-changes" [class.is-hidden]="profileForm.dirty">No unsaved changes</span>
+            </div>
+          </div>
+        </form>
+
+        <!-- ===== Account & security: closed rows; Change opens the form in place ===== -->
+        <section
+          id="security"
+          class="nn-panel nn-panel--framed nn-panel--titled settings__card settings__section"
+          [class.is-current]="activeSection === 'security'"
+          aria-labelledby="account-title"
+        >
+          <h2 id="account-title" class="nn-section-title">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>Account &amp; security
+            <span class="nn-section-title__rule" aria-hidden="true"></span>
+          </h2>
+
+          <div class="settings__account">
+            <!-- Email -->
+            <div class="settings__account-row">
+              <span class="settings__account-label">Email</span>
+              <span class="settings__account-value">{{ currentEmail }}</span>
+              <button
+                id="email-change"
+                type="button"
+                class="nn-btn nn-btn--outline settings__change"
+                aria-controls="email-form"
+                [attr.aria-expanded]="openRow === 'email'"
+                (click)="toggleRow('email')"
+              >
+                Change<span class="visually-hidden"> email</span>
+              </button>
+            </div>
+            @if (openRow === 'email') {
+              <form id="email-form" class="settings__row-form" [formGroup]="emailForm" (ngSubmit)="saveEmail()" novalidate>
+                <div class="settings__field">
+                  <label class="nn-field-label" for="newEmail">New email address</label>
+                  <input id="newEmail" class="nn-input" type="email" formControlName="email" autocomplete="email" (blur)="leftField(emailForm.controls.email, $event)" required />
+                  @if (showError('email', emailForm.controls.email)) {
+                    <span class="settings__error">
+                      {{ emailForm.controls.email.hasError('required') ? 'Enter your new email address.' : 'Enter a valid email address.' }}
+                    </span>
+                  } @else if (submitted.email && emailUnchanged) {
+                    <span class="settings__error">That's already your email address.</span>
+                  }
+                </div>
+                <div class="settings__field">
+                  <div class="settings__label-row">
+                    <label class="nn-field-label" for="emailCurrentPassword">Current password</label>
+                    <ng-container *ngTemplateOutlet="forgotPassword"></ng-container>
+                  </div>
+                  <input id="emailCurrentPassword" class="nn-input" type="password" formControlName="currentPassword" autocomplete="current-password" (blur)="leftField(emailForm.controls.currentPassword, $event)" required />
+                  @if (showError('email', emailForm.controls.currentPassword)) {
+                    <span class="settings__error">Enter your current password to change your email.</span>
+                  }
+                </div>
+
+                @for (message of apiErrors.email; track message) {
+                  <p class="settings__api-error" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+                }
+                <div class="settings__actions">
+                  <button type="button" class="nn-btn nn-btn--ghost" (click)="closeRow('email')">Cancel</button>
+                  <button type="submit" class="nn-btn nn-btn--primary" [disabled]="saving.email">
+                    <i class="bi bi-envelope-check" aria-hidden="true"></i>{{ saving.email ? 'Saving…' : 'Change email' }}
+                  </button>
+                </div>
+              </form>
+            }
+
+            <!-- Password -->
+            <div class="settings__account-row">
+              <span class="settings__account-label">Password</span>
+              <span class="settings__account-value settings__account-value--secret" aria-hidden="true">••••••••</span>
+              <button
+                id="password-change"
+                type="button"
+                class="nn-btn nn-btn--outline settings__change"
+                aria-controls="password-form"
+                [attr.aria-expanded]="openRow === 'password'"
+                (click)="toggleRow('password')"
+              >
+                Change<span class="visually-hidden"> password</span>
+              </button>
+            </div>
+            @if (openRow === 'password') {
+              <form id="password-form" class="settings__row-form" [formGroup]="passwordForm" (ngSubmit)="savePassword()" novalidate>
+                <div class="settings__field">
+                  <div class="settings__label-row">
+                    <label class="nn-field-label" for="currentPassword">Current password</label>
+                    <ng-container *ngTemplateOutlet="forgotPassword"></ng-container>
+                  </div>
+                  <input id="currentPassword" class="nn-input" type="password" formControlName="currentPassword" autocomplete="current-password" (blur)="leftField(passwordForm.controls.currentPassword, $event)" required />
+                  @if (showError('password', passwordForm.controls.currentPassword)) {
+                    <span class="settings__error">Enter your current password.</span>
+                  }
+                </div>
+                <div class="settings__field">
+                  <label class="nn-field-label" for="newPassword">New password</label>
+                  <!-- The rules pop up under the field while typing, and tick off as they're met.
+                       Screen readers hear them through aria-describedby, also while they're hidden. -->
+                  <div class="settings__password-wrap">
+                    <input
+                      id="newPassword"
+                      class="nn-input"
+                      type="password"
+                      formControlName="newPassword"
+                      autocomplete="new-password"
+                      aria-describedby="password-rules"
+                      required
+                      (focus)="newPasswordFocused = true"
+                      (blur)="newPasswordFocused = false; leftField(passwordForm.controls.newPassword, $event)"
+                    />
+                    <div id="password-rules" class="settings__rules" [class.is-open]="newPasswordFocused">
+                      <p class="settings__rules-title">Your password needs</p>
+                      <ul>
+                        @for (rule of passwordRules; track rule.label) {
+                          <li [class.is-met]="rule.test(newPassword)">
+                            <i class="bi" [class.bi-check-circle-fill]="rule.test(newPassword)" [class.bi-circle]="!rule.test(newPassword)" aria-hidden="true"></i>{{ rule.label }}
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  </div>
+                  @if (showError('password', passwordForm.controls.newPassword)) {
+                    <span class="settings__error">
+                      {{ newPassword ? 'Your password still needs: ' + missingPasswordRules + '.' : 'Enter a new password.' }}
+                    </span>
+                  }
+                </div>
+                <div class="settings__field">
+                  <label class="nn-field-label" for="confirmPassword">Confirm new password</label>
+                  <input id="confirmPassword" class="nn-input" type="password" formControlName="confirmPassword" autocomplete="new-password" (blur)="leftField(passwordForm.controls.confirmPassword, $event)" required />
+                  @if (passwordForm.hasError('mismatch') && (hasLeft(passwordForm.controls.confirmPassword) || submitted.password)) {
+                    <span class="settings__error">The passwords don't match.</span>
+                  } @else if (showError('password', passwordForm.controls.confirmPassword)) {
+                    <span class="settings__error">Enter the new password again.</span>
+                  }
+                </div>
+
+                @for (message of apiErrors.password; track message) {
+                  <p class="settings__api-error" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ message }}</p>
+                }
+                <div class="settings__actions">
+                  <button type="button" class="nn-btn nn-btn--ghost" (click)="closeRow('password')">Cancel</button>
+                  <button type="submit" class="nn-btn nn-btn--primary" [disabled]="saving.password">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>{{ saving.password ? 'Saving…' : 'Change password' }}
+                  </button>
+                </div>
+              </form>
+            }
+          </div>
+        </section>
+
+        <!-- "Forgot password?" next to both current-password fields. A placeholder until
+             #51 adds the reset flow; then it becomes a link to the forgot-password page. -->
+        <ng-template #forgotPassword>
+          <span class="settings__forgot nn-placeholder" title="Coming soon">
+            Forgot password? <span class="settings__soon-tag">Soon</span>
+          </span>
+        </ng-template>
+
+        <!-- ===== Delete account: not built yet (#90) ===== -->
+        <section
+          class="nn-panel settings__danger settings__section"
+          [class.is-current]="activeSection === 'security'"
+          aria-labelledby="delete-title"
+        >
+          <h2 id="delete-title" class="settings__danger-title">Delete account</h2>
+          <p class="settings__danger-text">
+            Removes your name, email, bio, picture and the text of your reviews. Your ratings stay,
+            shown as "Deleted user", so books' averages don't change.
+          </p>
+          <div class="settings__danger-actions">
+            <button type="button" class="nn-btn nn-btn--outline settings__danger-btn" disabled aria-describedby="delete-soon">
+              Delete account…
+            </button>
+            <span id="delete-soon" class="settings__soon">Coming soon</span>
+          </div>
+        </section>
+      </div>
+    }
+  }
 </div>
-}

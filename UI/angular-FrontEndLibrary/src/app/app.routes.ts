@@ -40,17 +40,23 @@ export const routes: Routes = [
           { path: '', redirectTo: 'reading-list', pathMatch: 'full' }
         ]
       },
+      // Settings: /settings/profile and /settings/security. One route with a parameter, so
+      // switching between them keeps the same page (and any unsaved edits). Phones show both
+      // on one scrolling page. Lays itself out, so it isn't framed by UserPageComponent.
+      { path: 'settings', redirectTo: 'settings/profile', pathMatch: 'full' },
       {
-        path: 'settings',
-        component: UserPageComponent,
-        children: [{ path: '', component: UserSettingsComponent }]
+        path: 'settings/:section',
+        component: UserSettingsComponent,
+        canDeactivate: [unsavedChangesGuard],
+        // Profile <-> Security keeps the page (and edits), so don't ask then; leaving Settings still asks
+        runGuardsAndResolvers: () => false,
       },
       // Old My page URLs, so existing links and bookmarks still work
       { path: 'user-page/readlist', redirectTo: '/my/reading-list', pathMatch: 'full' },
       { path: 'user-page/checkouts', redirectTo: '/my/loans', pathMatch: 'full' },
       { path: 'user-page/reservations', redirectTo: '/my/reservations', pathMatch: 'full' },
-      { path: 'user-page/settings', redirectTo: '/settings', pathMatch: 'full' },
-      { path: 'user-page', redirectTo: '/settings', pathMatch: 'full' },
+      { path: 'user-page/settings', redirectTo: '/settings/profile', pathMatch: 'full' },
+      { path: 'user-page', redirectTo: '/settings/profile', pathMatch: 'full' },
       {
         path: 'admin',
         component: AdminPageComponent,

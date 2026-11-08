@@ -1,99 +1,629 @@
-.settings-flex-row {
-  display: flex;
-  gap: 32px;
-  align-items: flex-start;     /* or use 80vw, 70%, etc. */
-  width: 100%;
+/* Header, page links and cards share one width, so the header starts where the cards do */
+.settings {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 16px;       /* optional: adds some space on very small screens */
-}
-
-.settings-left-col {
+  padding: var(--nn-space-2) var(--nn-space-4) var(--nn-space-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-width: 220px;
-  width: 60%;
-  align-items: center;
+  gap: var(--nn-space-4);
 }
 
-.settings-right-col {
+.settings__state {
+  padding: var(--nn-frame-pad);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 40%;
+  align-items: flex-start;
+  gap: var(--nn-space-3);
 }
 
-.settings-actions {
+.settings__state p {
+  margin: 0;
+}
+
+.settings__column {
+  width: 100%;
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: var(--nn-space-4);
 }
 
-.readonly-field {
-  background-color: #f5f5f5 !important;
-  color: #888;
-  cursor: not-allowed;
-}
+/* ---------- Links between the Profile and Security pages ---------- */
 
-.profile-picture-box {
-  background: transparent;
-  border-radius: 50%;
-  width: 300px;
-  height: 300px;
+/* On the right of the header row, opposite the title, with the divider between them.
+   Styled like the topbar's links (topbar.component.css, .topbar__link), so the current
+   page is highlighted the same way: green, an inner gold line, gold diamonds on the ends. */
+.settings__sections {
+  margin-left: auto;
   display: flex;
+  gap: var(--nn-space-2);
+  padding-inline: 4px; /* room for the diamonds, so they end where the card does */
+}
+
+.settings__section-link {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  padding: 0; 
+  gap: 6px;
+  min-height: 44px;
+  padding: 7px 14px;
+  border: 1px solid transparent; /* same size as the framed current link */
+  border-radius: var(--nn-radius-sm);
+  color: var(--nn-ink);
+  font-family: var(--nn-font-body);
+  font-size: 1.12rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
 }
 
-.profile-picture-img {
-  width: 300px;
-  height: 300px;
+.settings__section-link:hover {
+  background-color: var(--nn-surface-sunken);
+  color: var(--nn-ink-strong);
+}
+
+.settings__section-link.is-active,
+.settings__section-link.is-active:hover {
+  background-color: var(--nn-primary);
+  border-color: #1c2e21;
+  box-shadow: inset 0 0 0 2px var(--nn-primary), inset 0 0 0 3px var(--nn-gold), var(--nn-shadow);
+  color: var(--nn-on-primary);
+}
+
+.settings__section-link.is-active:hover {
+  background-color: var(--nn-primary-hover);
+  box-shadow: inset 0 0 0 2px var(--nn-primary-hover), inset 0 0 0 3px var(--nn-gold), var(--nn-shadow);
+}
+
+.settings__section-link.is-active::before,
+.settings__section-link.is-active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  background-color: var(--nn-gold);
+  border: 1px solid #1c2e21;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.settings__section-link.is-active::before {
+  left: -4px;
+}
+
+.settings__section-link.is-active::after {
+  right: -4px;
+}
+
+/* Wider screens: one page at a time. (Phones show every section, see the end.) */
+@media (min-width: 641px) {
+  .settings__section:not(.is-current) {
+    display: none;
+  }
+}
+
+/* A link to Security on a phone scrolls there; leave room for the topbar */
+.settings__section {
+  scroll-margin-top: calc(var(--topbar-height, 64px) + var(--nn-space-3));
+}
+
+/* Touch-friendly: every button on the page is at least 44px tall */
+.settings .nn-btn {
+  min-height: 44px;
+}
+
+.settings__card {
+  padding: var(--nn-frame-pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  min-width: 0;
+}
+
+/* ---------- Profile ---------- */
+
+.settings__profile-body {
+  display: flex;
+  gap: var(--nn-space-5);
+  align-items: flex-start;
+}
+
+.settings__picture-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--nn-space-3);
+}
+
+.settings__avatar {
+  width: 148px;
+  height: 148px;
   border-radius: 50%;
   object-fit: cover;
-}
-.profile-picture-options {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-}
-.profile-picture-option {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border 0.2s;
-}
-.profile-picture-option.selected {
-  border: 2px solid #007bff;
-}
-.bio-box {
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 16px;
-  min-height: 400px;
-  width: 80%;
+  border: 3px solid var(--nn-gold);
+  background-color: var(--nn-surface);
 }
 
-.form-group {
+/* The picture column is the anchor for the menu */
+.settings__picture-col {
+  position: relative;
+}
+
+.settings__avatar-wrap {
+  position: relative;
+}
+
+/* Round pencil button on the picture's lower right edge */
+.settings__avatar-edit {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--nn-gold);
+  background-color: var(--nn-primary);
+  color: var(--nn-on-primary);
+  font-size: 1.05rem;
+  box-shadow: var(--nn-shadow);
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.15s;
+}
+
+.settings__avatar-edit:hover:not(:disabled) {
+  background-color: var(--nn-primary-hover);
+  transform: scale(1.05);
+}
+
+.settings__avatar-edit[aria-expanded='true'] {
+  background-color: var(--nn-primary-hover);
+}
+
+.settings__avatar-edit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* While a new picture is being saved */
+.settings__avatar-busy {
+  position: absolute;
+  inset: 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background-color: rgba(250, 242, 226, 0.7);
+  color: var(--nn-primary);
+}
+
+/* The menu under the picture: presets, then upload */
+.settings__picture-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 10;
+  width: 260px;
+  transform: translateX(-50%);
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  gap: 10px;
+  background-color: var(--nn-surface);
+  border: 1px solid var(--nn-gold-soft);
+  border-radius: var(--nn-radius);
+  box-shadow: var(--nn-shadow-raised);
 }
-.form-row {
+
+/* Small pointer up to the picture */
+.settings__picture-menu::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: calc(50% - 5px);
+  width: 10px;
+  height: 10px;
+  background-color: var(--nn-surface);
+  border-left: 1px solid var(--nn-gold-soft);
+  border-top: 1px solid var(--nn-gold-soft);
+  transform: rotate(45deg);
+}
+
+.settings__picture-menu-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--nn-ink);
+  text-align: center;
+}
+
+.settings__picture-menu-rule {
+  height: 1px;
+  background-color: var(--nn-gold-soft);
+}
+
+.settings__upload {
+  justify-content: center;
+}
+
+.settings__picture-options {
   display: flex;
-  flex-direction: row;
-  gap: 16px;
-  align-items: center;
+  justify-content: center;
+  gap: var(--nn-space-3);
 }
-textarea {
-  width: 100%;
-  height: 300px;
+
+.settings__picture {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.settings__picture img {
+  display: block;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid var(--nn-border);
+  background-color: var(--nn-surface);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.settings__picture:hover img {
+  border-color: var(--nn-gold-soft);
+  transform: translateY(-1px);
+}
+
+.settings__picture.is-selected img {
+  border-color: var(--nn-gold);
+  box-shadow: 0 0 0 3px var(--nn-gold-soft);
+}
+
+.settings__picture:focus-visible {
+  outline: none;
+}
+
+.settings__picture:focus-visible img {
+  outline: 2px solid var(--nn-focus);
+  outline-offset: 2px;
+}
+
+.settings__fields {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+}
+
+/* ---------- Fields ---------- */
+
+.settings__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nn-space-3);
+}
+
+.settings__row > .settings__field {
+  flex: 1 1 180px;
+}
+
+.settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Above the names: who you are, read-only (plain text, not a field) */
+.settings__username-value {
+  padding: 2px 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--nn-ink-strong);
+  overflow-wrap: anywhere;
+}
+
+.settings__hint {
+  color: var(--nn-ink-muted);
+  font-size: 0.9rem;
+}
+
+.settings__textarea {
+  min-height: 120px;
   resize: vertical;
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-family: inherit;
+  line-height: 1.45;
+}
+
+.settings__error {
+  color: var(--nn-accent);
+  font-size: 0.9rem;
+}
+
+.settings__api-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: var(--nn-accent);
+}
+
+/* Password rules: a small card that pops up under the field while typing,
+   floating over what's below so nothing jumps. Each rule ticks off when it's met. */
+.settings__password-wrap {
+  position: relative;
+}
+
+.settings__rules {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 5;
+  min-width: 240px;
+  padding: 10px 14px;
+  background-color: var(--nn-surface);
+  border: 1px solid var(--nn-gold-soft);
+  border-radius: var(--nn-radius);
+  box-shadow: var(--nn-shadow-raised);
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+}
+
+/* Small pointer up to the field */
+.settings__rules::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 10px;
+  height: 10px;
+  background-color: var(--nn-surface);
+  border-left: 1px solid var(--nn-gold-soft);
+  border-top: 1px solid var(--nn-gold-soft);
+  transform: rotate(45deg);
+}
+
+.settings__rules.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.settings__rules-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--nn-ink);
+}
+
+.settings__rules ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings__rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.settings__rules li.is-met {
+  color: var(--nn-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings__rules,
+  .settings__rules li {
+    transition: none;
+  }
+}
+
+.settings__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start; /* Cancel lines up with Save, not with the note under it */
+  flex-wrap: wrap;
+  gap: var(--nn-space-2);
+  margin-top: var(--nn-space-1);
+}
+
+/* Bio label with its character counter on the right */
+.settings__label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--nn-space-2);
+}
+
+.settings__counter {
+  font-size: 0.85rem;
+  color: var(--nn-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings__counter.is-over {
+  color: var(--nn-accent);
+  font-weight: 600;
+}
+
+/* Why Save is grey: shown in place of Cancel while nothing has changed */
+/* "Forgot password?" on the right of the current-password label: muted, not a link
+   yet (#51), with a small Soon tag like the topbar's */
+.settings__forgot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--nn-ink-faint);
+  cursor: default;
+}
+
+.settings__soon-tag {
+  padding: 0 6px;
+  border: 1px solid var(--nn-border-strong);
+  border-radius: var(--nn-radius-pill);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nn-ink-muted);
+}
+
+/* Save profile, with a note under it while nothing has changed */
+.settings__save {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings__no-changes {
+  color: var(--nn-ink-muted);
+  font-size: 0.85rem;
+}
+
+/* Hidden while editing, but keeps its space so Save doesn't move */
+.settings__no-changes.is-hidden {
+  visibility: hidden;
+}
+
+/* ---------- Account & security: read-only rows, a form opens under its row ---------- */
+
+.settings__account {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings__account-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--nn-space-2) var(--nn-space-3);
+  padding: var(--nn-space-3) 0;
+}
+
+/* A thin line between the rows (the open form sits above the line) */
+.settings__account-row:not(:first-child) {
+  border-top: 1px solid var(--nn-gold-soft);
+}
+
+.settings__account-label {
+  font-weight: 600;
+  color: var(--nn-ink);
+}
+
+.settings__account-value {
+  color: var(--nn-ink-strong);
+  overflow-wrap: anywhere;
+}
+
+.settings__account-value--secret {
+  letter-spacing: 0.15em;
+}
+
+.settings__row-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  margin: 0 0 var(--nn-space-3);
+  padding: var(--nn-space-3) var(--nn-space-4) var(--nn-space-4);
+  background-color: var(--nn-surface-sunken);
+  border: 1px solid var(--nn-gold-soft);
+  border-radius: var(--nn-radius);
+}
+
+/* ---------- Delete account: muted red, not framed in gold ---------- */
+
+.settings__danger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-2);
+  border-color: color-mix(in srgb, var(--nn-accent) 45%, transparent);
+  box-shadow: none;
+}
+
+.settings__danger-title {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--nn-accent);
+}
+
+.settings__danger-text {
+  margin: 0;
+  color: var(--nn-ink-muted);
+}
+
+.settings__danger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--nn-space-3);
+  margin-top: var(--nn-space-1);
+}
+
+.settings__danger-btn {
+  color: var(--nn-accent);
+  border-color: var(--nn-accent);
+}
+
+.settings__soon {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- Small screens: picture above the fields, Change under the value ---------- */
+
+@media (max-width: 640px) {
+  .settings {
+    padding-inline: 0;
+  }
+
+  /* Phones just scroll: the panels follow each other closely enough */
+  .settings__sections {
+    display: none;
+  }
+
+  .settings__profile-body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings__avatar {
+    width: 128px;
+    height: 128px;
+  }
+
+  .settings__actions > .nn-btn {
+    flex: 1 1 auto;
+  }
+
+  .settings__save {
+    flex: 1 1 auto;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .settings__account-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings__change {
+    justify-self: start;
+  }
+
+  .settings__row-form {
+    padding-inline: var(--nn-space-3);
+  }
 }
