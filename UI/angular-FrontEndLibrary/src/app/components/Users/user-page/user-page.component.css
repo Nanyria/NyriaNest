@@ -1,16 +1,12 @@
-.user-layout {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;   /* stretch children to fill width */
-  height: 100vh;
-  width: 100vw;           /* fill the viewport width */
-  margin: 0 auto;
-  max-width: 70%;}
-.nav-row,
-.user-body {
+/* Same width and side padding as the admin pages, so they line up */
+.user-content {
   width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 var(--nn-space-4);
 }
-.user-body {
-  flex: 1;
-  padding: 24px;
+
+/* Same framed card as Library, Manage books and Add book, until #65-#68 redesign these pages */
+.user-panel {
+  padding: var(--nn-frame-pad);
 }

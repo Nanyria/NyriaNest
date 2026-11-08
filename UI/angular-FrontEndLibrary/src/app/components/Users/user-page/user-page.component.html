@@ -1,13 +1,5 @@
-<div class="user-layout">
-  <div class="nav-row">
-  <app-user-page-nav
-  [currentUrl]="currentUrl"
-  [hasNewNotification]="hasNewNotification">
-</app-user-page-nav>
-  </div>
-  <div class="user-body">
-    <div class="info-container">
-      <router-outlet></router-outlet>
-    </div>
+<div class="user-content">
+  <div class="nn-panel nn-panel--framed user-panel">
+    <router-outlet></router-outlet>
   </div>
 </div>
