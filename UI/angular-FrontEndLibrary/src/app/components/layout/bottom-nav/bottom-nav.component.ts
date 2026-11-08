@@ -10,6 +10,7 @@ import {
   MAIN_NAV,
   NavGroup,
   NavItem,
+  SETTINGS_NAV,
   isNavGroup,
 } from '../nav-items';
 
@@ -56,7 +57,7 @@ export class BottomNavComponent {
       label: 'More',
       icon: 'bi-three-dots',
       route: '/more',
-      activeFor: ['/admin', '/add-book', '/user-page/settings'],
+      activeFor: ['/admin', '/add-book', SETTINGS_NAV.route!],
     },
   ];
 

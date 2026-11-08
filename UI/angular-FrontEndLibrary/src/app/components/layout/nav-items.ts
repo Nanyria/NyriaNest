@@ -36,9 +36,9 @@ export const MAIN_NAV: NavEntry[] = [
     label: 'My books',
     icon: 'bi-journal-bookmark',
     items: [
-      { label: 'Reading list', icon: 'bi-heart', route: '/user-page/readlist' },
-      { label: 'Borrowed books', icon: 'bi-book-half', route: '/user-page/checkouts' },
-      { label: 'Reservations', icon: 'bi-bookmark', route: '/user-page/reservations' },
+      { label: 'Reading list', icon: 'bi-heart', route: '/my/reading-list' },
+      { label: 'Borrowed books', icon: 'bi-book-half', route: '/my/loans' },
+      { label: 'Reservations', icon: 'bi-bookmark', route: '/my/reservations' },
     ],
   },
 ];
@@ -58,7 +58,7 @@ export const ADMIN_NAV: NavGroup = {
 export const SETTINGS_NAV: NavItem = {
   label: 'Settings',
   icon: 'bi-gear',
-  route: '/user-page/settings',
+  route: '/settings',
 };
 
 // Small screens: Home and Library have their own tabs in the bottom bar, the

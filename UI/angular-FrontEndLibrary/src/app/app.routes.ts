@@ -29,17 +29,28 @@ export const routes: Routes = [
       // Same page in edit mode. Kept outside the admin wrapper so it lays out
       // exactly like Add book; listed before 'admin' so that route doesn't claim it.
       { path: 'admin/manage-books/:id/edit', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
+      // The reader's own pages (the topbar's My books menu), framed by UserPageComponent
       {
-        path: 'user-page',
+        path: 'my',
         component: UserPageComponent,
         children: [
-          { path: 'settings', component: UserSettingsComponent },
-          { path: 'readlist', component: UserReadlistComponent },
+          { path: 'reading-list', component: UserReadlistComponent },
+          { path: 'loans', component: UserCheckoutsComponent },
           { path: 'reservations', component: UserReservationsComponent },
-          { path: 'checkouts', component: UserCheckoutsComponent },
-          { path: '', redirectTo: 'settings', pathMatch: 'full' }
+          { path: '', redirectTo: 'reading-list', pathMatch: 'full' }
         ]
       },
+      {
+        path: 'settings',
+        component: UserPageComponent,
+        children: [{ path: '', component: UserSettingsComponent }]
+      },
+      // Old My page URLs, so existing links and bookmarks still work
+      { path: 'user-page/readlist', redirectTo: '/my/reading-list', pathMatch: 'full' },
+      { path: 'user-page/checkouts', redirectTo: '/my/loans', pathMatch: 'full' },
+      { path: 'user-page/reservations', redirectTo: '/my/reservations', pathMatch: 'full' },
+      { path: 'user-page/settings', redirectTo: '/settings', pathMatch: 'full' },
+      { path: 'user-page', redirectTo: '/settings', pathMatch: 'full' },
       {
         path: 'admin',
         component: AdminPageComponent,
