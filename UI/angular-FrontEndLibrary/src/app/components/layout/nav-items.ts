@@ -19,22 +19,22 @@ export const isNavGroup = (entry: NavEntry): entry is NavGroup =>
   'items' in entry;
 
 export const MAIN_NAV: NavEntry[] = [
-  { label: 'Home', icon: 'bi-house-door', route: '/home' },
-  { label: 'Library', icon: 'bi-book', route: '/library' },
+  { label: 'Home', icon: 'nn-icon-home', route: '/home' },
+  { label: 'Library', icon: 'nn-icon-library', route: '/library' },
   {
     id: 'discover',
     label: 'Discover',
-    icon: 'bi-compass',
+    icon: 'nn-icon-explore',
     items: [
       { label: 'Recommendations', icon: 'bi-stars' },
       { label: 'Reviews', icon: 'bi-chat-left-text' },
     ],
   },
-  { label: 'Challenges', icon: 'bi-award' },
+  { label: 'Challenges', icon: 'nn-icon-challenges' },
   {
     id: 'my-books',
     label: 'My books',
-    icon: 'bi-journal-bookmark',
+    icon: 'nn-icon-mybooks',
     items: [
       { label: 'Reading list', icon: 'bi-heart', route: '/my/reading-list' },
       { label: 'Borrowed books', icon: 'bi-book-half', route: '/my/loans' },
@@ -46,7 +46,7 @@ export const MAIN_NAV: NavEntry[] = [
 export const ADMIN_NAV: NavGroup = {
   id: 'admin',
   label: 'Admin',
-  icon: 'bi-shield-lock',
+  icon: 'nn-icon-admin',
   items: [
     { label: 'Dashboard', icon: 'bi-speedometer2' },
     { label: 'Manage books', icon: 'bi-journals', route: '/admin/manage-books' },

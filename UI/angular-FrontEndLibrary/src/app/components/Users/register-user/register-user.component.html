@@ -129,8 +129,8 @@
     }
     @if ((submitted || user.password) && !passwordValid()) {
       <p class="auth-form__hint" [class.auth-form__error]="submitted">
-        <i class="bi bi-info-circle"></i>At least 8 characters, with one capital
-        letter and one digit.
+        <i class="bi bi-info-circle"></i>At least 8 characters, with an uppercase
+        and a lowercase letter, a digit and a symbol.
       </p>
     }
     @if (confirmPassword && !passwordsMatch()) {

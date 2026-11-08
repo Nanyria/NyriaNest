@@ -23,8 +23,7 @@
   flex-shrink: 0;
 }
 
-/* The logo is the way home, so it says so on hover, like the compact menu's
-   tooltips */
+/* The logo is the way home, so it says so on hover */
 .topbar__brand::after {
   content: attr(data-label);
   position: absolute;
@@ -98,22 +97,29 @@ button.topbar__link:hover {
 }
 
 /* Current page: framed like the ornate login button, green with an inner
-   gold line and small gold diamonds on the short ends */
+   gold line and small gold diamonds on the short ends. Only colours change,
+   never the size: every item has the same padding and 1px border either way,
+   and the diamonds sit outside it. The user button gets it on its menu's pages. */
 .topbar__link.is-active,
-.topbar__link.is-active:hover {
+.topbar__link.is-active:hover,
+.topbar__user-toggle.is-active,
+.topbar__user-toggle.is-active:hover {
   background-color: var(--nn-primary);
   border-color: #1c2e21;
   box-shadow: inset 0 0 0 2px var(--nn-primary), inset 0 0 0 3px var(--nn-gold), var(--nn-shadow);
   color: var(--nn-on-primary);
 }
 
-.topbar__link.is-active:hover {
+.topbar__link.is-active:hover,
+.topbar__user-toggle.is-active:hover {
   background-color: var(--nn-primary-hover);
   box-shadow: inset 0 0 0 2px var(--nn-primary-hover), inset 0 0 0 3px var(--nn-gold), var(--nn-shadow);
 }
 
 .topbar__link.is-active::before,
-.topbar__link.is-active::after {
+.topbar__link.is-active::after,
+.topbar__user-toggle.is-active::before,
+.topbar__user-toggle.is-active::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -124,11 +130,13 @@ button.topbar__link:hover {
   transform: translateY(-50%) rotate(45deg);
 }
 
-.topbar__link.is-active::before {
+.topbar__link.is-active::before,
+.topbar__user-toggle.is-active::before {
   left: -4px;
 }
 
-.topbar__link.is-active::after {
+.topbar__link.is-active::after,
+.topbar__user-toggle.is-active::after {
   right: -4px;
 }
 
@@ -181,6 +189,19 @@ button.topbar__link:hover {
    field colour to stand out */
 .topbar__search .nn-input {
   background-color: var(--nn-field);
+  padding-left: 52px; /* room for the larger search icon */
+}
+
+/* The search icon, in the field and on the small screens' search button, a size
+   up from the field's default so it reads like the menu icons */
+.topbar__search > .bi:first-child,
+.topbar__search-open .bi {
+  font-size: 1.55rem; /* the same height as the menu icons */
+  line-height: 1;
+}
+
+.topbar__search > .bi:first-child {
+  left: 10px;
 }
 
 /* Only used on small screens, where the search opens across the bar */
@@ -204,7 +225,8 @@ button.topbar__link:hover {
 
 .topbar__bell {
   position: relative;
-  font-size: 1.35rem;
+  font-size: 1.6rem; /* the same height as the menu and search icons */
+  line-height: 1;
   color: var(--nn-gold);
 }
 
@@ -224,14 +246,16 @@ button.topbar__link:hover {
   position: relative;
 }
 
+/* Same box highlighted or not (see .is-active above): the border is there, just transparent */
 .topbar__user-toggle {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--nn-space-3);
   background: none;
-  border: none;
-  padding: 4px;
-  border-radius: var(--nn-radius-pill);
+  border: 1px solid transparent;
+  padding: 3px 12px 3px 10px; /* room left of the avatar, so the highlight frames it */
+  border-radius: var(--nn-radius-sm);
   color: var(--nn-ink);
   font-family: var(--nn-font-body);
   font-size: 1.1rem;
@@ -250,6 +274,10 @@ button.topbar__link:hover {
 .topbar__caret {
   font-size: 0.75rem;
   color: var(--nn-ink-muted);
+}
+
+.topbar__user-toggle.is-active .topbar__caret {
+  color: inherit;
 }
 
 /* ---------- Dropdown panels ---------- */
@@ -335,39 +363,38 @@ button.topbar__link:hover {
   }
 }
 
-/* Compact menu: icons only, except the current page which keeps its label.
-   The other labels show as a tooltip on hover. */
-@media (min-width: 992px) and (max-width: 1279px) {
+/* The menu shows each icon with its name beside it, the icons a size up from the
+   text. Below 992px the menu moves to the bottom bar. */
+@media (min-width: 992px) {
+  .topbar__link {
+    padding-inline: 10px;
+  }
+
+  .topbar__link .bi:first-child {
+    font-size: 1.3rem; /* about 24px tall */
+    line-height: 1;
+  }
+
+  /* Muted, with "Coming soon" on hover, says enough; the tag would crowd the search */
+  .topbar__soon-tag {
+    display: none;
+  }
+}
+
+/* Narrower desktops: names don't fit beside the icons, so icons only (the current
+   page too, so highlighting never changes an item's size). Each name shows on hover
+   in the same dark tooltip as the logo's "Home" (not on the current page, whose
+   ::before is its diamond; the page's own heading says where you are). */
+@media (min-width: 992px) and (max-width: 1365px) {
   .topbar__label {
     max-width: 0;
     opacity: 0;
     overflow: hidden;
     white-space: nowrap;
-    transition: max-width 0.25s ease, opacity 0.2s ease;
   }
 
   .topbar__link {
     gap: 0;
-    padding: 7px 10px;
-    transition: background-color 0.15s, color 0.15s, gap 0.25s ease;
-  }
-
-  .topbar__link.is-active {
-    gap: 6px;
-  }
-
-  .topbar__link.is-active .topbar__label {
-    max-width: 8em;
-    opacity: 1;
-  }
-
-  /* The tooltip shows the name; the Soon tag would only crowd the icon */
-  .topbar__soon-tag {
-    display: none;
-  }
-
-  .topbar__link .bi:first-child {
-    font-size: 1.2rem;
   }
 
   .topbar__chevron {
@@ -403,7 +430,9 @@ button.topbar__link:hover {
   .topbar__link[aria-expanded='true']::before {
     display: none;
   }
+}
 
+@media (min-width: 992px) and (max-width: 1279px) {
   .topbar__search {
     min-width: 120px;
   }

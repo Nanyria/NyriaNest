@@ -85,4 +85,11 @@ private apiUrl = 'api/UserActions'; // Base URL for the User API
   updateUser(user: any): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/update`, user);
   }
+
+  // Uploads my own profile picture; the result is its URL, which is now my picture
+  uploadProfilePicture(picture: Blob, fileName: string): Observable<{ isSuccess: boolean; result: string }> {
+    const form = new FormData();
+    form.append('file', picture, fileName);
+    return this.http.post<{ isSuccess: boolean; result: string }>(`${this.apiUrl}/avatar`, form);
+  }
 }

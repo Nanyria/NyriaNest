@@ -54,7 +54,17 @@ namespace NyriaNest.Api
                 options.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader();
             }));
 
-            builder.Services.AddIdentity<User, IdentityRole>()
+            builder.Services.AddIdentity<User, IdentityRole>(options =>
+                {
+                    // Spelled out because the frontend shows the same rules (register and Settings)
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireLowercase = true;
+                    options.Password.RequireDigit = true;
+                    options.Password.RequireNonAlphanumeric = true;
+                    // Also makes Identity check that the email is valid, on register and on update
+                    options.User.RequireUniqueEmail = true;
+                })
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
 

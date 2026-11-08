@@ -3,6 +3,7 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { UserActionsService } from '../../../Services/user-actions.service';
 import { CreateUserDto } from '../../../Models/interfaces';
+import { meetsPasswordRules } from '../../../Helpers/password-rules';
 @Component({
   selector: 'app-register-user',
   templateUrl: './register-user.component.html',
@@ -52,9 +53,8 @@ export class RegisterUserComponent {
       },
     });
   }
+  // Same rules as the API and Settings
   passwordValid(): boolean {
-    const pw = this.user.password;
-    // Example: at least 8 chars, one uppercase, one digit
-    return pw.length >= 8 && /[A-Z]/.test(pw) && /\d/.test(pw);
+    return meetsPasswordRules(this.user.password);
   }
 }
