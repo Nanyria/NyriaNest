@@ -107,6 +107,14 @@ namespace NyriaNest.Application.Services
             var user = await _userRepo.GetByIdAsync<User>(userId);
             if (user != null)
             {
+                // Names are optional in the request (null = unchanged), but can't be cleared
+                if ((userToUpdate.FirstName != null && string.IsNullOrWhiteSpace(userToUpdate.FirstName))
+                    || (userToUpdate.LastName != null && string.IsNullOrWhiteSpace(userToUpdate.LastName)))
+                {
+                    response.ErrorMessages.Add("First name and last name can't be empty.");
+                    return response;
+                }
+
                 // Changing the password or the email needs the current password.
                 // Resending the email you already have (the profile page does) doesn't count.
                 var changesPassword = !string.IsNullOrWhiteSpace(userToUpdate.Password);
