@@ -19,7 +19,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private const string UploadUrl = "api/UserActions/avatar";
     private const string UpdateUrl = "api/UserActions/update";
-    private const string Preset = "assets/images/profile-pictures/RedDragon.svg";
+    private const string Preset = "assets/images/profile-pictures/RedDragon.png";
     private const int MaxSize = 512 * 1024;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -187,15 +187,34 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     // ---- Choosing a picture through update ----
 
-    [Fact]
-    public async Task Update_ToAPreset_Works()
+    // #111: the three dragons drawn for NyriaNest replaced the placeholder SVGs
+    [Theory]
+    [InlineData("assets/images/profile-pictures/RedDragon.png")]
+    [InlineData("assets/images/profile-pictures/BlueDragon.png")]
+    [InlineData("assets/images/profile-pictures/GreenDragon.png")]
+    public async Task Update_ToAPreset_Works(string preset)
     {
         var (client, me) = await factory.LoginAsAsync();
 
-        var response = await client.PutAsJsonAsync(UpdateUrl, new { profilePictureUrl = Preset }, Ct);
+        var response = await client.PutAsJsonAsync(UpdateUrl, new { profilePictureUrl = preset }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await PictureOf(me.Id)).Should().Be(Preset);
+        (await PictureOf(me.Id)).Should().Be(preset);
+    }
+
+    // The old placeholders are gone; the migration moved everyone who had one
+    [Theory]
+    [InlineData("assets/images/profile-pictures/BlueKidDragon.svg")]
+    [InlineData("assets/images/profile-pictures/PinkKidDragon.svg")]
+    [InlineData("assets/images/profile-pictures/RedDragon.svg")]
+    public async Task Update_ToAnOldPlaceholder_Returns400(string oldPreset)
+    {
+        var (client, me) = await factory.LoginAsAsync();
+
+        var response = await client.PutAsJsonAsync(UpdateUrl, new { profilePictureUrl = oldPreset }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await PictureOf(me.Id)).Should().BeNull();
     }
 
     [Fact]

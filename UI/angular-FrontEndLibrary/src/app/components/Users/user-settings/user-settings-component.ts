@@ -28,6 +28,7 @@ import { ToastService } from '../../../Services/toast.service';
 import { HasUnsavedChanges } from '../../../Services/unsaved-changes.guard';
 import { PASSWORD_RULES, passwordRulesValidator } from '../../../Helpers/password-rules';
 import { PictureError, prepareProfilePicture } from '../../../Helpers/profile-picture';
+import { DEFAULT_PROFILE_PICTURE, PROFILE_PICTURES } from '../../../Helpers/profile-pictures';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Card = 'profile' | 'email' | 'password';
@@ -49,7 +50,7 @@ const passwordsMatch = (group: AbstractControl): ValidationErrors | null => {
   return confirmPassword && newPassword !== confirmPassword ? { mismatch: true } : null;
 };
 
-const DEFAULT_PICTURE = 'assets/images/profile-pictures/BlueKidDragon.svg';
+const DEFAULT_PICTURE = DEFAULT_PROFILE_PICTURE;
 
 // The user's own account: profile, email and password, each saved on its own
 @Component({
@@ -72,11 +73,7 @@ export class UserSettingsComponent implements OnInit, HasUnsavedChanges {
   ];
   activeSection: SectionId = 'profile';
   private readonly destroyRef = inject(DestroyRef);
-  readonly profilePictures = [
-    { url: 'assets/images/profile-pictures/BlueKidDragon.svg', label: 'Blue dragon' },
-    { url: 'assets/images/profile-pictures/PinkKidDragon.svg', label: 'Pink dragon' },
-    { url: 'assets/images/profile-pictures/RedDragon.svg', label: 'Red dragon' },
-  ];
+  readonly profilePictures = PROFILE_PICTURES;
 
   loadState: LoadState = 'loading';
   userName = '';
