@@ -166,6 +166,31 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
         bio.Should().Be("Dragons");
     }
 
+    [Fact]
+    public async Task Update_WithABioOf300Characters_Works()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var bio = new string('a', 300);
+
+        var response = await client.PutAsJsonAsync(Url, new { bio }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await BioOf(me.Id)).Should().Be(bio);
+    }
+
+    [Fact]
+    public async Task Update_WithABioLongerThan300Characters_Returns400_AndKeepsTheOldOne()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        await client.PutAsJsonAsync(Url, new { bio = "Short bio" }, Ct);
+
+        var response = await client.PutAsJsonAsync(Url, new { bio = new string('a', 301) }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("The bio can be at most 300 characters.");
+        (await BioOf(me.Id)).Should().Be("Short bio");
+    }
+
     [Theory]
     [InlineData("firstName", "")]
     [InlineData("firstName", "   ")]
@@ -188,6 +213,9 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private Task<string> FirstNameOf(string userId) => factory.WithDbAsync(db =>
         db.Users.Where(u => u.Id == userId).Select(u => u.FirstName).SingleAsync(Ct));
+
+    private Task<string?> BioOf(string userId) => factory.WithDbAsync(db =>
+        db.Users.Where(u => u.Id == userId).Select(u => u.Bio).SingleAsync(Ct));
 
     private Task<string?> EmailOf(string userId) => factory.WithDbAsync(db =>
         db.Users.Where(u => u.Id == userId).Select(u => u.Email).SingleAsync(Ct));

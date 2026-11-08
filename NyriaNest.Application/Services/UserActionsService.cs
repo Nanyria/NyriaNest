@@ -117,6 +117,12 @@ namespace NyriaNest.Application.Services
                     return response;
                 }
 
+                if (userToUpdate.Bio != null && userToUpdate.Bio.Length > UserLimits.BioMaxLength)
+                {
+                    response.ErrorMessages.Add($"The bio can be at most {UserLimits.BioMaxLength} characters.");
+                    return response;
+                }
+
                 // A preset or the user's own upload, never any URL: other readers' browsers load it
                 if (userToUpdate.ProfilePictureUrl != null && !_profilePictures.IsAllowed(userToUpdate.ProfilePictureUrl, user))
                 {
