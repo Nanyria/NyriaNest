@@ -53,9 +53,11 @@ namespace NyriaNest.Application.Services
         private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
+        private readonly IProfilePictureService _profilePictures;
 
-        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
+        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
         {
+            _profilePictures = profilePictures;
             _userRepo = userRepo;
             _bookRepo = bookRepo;
             _mapper = mapper;
@@ -115,6 +117,14 @@ namespace NyriaNest.Application.Services
                     return response;
                 }
 
+                // A preset or the user's own upload, never any URL: other readers' browsers load it
+                if (userToUpdate.ProfilePictureUrl != null && !_profilePictures.IsAllowed(userToUpdate.ProfilePictureUrl, user))
+                {
+                    response.ErrorMessages.Add("Choose one of the preset pictures or upload your own.");
+                    return response;
+                }
+                var oldPicture = user.ProfilePictureUrl;
+
                 // Changing the password or the email needs the current password.
                 // Resending the email you already have (the profile page does) doesn't count.
                 var changesPassword = !string.IsNullOrWhiteSpace(userToUpdate.Password);
@@ -148,6 +158,10 @@ namespace NyriaNest.Application.Services
                     response.ErrorMessages.AddRange(updateResult.Errors.Select(e => e.Description));
                     return response;
                 }
+
+                // Switched away from an uploaded picture: its file isn't needed any more
+                if (user.ProfilePictureUrl != oldPicture)
+                    await _profilePictures.DeleteUploadAsync(oldPicture);
 
                 var updatedUserDto = _mapper.Map<UpdateUserDto>(user);
                 response.IsSuccess = true;

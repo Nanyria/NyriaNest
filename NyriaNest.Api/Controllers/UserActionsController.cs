@@ -15,11 +15,13 @@ namespace NyriaNest.Api.Controllers
     {
         private readonly IUserService _userService;
         private readonly IUserActionsService _userActionsService;
+        private readonly IProfilePictureService _profilePictures;
 
-        public UserActionsController(IUserService userService, IUserActionsService userActionsService)
+        public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures)
         {
             _userService = userService;
             _userActionsService = userActionsService;
+            _profilePictures = profilePictures;
         }
 
         // Set by AuthController when it issues the token. [Authorize] guarantees a valid
@@ -52,6 +54,18 @@ namespace NyriaNest.Api.Controllers
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
         {
             var response = await _userActionsService.UpdateUserAsync(CurrentUserId, updateUserDto);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
+        // Upload my own profile picture (PNG, JPEG or WebP). Returns its URL, which is
+        // now my picture. The request limit leaves room above the service's 512 KB, so a
+        // slightly too large file gets the service's clear message instead of a bare 413.
+        [HttpPost("avatar")]
+        [RequestSizeLimit(1024 * 1024)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 1024 * 1024)]
+        public async Task<IActionResult> UploadProfilePicture(IFormFile? file, CancellationToken ct)
+        {
+            var response = await _profilePictures.UploadAsync(CurrentUserId, file?.ToUploadedFile(), ct);
             return StatusCode((int)response.StatusCode, response);
         }
 
