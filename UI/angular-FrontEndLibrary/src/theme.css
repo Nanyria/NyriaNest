@@ -1134,3 +1134,36 @@ body:has(.nn-theme) > app-root {
   gap: var(--nn-space-3);
   flex-wrap: wrap;
 }
+
+/* ---------- Navbar icons ----------
+   Our own drawn icons (assets/images/nav-bar/nav-bar-icons), used in place of a
+   Bootstrap icon: <i class="bi nn-icon-home">. Each SVG is a black shape used as a
+   mask, so it takes the text colour like a Bootstrap icon does (ink normally,
+   light on a highlighted green link).
+   All icons get the same height, so they look the same size whatever their shape
+   (the shield is tall, the book stack wide). The box is wide enough for the widest
+   drawing (about 1.23 times its height), so none is ever shrunk to fit the width. */
+.bi[class*='nn-icon-']::before {
+  content: '';
+  width: 1.45em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  background-color: currentColor;
+  -webkit-mask: var(--nn-icon) center / contain no-repeat;
+  mask: var(--nn-icon) center / contain no-repeat;
+}
+
+/* Some drawings look small next to the others at the same height; they're scaled up
+   on their own (without changing the box, so nothing around them moves) */
+.bi[class*='nn-icon-']::before {
+  transform: scale(var(--nn-icon-scale, 1));
+}
+
+.nn-icon-home { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/home.svg'); }
+.nn-icon-library { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/library.svg'); --nn-icon-scale: 1.15; }
+.nn-icon-explore { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/explore.svg'); --nn-icon-scale: 1.15; }
+.nn-icon-challenges { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/challanges.svg'); }
+.nn-icon-mybooks { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/mybooks.svg'); }
+.nn-icon-admin { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/admin.svg'); }
+.nn-icon-search { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/search.svg'); }
+.nn-icon-notification { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/notification.svg'); }

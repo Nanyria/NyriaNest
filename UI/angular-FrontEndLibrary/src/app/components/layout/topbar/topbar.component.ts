@@ -15,6 +15,7 @@ import {
   MAIN_NAV,
   NavGroup,
   NavItem,
+  SETTINGS_NAV,
   isNavGroup,
 } from '../nav-items';
 
@@ -80,6 +81,11 @@ export class TopbarComponent {
     return group.items.some(
       (item) => !!item.route && this.router.url.startsWith(item.route),
     );
+  }
+
+  // The user menu too: its only page so far is Settings
+  get isUserMenuActive(): boolean {
+    return this.router.url.startsWith(SETTINGS_NAV.route!);
   }
 
   // Searching from anywhere opens the library filtered by the term
