@@ -52,7 +52,7 @@ public class PasswordRulesTests(ApiFactory factory) : IClassFixture<ApiFactory>
             new { password, currentPassword = TestAuth.Password }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest, because);
-        (await CanLogIn(me.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(me.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class PasswordRulesTests(ApiFactory factory) : IClassFixture<ApiFactory>
             new { password = ValidPassword, currentPassword = TestAuth.Password }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await CanLogIn(me.UserName!, ValidPassword)).Should().BeTrue();
+        (await factory.CanLogInAsync(me.UserName!, ValidPassword)).Should().BeTrue();
     }
 
     private async Task<HttpResponseMessage> Register(string password)
@@ -79,12 +79,5 @@ public class PasswordRulesTests(ApiFactory factory) : IClassFixture<ApiFactory>
             email = $"{name}@test.local",
             password,
         }, Ct);
-    }
-
-    private async Task<bool> CanLogIn(string username, string password)
-    {
-        using var client = factory.CreateClient();
-        var response = await client.PostLoginAsync(username, password);
-        return response.IsSuccessStatusCode;
     }
 }

@@ -35,7 +35,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var client = factory.CreateClient();
 
-        var response = await client.PostAsync(UploadUrl, Form(Png(), "me.png"), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form(Png(), "me.png"), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -52,11 +52,11 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
         string? savedKey = null;
         factory.FileStorage
             .Setup(s => s.SaveAsync(It.IsAny<Stream>(), It.Is<string>(k => k.StartsWith($"avatars/{me.Id}/")), It.IsAny<CancellationToken>()))
-            .Callback((Stream content, string key, CancellationToken _) => { saved = ReadAll(content); savedKey = key; })
+            .Callback((Stream content, string key, CancellationToken _) => { saved = TestFiles.ReadAll(content); savedKey = key; })
             .ReturnsAsync((Stream _, string key, CancellationToken _) => key);
 
         // The file name doesn't matter: the type comes from the content
-        var response = await client.PostAsync(UploadUrl, Form(picture, "anything.bin"), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form(picture, "anything.bin"), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         saved.Should().Equal(picture);
@@ -70,10 +70,10 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Upload_Replacing_DeletesMyOldUpload()
     {
         var (client, me) = await factory.LoginAsAsync();
-        await client.PostAsync(UploadUrl, Form(Png(), "first.png"), Ct);
+        await client.PostAsync(UploadUrl, TestFiles.Form(Png(), "first.png"), Ct);
         var firstKey = (await PictureOf(me.Id))!["api/".Length..];
 
-        var response = await client.PostAsync(UploadUrl, Form(Png(), "second.png"), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form(Png(), "second.png"), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         factory.FileStorage.Verify(s => s.DeleteAsync(firstKey, It.IsAny<CancellationToken>()), Times.Once);
@@ -93,7 +93,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var (client, me) = await factory.LoginAsAsync();
 
-        var response = await client.PostAsync(UploadUrl, Form(content, fileName), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form(content, fileName), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("Only PNG, JPEG and WebP pictures are allowed.");
@@ -106,7 +106,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var (client, me) = await factory.LoginAsAsync();
 
-        var response = await client.PostAsync(UploadUrl, Form(Png(MaxSize + 1), "big.png"), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form(Png(MaxSize + 1), "big.png"), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("The picture is larger than 512 KB.");
@@ -118,7 +118,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var (client, _) = await factory.LoginAsAsync();
 
-        var response = await client.PostAsync(UploadUrl, Form(Png(MaxSize), "max.png"), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form(Png(MaxSize), "max.png"), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -128,7 +128,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var (client, me) = await factory.LoginAsAsync();
 
-        var response = await client.PostAsync(UploadUrl, Form([], "empty.png"), Ct);
+        var response = await client.PostAsync(UploadUrl, TestFiles.Form([], "empty.png"), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         AssertNothingSavedFor(me.Id);
@@ -221,7 +221,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Update_FromMyUploadToAPreset_DeletesTheUpload()
     {
         var (client, me) = await factory.LoginAsAsync();
-        await client.PostAsync(UploadUrl, Form(Png(), "me.png"), Ct);
+        await client.PostAsync(UploadUrl, TestFiles.Form(Png(), "me.png"), Ct);
         var uploadKey = (await PictureOf(me.Id))!["api/".Length..];
 
         var response = await client.PutAsJsonAsync(UpdateUrl, new { profilePictureUrl = Preset }, Ct);
@@ -234,7 +234,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Update_WithMyCurrentUpload_KeepsIt()
     {
         var (client, me) = await factory.LoginAsAsync();
-        await client.PostAsync(UploadUrl, Form(Png(), "me.png"), Ct);
+        await client.PostAsync(UploadUrl, TestFiles.Form(Png(), "me.png"), Ct);
         var url = await PictureOf(me.Id);
 
         var response = await client.PutAsJsonAsync(UpdateUrl, new { profilePictureUrl = url, firstName = "Same picture" }, Ct);
@@ -264,7 +264,7 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Update_WithSomeoneElsesUpload_Returns400()
     {
         var (otherClient, other) = await factory.LoginAsAsync();
-        await otherClient.PostAsync(UploadUrl, Form(Png(), "other.png"), Ct);
+        await otherClient.PostAsync(UploadUrl, TestFiles.Form(Png(), "other.png"), Ct);
         var othersUrl = await PictureOf(other.Id);
         var (client, me) = await factory.LoginAsAsync();
 
@@ -283,13 +283,6 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
         return bytes;
     }
 
-    private static MultipartFormDataContent Form(byte[] content, string fileName)
-    {
-        var file = new ByteArrayContent(content);
-        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        return new MultipartFormDataContent { { file, "file", fileName } };
-    }
-
     private Task<string?> PictureOf(string userId) => factory.WithDbAsync(db =>
         db.Users.Where(u => u.Id == userId).Select(u => u.ProfilePictureUrl).SingleAsync(Ct));
 
@@ -303,11 +296,4 @@ public class ProfilePictureTests(ApiFactory factory) : IClassFixture<ApiFactory>
         factory.FileStorage.Verify(
             s => s.SaveAsync(It.IsAny<Stream>(), It.Is<string>(k => k.StartsWith($"avatars/{userId}/")), It.IsAny<CancellationToken>()),
             Times.Never);
-
-    private static byte[] ReadAll(Stream content)
-    {
-        using var copy = new MemoryStream();
-        content.CopyTo(copy);
-        return copy.ToArray();
-    }
 }

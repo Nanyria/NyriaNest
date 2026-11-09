@@ -59,8 +59,8 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await client.PutAsJsonAsync(Url, new { password = NewPassword }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await CanLogIn(me.UserName!, TestAuth.Password)).Should().BeTrue();
-        (await CanLogIn(me.UserName!, NewPassword)).Should().BeFalse();
+        (await factory.CanLogInAsync(me.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(me.UserName!, NewPassword)).Should().BeFalse();
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("The current password you entered is incorrect.");
-        (await CanLogIn(me.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(me.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -83,8 +83,8 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await client.PutAsJsonAsync(Url, new { password = NewPassword, currentPassword = TestAuth.Password }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await CanLogIn(me.UserName!, NewPassword)).Should().BeTrue();
-        (await CanLogIn(me.UserName!, TestAuth.Password)).Should().BeFalse();
+        (await factory.CanLogInAsync(me.UserName!, NewPassword)).Should().BeTrue();
+        (await factory.CanLogInAsync(me.UserName!, TestAuth.Password)).Should().BeFalse();
     }
 
     [Fact]
@@ -219,11 +219,4 @@ public class UpdateUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private Task<string?> EmailOf(string userId) => factory.WithDbAsync(db =>
         db.Users.Where(u => u.Id == userId).Select(u => u.Email).SingleAsync(Ct));
-
-    private async Task<bool> CanLogIn(string username, string password)
-    {
-        using var client = factory.CreateClient();
-        var response = await client.PostLoginAsync(username, password);
-        return response.IsSuccessStatusCode;
-    }
 }

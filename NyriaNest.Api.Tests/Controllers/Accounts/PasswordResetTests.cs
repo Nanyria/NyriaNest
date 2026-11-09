@@ -94,8 +94,8 @@ public class PasswordResetTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await client.PostAsJsonAsync(ResetUrl, new { email, token, newPassword = NewPassword }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await CanLogIn(user.UserName!, NewPassword)).Should().BeTrue();
-        (await CanLogIn(user.UserName!, TestAuth.Password)).Should().BeFalse();
+        (await factory.CanLogInAsync(user.UserName!, NewPassword)).Should().BeTrue();
+        (await factory.CanLogInAsync(user.UserName!, TestAuth.Password)).Should().BeFalse();
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class PasswordResetTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         again.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ErrorsOf(again)).Should().Contain(InvalidLinkMessage);
-        (await CanLogIn(user.UserName!, NewPassword)).Should().BeTrue();
+        (await factory.CanLogInAsync(user.UserName!, NewPassword)).Should().BeTrue();
     }
 
     [Theory]
@@ -125,7 +125,7 @@ public class PasswordResetTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await client.PostAsJsonAsync(ResetUrl, new { email = user.Email, token, newPassword = NewPassword }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await CanLogIn(user.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(user.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class PasswordResetTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await client.PostAsJsonAsync(ResetUrl, new { email = me.Email, token = othersToken, newPassword = NewPassword }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await CanLogIn(me.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(me.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class PasswordResetTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         weak.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ErrorsOf(weak)).Should().NotBeEmpty().And.NotContain(InvalidLinkMessage);
-        (await CanLogIn(user.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(user.UserName!, TestAuth.Password)).Should().BeTrue();
         // A failed attempt doesn't use up the link
         var retry = await client.PostAsJsonAsync(ResetUrl, new { email, token, newPassword = NewPassword }, Ct);
         retry.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -229,12 +229,5 @@ public class PasswordResetTests(ApiFactory factory) : IClassFixture<ApiFactory>
         return json.RootElement.TryGetProperty("errorMessages", out var errors)
             ? errors.EnumerateArray().Select(e => e.GetString()!).ToList()
             : [];
-    }
-
-    private async Task<bool> CanLogIn(string username, string password)
-    {
-        using var client = factory.CreateClient();
-        var response = await client.PostLoginAsync(username, password);
-        return response.IsSuccessStatusCode;
     }
 }
