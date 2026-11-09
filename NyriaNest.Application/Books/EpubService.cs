@@ -6,7 +6,7 @@ using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Text;
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Books
 {
     public record EpubDownload(Stream Content, string FileName);
 

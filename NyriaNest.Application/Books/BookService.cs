@@ -11,7 +11,7 @@ using NyriaNest.Domain.Enums;
 using System.Net;
 
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Books
 {
     public interface IBookService
     {
