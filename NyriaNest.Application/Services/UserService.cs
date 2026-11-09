@@ -6,6 +6,7 @@ using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 using System.Net;
 
 namespace NyriaNest.Application.Services
@@ -133,13 +134,15 @@ namespace NyriaNest.Application.Services
                 var statusHistory = await _dbContext.StatusHistoryItems.Where(s => s.UserId == userId).ToListAsync();
                 _dbContext.StatusHistoryItems.RemoveRange(statusHistory);
 
-                // Remove from Book lists (if needed, EF should handle this if relationships are set up with cascade delete)
-                // But to be explicit, update each affected book:
+                // Put right the books the user had a loan or a reservation on. Other books
+                // aren't affected: their status and queue don't depend on this user.
                 var books = await _dbContext.Books
                     .Include(b => b.Reservations)
                     .Include(b => b.CheckedOutBy)
                     .Include(b => b.Reviews)
                     .Include(b => b.StatusHistory)
+                    .Where(b => b.Reservations.Any(r => r.UserId == userId)
+                        || (b.CheckedOutBy != null && b.CheckedOutBy.UserId == userId))
                     .ToListAsync();
 
                 foreach (var book in books)
@@ -151,8 +154,11 @@ namespace NyriaNest.Application.Services
                     book.Reviews.RemoveAll(r => r.UserId == userId);
                     book.StatusHistory.RemoveAll(s => s.UserId == userId);
 
-                    // Always update status after user-related items are removed
-                    await _bookService.UpdateBookStatusAsync(book, null, book.BookStatus, "Updated after user deletion");
+                    // As after a cancel or a return: the queue may move up, and "Returned"
+                    // makes the status be worked out again (CheckedOut, Reserved or Available).
+                    // Passing the book's old status left it Reserved with an empty queue (#118).
+                    _bookService.RecalculateAvailabilityDates(book);
+                    await _bookService.UpdateBookStatusAsync(book, null, BookStatusEnum.Returned, "Updated after user deletion");
                 }
 
                 await _dbContext.SaveChangesAsync();
