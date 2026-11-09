@@ -5,6 +5,7 @@ using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.ReadingList;
+using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Services;
 using NyriaNest.Domain.Entities;
 
@@ -23,10 +24,12 @@ namespace NyriaNest.Api.Controllers
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
         private readonly IReadingListService _readingList;
+        private readonly IReviewService _reviews;
 
         public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList)
+            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews)
         {
+            _reviews = reviews;
             _userService = userService;
             _userActionsService = userActionsService;
             _profilePictures = profilePictures;
@@ -143,7 +146,7 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("reviews")]
         public async Task<IActionResult> GetUserReviews()
         {
-            var response = await _userActionsService.GetUserReviewsAsync(CurrentUserId);
+            var response = await _reviews.GetUserReviewsAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPost("newReview")]
@@ -151,19 +154,19 @@ namespace NyriaNest.Api.Controllers
         {
             // Whatever userId the body says, the review is written by the logged-in user
             createReviewDto.UserId = CurrentUserId;
-            var response = await _userActionsService.CreateReviewAsync(createReviewDto);
+            var response = await _reviews.CreateReviewAsync(createReviewDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("editReview/{reviewId}")]
         public async Task<IActionResult> EditReview([FromRoute] int reviewId, [FromBody] ReviewItemDto updateReviewDto)
         {
-            var response = await _userActionsService.EditReviewAsync(CurrentUserId, reviewId, updateReviewDto);
+            var response = await _reviews.EditReviewAsync(CurrentUserId, reviewId, updateReviewDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("deleteReview/{reviewId}")]
         public async Task<IActionResult> DeleteReview([FromRoute] int reviewId)
         {
-            var response = await _userActionsService.RemoveReviewItemAsync(CurrentUserId, reviewId);
+            var response = await _reviews.RemoveReviewItemAsync(CurrentUserId, reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -171,13 +174,13 @@ namespace NyriaNest.Api.Controllers
         [HttpPut("editRating/{reviewId}")]
         public async Task<IActionResult> EditRating([FromRoute] int reviewId, [FromBody] RatingItemDto ratingDto)
         {
-            var response = await _userActionsService.EditRatingAsync(CurrentUserId, reviewId, ratingDto);
+            var response = await _reviews.EditRatingAsync(CurrentUserId, reviewId, ratingDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("deleteRating/{reviewId}")]
         public async Task<IActionResult> DeleteRating([FromRoute] int reviewId)
         {
-            var response = await _userActionsService.RemoveRatingAsync(CurrentUserId, reviewId);
+            var response = await _reviews.RemoveRatingAsync(CurrentUserId, reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
 

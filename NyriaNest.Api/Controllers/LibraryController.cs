@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Services;
 using System.Security.Claims;
 
@@ -9,10 +10,12 @@ public class LibraryController : ControllerBase
 {
     private readonly IBookService _bookService;
     private readonly IUserService _userService;
-    public LibraryController(IBookService bookService, IUserService userService)
+    private readonly IReviewService _reviews;
+    public LibraryController(IBookService bookService, IUserService userService, IReviewService reviews)
     {
         _bookService = bookService;
         _userService = userService;
+        _reviews = reviews;
     }
 
     [HttpGet]
@@ -29,7 +32,7 @@ public class LibraryController : ControllerBase
     [HttpGet("review/{bookId:int}")]
     public async Task<IActionResult> GetBookReview(int bookId)
     {
-        var response = await _bookService.GetBookReviewsAsync(bookId);
+        var response = await _reviews.GetBookReviewsAsync(bookId);
         return StatusCode((int)response.StatusCode, response);
     }
 

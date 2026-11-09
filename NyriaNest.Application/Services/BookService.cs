@@ -24,7 +24,6 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId);
-        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId);
         void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
@@ -595,30 +594,6 @@ namespace NyriaNest.Application.Services
             else
             {
                 response.ErrorMessages.Add($"Book {bookId} was not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-            }
-            return response;
-        }
-
-        public async Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId)
-        {
-            var response = new APIResponse<List<BookReviewDto>>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            var book = await _bookRepo.GetByIdAsync(bookId);
-            if (book != null)
-            {
-                // Use AutoMapper to map ReviewItem to BookReviewDto
-                response.Result = _mapper.Map<List<BookReviewDto>>(book.Reviews.OrderByDescending(r => r.CreatedAt).ToList());
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-            }
-            else
-            {
-                response.ErrorMessages.Add("Book not found.");
                 response.StatusCode = HttpStatusCode.NotFound;
             }
             return response;
