@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NyriaNest.Application.Accounts;
 using NyriaNest.Application.Loans;
 using NyriaNest.Application.Mapping;
 using NyriaNest.Application.ReadingList;
@@ -15,7 +16,7 @@ namespace NyriaNest.Application
         {
             services.AddScoped<IBookService, BookService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IUserActionsService, UserActionsService>();
+            services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IEpubService, EpubService>();
             services.AddScoped<IProfilePictureService, ProfilePictureService>();
             services.AddScoped<IPasswordResetService, PasswordResetService>();

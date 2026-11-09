@@ -1,27 +1,26 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using NyriaNest.Application.Common;
-using NyriaNest.Application.DTOs;
-using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Interfaces;
-using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
-using NyriaNest.Domain.Enums;
 using System.Net;
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Accounts
 {
-    public interface IUserActionsService
+    public interface IAccountService
     {
         // Register methods
         Task<APIResponse<CreateUserDto>> AddUserAsync(CreateUserDto createUserDTO);
         Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
     }
 
-    public class UserActionsService : IUserActionsService
+    /// <summary>
+    /// The user's own account: register and update profile, email and password.
+    /// Was UserActionsService; the rest of it moved to feature services (#116).
+    /// </summary>
+    public class AccountService : IAccountService
     {
         private readonly IUserRepo _userRepo;
         private readonly IMapper _mapper;
@@ -29,7 +28,7 @@ namespace NyriaNest.Application.Services
         private readonly IEmailService _emailService;
         private readonly IProfilePictureService _profilePictures;
 
-        public UserActionsService(IUserRepo userRepo, IMapper mapper, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
+        public AccountService(IUserRepo userRepo, IMapper mapper, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
         {
             _profilePictures = profilePictures;
             _userRepo = userRepo;

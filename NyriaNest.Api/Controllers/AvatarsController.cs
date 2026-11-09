@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Application.Services;
+using NyriaNest.Application.Accounts;
 
 namespace NyriaNest.Api.Controllers
 {

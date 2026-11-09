@@ -9,7 +9,7 @@ using System.Buffers.Text;
 using System.Net;
 using System.Text;
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Accounts
 {
     public interface IPasswordResetService
     {

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Auth;
+using NyriaNest.Application.Accounts;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Loans;
@@ -20,7 +21,7 @@ namespace NyriaNest.Api.Controllers
     public class UserActionsController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IUserActionsService _userActionsService;
+        private readonly IAccountService _accounts;
         private readonly IProfilePictureService _profilePictures;
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
@@ -29,14 +30,14 @@ namespace NyriaNest.Api.Controllers
         private readonly IReservationService _reservations;
         private readonly ILoanService _loans;
 
-        public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures,
+        public UserActionsController(IUserService userService, IAccountService accounts, IProfilePictureService profilePictures,
             UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews, IReservationService reservations, ILoanService loans)
         {
             _reviews = reviews;
             _reservations = reservations;
             _loans = loans;
             _userService = userService;
-            _userActionsService = userActionsService;
+            _accounts = accounts;
             _profilePictures = profilePictures;
             _userManager = userManager;
             _tokens = tokens;
@@ -56,7 +57,7 @@ namespace NyriaNest.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> AddUser([FromBody] CreateUserDto createUserDto)
         {
-            var response = await _userActionsService.AddUserAsync(createUserDto);
+            var response = await _accounts.AddUserAsync(createUserDto);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -73,7 +74,7 @@ namespace NyriaNest.Api.Controllers
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
         {
             updateUserDto.Token = null; // never taken from the request
-            var response = await _userActionsService.UpdateUserAsync(CurrentUserId, updateUserDto);
+            var response = await _accounts.UpdateUserAsync(CurrentUserId, updateUserDto);
 
             // A new password or email changes the security stamp, which ends every session,
             // this one too (#113). The caller proved who they are (current password), so
