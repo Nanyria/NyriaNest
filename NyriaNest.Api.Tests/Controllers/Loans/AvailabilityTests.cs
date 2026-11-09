@@ -5,7 +5,7 @@ using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Net;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
 /// Pins down what a book's status, availability date and status history look like

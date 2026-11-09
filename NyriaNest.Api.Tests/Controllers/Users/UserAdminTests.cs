@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Users;
 
 /// <summary>
 /// #116: pins down creating an admin, getting one user and a user's history (api/User)

@@ -8,7 +8,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// Pins down how EPUB uploads behave today (POST api/Book/{id}/epub and

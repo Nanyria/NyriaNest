@@ -10,7 +10,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Web;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// #51: a forgotten password is reset through an emailed link, never by emailing a

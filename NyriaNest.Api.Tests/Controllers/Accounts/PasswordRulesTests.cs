@@ -3,7 +3,7 @@ using NyriaNest.Api.Tests.TestSupport;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// #68: one set of password rules for register and change password, the same

@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// Registering, or a SuperAdmin creating an admin, with an email or username another

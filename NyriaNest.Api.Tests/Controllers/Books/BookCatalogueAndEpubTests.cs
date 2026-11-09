@@ -9,7 +9,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// #116: characterization tests for the BookService / EpubService endpoints that had none,

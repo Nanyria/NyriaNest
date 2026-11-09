@@ -11,7 +11,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// #76: the BookController endpoints that returned the Book entity. For a book with

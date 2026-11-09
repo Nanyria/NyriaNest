@@ -4,7 +4,7 @@ using NyriaNest.Api.Tests.TestSupport;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// Security finding 2 (#48): PUT api/UserActions/update changes only the logged-in user,

@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Reviews;
 
 /// <summary>
 /// Pins down how reviews and ratings behave today (creating, listing, a book's reviews,

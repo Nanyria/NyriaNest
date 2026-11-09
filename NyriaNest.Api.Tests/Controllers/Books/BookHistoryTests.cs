@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// #32: GET api/Book/history/{bookId} returns the book's status history,

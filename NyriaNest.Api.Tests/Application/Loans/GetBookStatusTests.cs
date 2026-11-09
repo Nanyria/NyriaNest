@@ -5,7 +5,7 @@ using NyriaNest.Application.Interfaces;
 using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Enums;
 
-namespace NyriaNest.Api.Tests.Services.BookService;
+namespace NyriaNest.Api.Tests.Application.Loans;
 
 /// <summary>
 /// GetBookStatus is a plain function of the book's loan, reservations and admin status,

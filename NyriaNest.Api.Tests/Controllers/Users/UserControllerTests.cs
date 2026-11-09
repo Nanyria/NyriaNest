@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Users;
 
 /// <summary>
 /// Security finding 4 (#48): what an Admin and a SuperAdmin may do to other users

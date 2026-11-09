@@ -6,7 +6,7 @@ using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
 /// #39 part A: the rules for borrowing, returning and reservations, through
