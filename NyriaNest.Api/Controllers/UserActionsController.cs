@@ -44,12 +44,6 @@ namespace NyriaNest.Api.Controllers
             _readingList = readingList;
         }
 
-        // Set by AuthController when it issues the token. [Authorize] guarantees a valid
-        // token, and every token we issue has this claim.
-        private string CurrentUserId =>
-            User.FindFirst("userId")?.Value
-            ?? throw new InvalidOperationException("The token has no userId claim.");
-
         // Own things only, for every role. What admins do for or to other users
         // (e.g. removing a review) lives in admin endpoints instead (#50).
 
@@ -66,7 +60,7 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetMe()
         {
-            var response = await _users.GetUserByIdAsync(CurrentUserId);
+            var response = await _users.GetUserByIdAsync(User.GetUserId());
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -74,14 +68,14 @@ namespace NyriaNest.Api.Controllers
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
         {
             updateUserDto.Token = null; // never taken from the request
-            var response = await _accounts.UpdateUserAsync(CurrentUserId, updateUserDto);
+            var response = await _accounts.UpdateUserAsync(User.GetUserId(), updateUserDto);
 
             // A new password or email changes the security stamp, which ends every session,
             // this one too (#113). The caller proved who they are (current password), so
             // they get a new token and stay logged in here.
             if (response.IsSuccess && response.Result is not null)
             {
-                var user = await _userManager.FindByIdAsync(CurrentUserId);
+                var user = await _userManager.FindByIdAsync(User.GetUserId());
                 if (user is not null
                     && await _userManager.GetSecurityStampAsync(user) != User.FindFirst(TokenService.SecurityStampClaim)?.Value)
                 {
@@ -99,7 +93,7 @@ namespace NyriaNest.Api.Controllers
         [RequestFormLimits(MultipartBodyLengthLimit = 1024 * 1024)]
         public async Task<IActionResult> UploadProfilePicture(IFormFile? file, CancellationToken ct)
         {
-            var response = await _profilePictures.UploadAsync(CurrentUserId, file?.ToUploadedFile(), ct);
+            var response = await _profilePictures.UploadAsync(User.GetUserId(), file?.ToUploadedFile(), ct);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -108,21 +102,21 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("checkedout")]
         public async Task<IActionResult> GetCheckedOutBooks()
         {
-            var response = await _loans.GetCheckedOutBooksAsync(CurrentUserId);
+            var response = await _loans.GetCheckedOutBooksAsync(User.GetUserId());
             return StatusCode((int)response.StatusCode, response);
         }
 
         [HttpPut("borrow/{bookId}")]
         public async Task<IActionResult> BorrowBook([FromRoute] int bookId)
         {
-            var response = await _loans.CheckOutBookAsync(CurrentUserId, bookId);
+            var response = await _loans.CheckOutBookAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
         [HttpPut("return/{bookId}")]
         public async Task<IActionResult> ReturnBook([FromRoute] int bookId)
         {
-            var response = await _loans.ReturnBookAsync(CurrentUserId, bookId);
+            var response = await _loans.ReturnBookAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -132,19 +126,19 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("reserved")]
         public async Task<IActionResult> GetReservedBooks()
         {
-            var response = await _reservations.GetReservedBooksAsync(CurrentUserId);
+            var response = await _reservations.GetReservedBooksAsync(User.GetUserId());
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("reserve/{bookId}")]
         public async Task<IActionResult> ReserveBook([FromRoute] int bookId)
         {
-            var response = await _reservations.ReserveBookAsync(CurrentUserId, bookId);
+            var response = await _reservations.ReserveBookAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("unreserve/{bookId}")]
         public async Task<IActionResult> UnreserveBook([FromRoute] int bookId)
         {
-            var response = await _reservations.CancelReservationAsync(CurrentUserId, bookId);
+            var response = await _reservations.CancelReservationAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -152,27 +146,27 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("reviews")]
         public async Task<IActionResult> GetUserReviews()
         {
-            var response = await _reviews.GetUserReviewsAsync(CurrentUserId);
+            var response = await _reviews.GetUserReviewsAsync(User.GetUserId());
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPost("newReview")]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewItemDto createReviewDto)
         {
             // Whatever userId the body says, the review is written by the logged-in user
-            createReviewDto.UserId = CurrentUserId;
+            createReviewDto.UserId = User.GetUserId();
             var response = await _reviews.CreateReviewAsync(createReviewDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("editReview/{reviewId}")]
         public async Task<IActionResult> EditReview([FromRoute] int reviewId, [FromBody] ReviewItemDto updateReviewDto)
         {
-            var response = await _reviews.EditReviewAsync(CurrentUserId, reviewId, updateReviewDto);
+            var response = await _reviews.EditReviewAsync(User.GetUserId(), reviewId, updateReviewDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("deleteReview/{reviewId}")]
         public async Task<IActionResult> DeleteReview([FromRoute] int reviewId)
         {
-            var response = await _reviews.RemoveReviewItemAsync(CurrentUserId, reviewId);
+            var response = await _reviews.RemoveReviewItemAsync(User.GetUserId(), reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -180,13 +174,13 @@ namespace NyriaNest.Api.Controllers
         [HttpPut("editRating/{reviewId}")]
         public async Task<IActionResult> EditRating([FromRoute] int reviewId, [FromBody] RatingItemDto ratingDto)
         {
-            var response = await _reviews.EditRatingAsync(CurrentUserId, reviewId, ratingDto);
+            var response = await _reviews.EditRatingAsync(User.GetUserId(), reviewId, ratingDto);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("deleteRating/{reviewId}")]
         public async Task<IActionResult> DeleteRating([FromRoute] int reviewId)
         {
-            var response = await _reviews.RemoveRatingAsync(CurrentUserId, reviewId);
+            var response = await _reviews.RemoveRatingAsync(User.GetUserId(), reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -195,20 +189,20 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("favorites")]
         public async Task<IActionResult> GetFavoriteBooks()
         {
-            var response = await _readingList.GetFavoriteItemsAsync(CurrentUserId);
+            var response = await _readingList.GetFavoriteItemsAsync(User.GetUserId());
             return StatusCode((int)response.StatusCode, response);
         }
 
         [HttpPut("favorite/{bookId}")]
         public async Task<IActionResult> AddToFavorites([FromRoute] int bookId)
         {
-            var response = await _readingList.AddToFavoritesAsync(CurrentUserId, bookId);
+            var response = await _readingList.AddToFavoritesAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("unfavorite/{bookId}")]
         public async Task<IActionResult> RemoveFromFavorites([FromRoute] int bookId)
         {
-            var response = await _readingList.RemoveFromFavoritesAsync(CurrentUserId, bookId);
+            var response = await _readingList.RemoveFromFavoritesAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 

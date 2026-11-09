@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Users;
 using NyriaNest.Domain.Constants;
@@ -20,9 +21,6 @@ namespace NyriaNest.Api.Controllers
 
         // The admin making the request, from the token. What they may do to whom is
         // decided in UserAdminService (AdminMayNotUpdate / AdminMayNotDelete).
-        private string CurrentUserId =>
-            User.FindFirst("userId")?.Value
-            ?? throw new InvalidOperationException("The token has no userId claim.");
         private bool IsSuperAdmin => User.IsInRole(Roles.SuperAdmin);
         [HttpGet]
         public async Task<IActionResult> GetAllUsers()
@@ -55,7 +53,7 @@ namespace NyriaNest.Api.Controllers
         [HttpPut("updateAsAdmin/{userId}")]
         public async Task<IActionResult> UpdateUserAsAdmin([FromRoute] string userId, [FromBody] UpdateUserAsAdminDto updateUserDto)
         {
-            var response = await _users.UpdateUserAsAdminAsync(CurrentUserId, IsSuperAdmin, userId, updateUserDto);
+            var response = await _users.UpdateUserAsAdminAsync(User.GetUserId(), IsSuperAdmin, userId, updateUserDto);
             return StatusCode((int)response.StatusCode, response);
         }
 
