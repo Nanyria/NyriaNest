@@ -6,6 +6,7 @@ using NyriaNest.Application.Mapping;
 using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Services;
+using NyriaNest.Application.Users;
 
 namespace NyriaNest.Application
 {
@@ -15,7 +16,7 @@ namespace NyriaNest.Application
         public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<IBookService, BookService>();
-            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IUserAdminService, UserAdminService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IEpubService, EpubService>();
             services.AddScoped<IProfilePictureService, ProfilePictureService>();

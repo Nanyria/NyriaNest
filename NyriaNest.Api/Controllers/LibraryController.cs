@@ -9,12 +9,10 @@ using System.Security.Claims;
 public class LibraryController : ControllerBase
 {
     private readonly IBookService _bookService;
-    private readonly IUserService _userService;
     private readonly IReviewService _reviews;
-    public LibraryController(IBookService bookService, IUserService userService, IReviewService reviews)
+    public LibraryController(IBookService bookService, IReviewService reviews)
     {
         _bookService = bookService;
-        _userService = userService;
         _reviews = reviews;
     }
 

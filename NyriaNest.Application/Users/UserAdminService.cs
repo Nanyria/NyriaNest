@@ -10,9 +10,9 @@ using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Users
 {
-    public interface IUserService
+    public interface IUserAdminService
     {
         // callerId / callerIsSuperAdmin = the admin asking. The rules are in AdminMayNotUpdate/-Delete.
         Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
@@ -23,7 +23,7 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<List<StatusHistoryItem>>> GetUserHistoryAsync(string userId);
     }
 
-    public class UserService : IUserService
+    public class UserAdminService : IUserAdminService
     {
         private readonly IUserRepo _userRepo;
         private readonly IBookRepo _bookRepo;
@@ -32,7 +32,7 @@ namespace NyriaNest.Application.Services
         private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
-        public UserService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IAvailabilityService availability, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
+        public UserAdminService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IAvailabilityService availability, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
         {
             _userRepo = userRepo;
             _bookRepo = bookRepo;

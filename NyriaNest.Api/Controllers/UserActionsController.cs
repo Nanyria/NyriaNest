@@ -8,7 +8,7 @@ using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Loans;
 using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Reviews;
-using NyriaNest.Application.Services;
+using NyriaNest.Application.Users;
 using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api.Controllers
@@ -20,7 +20,7 @@ namespace NyriaNest.Api.Controllers
     [Route("api/[controller]")]
     public class UserActionsController : ControllerBase
     {
-        private readonly IUserService _userService;
+        private readonly IUserAdminService _users;
         private readonly IAccountService _accounts;
         private readonly IProfilePictureService _profilePictures;
         private readonly UserManager<User> _userManager;
@@ -30,13 +30,13 @@ namespace NyriaNest.Api.Controllers
         private readonly IReservationService _reservations;
         private readonly ILoanService _loans;
 
-        public UserActionsController(IUserService userService, IAccountService accounts, IProfilePictureService profilePictures,
+        public UserActionsController(IUserAdminService users, IAccountService accounts, IProfilePictureService profilePictures,
             UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews, IReservationService reservations, ILoanService loans)
         {
             _reviews = reviews;
             _reservations = reservations;
             _loans = loans;
-            _userService = userService;
+            _users = users;
             _accounts = accounts;
             _profilePictures = profilePictures;
             _userManager = userManager;
@@ -66,7 +66,7 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetMe()
         {
-            var response = await _userService.GetUserByIdAsync(CurrentUserId);
+            var response = await _users.GetUserByIdAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
 
