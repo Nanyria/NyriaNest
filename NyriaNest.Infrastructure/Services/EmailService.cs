@@ -56,6 +56,19 @@ namespace NyriaNest.Infrastructure.Services
                 $"Your username is {userName}. Log in with the password you chose when you signed up.";
             await SendEmailAsync(to, subject, body);
         }
+
+        // The link carries a one-time token, so it's only ever put in the email, never logged
+        public async Task SendPasswordResetEmailAsync(string to, string firstName, string resetLink)
+        {
+            var subject = "Reset your NyriaNest password";
+            var body = $"Hi {firstName},\n\n" +
+                "Someone asked to reset the password for your NyriaNest account. " +
+                "To choose a new password, open this link within an hour:\n\n" +
+                $"{resetLink}\n\n" +
+                "If you didn't ask for this, you can ignore this email: your password stays the same.";
+            await SendEmailAsync(to, subject, body);
+        }
+
         public async Task SendBookBorrowedEmailAsync(string to, string firstname, string userName, string bookTitle, DateTime returnDate)
         {
             var subject = "Bekräftelse av lån";

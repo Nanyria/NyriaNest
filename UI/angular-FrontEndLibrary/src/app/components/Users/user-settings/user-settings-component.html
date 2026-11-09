@@ -322,12 +322,10 @@
           </div>
         </section>
 
-        <!-- "Forgot password?" next to both current-password fields. A placeholder until
-             #51 adds the reset flow; then it becomes a link to the forgot-password page. -->
+        <!-- "Forgot password?" next to both current-password fields: to the reset page,
+             with the user's email filled in -->
         <ng-template #forgotPassword>
-          <span class="settings__forgot nn-placeholder" title="Coming soon">
-            Forgot password? <span class="settings__soon-tag">Soon</span>
-          </span>
+          <a class="settings__forgot" routerLink="/forgot-password" [queryParams]="{ email: currentEmail }">Forgot password?</a>
         </ng-template>
 
         <!-- ===== Delete account: not built yet (#90) ===== -->

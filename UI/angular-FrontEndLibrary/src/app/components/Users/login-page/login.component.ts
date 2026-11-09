@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { AuthService } from '../../../Services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -9,7 +9,7 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./login.component.css'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [FormsModule], // <-- Add FormsModule and CommonModule here
+  imports: [FormsModule, RouterModule],
 })
 export class LoginComponent {
   username: string = '';

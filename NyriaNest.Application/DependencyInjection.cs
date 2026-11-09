@@ -15,6 +15,7 @@ namespace NyriaNest.Application
             services.AddScoped<IUserActionsService, UserActionsService>();
             services.AddScoped<IEpubService, EpubService>();
             services.AddScoped<IProfilePictureService, ProfilePictureService>();
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
 
             services.AddAutoMapper(cfg =>
             {

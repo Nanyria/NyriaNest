@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using NyriaNest.Api.Controllers;
 using NyriaNest.Application;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Infrastructure;
 using NyriaNest.Infrastructure.Data;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace NyriaNest.Api
 {
@@ -68,6 +70,31 @@ namespace NyriaNest.Api
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
 
+            // Password reset links (#51) work for an hour
+            builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+                options.TokenLifespan = TimeSpan.FromHours(1));
+
+            // Emailed links point to the frontend, so it must be known
+            if (string.IsNullOrWhiteSpace(builder.Configuration["Frontend:BaseUrl"]))
+                throw new InvalidOperationException("Frontend:BaseUrl is missing. Set it to the address the app is served from, e.g. https://nyrianest.example.");
+
+            // Forgot/reset password: a few tries per IP per 15 minutes, then 429. Stops the
+            // endpoints being used to flood someone's inbox or to guess reset tokens.
+            var passwordResetLimit = builder.Configuration.GetValue("RateLimiting:PasswordResetPermitLimit", 5);
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddPolicy(AuthController.PasswordResetRateLimit, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = passwordResetLimit,
+                            Window = TimeSpan.FromMinutes(15),
+                            QueueLimit = 0,
+                        }));
+            });
+
             var jwtKey = builder.Configuration["Jwt:Key"];
             if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
                 throw new InvalidOperationException("Jwt:Key is missing or shorter than 32 characters. Set it in User Secrets or app settings.");
@@ -107,6 +134,7 @@ namespace NyriaNest.Api
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseRateLimiter();
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
