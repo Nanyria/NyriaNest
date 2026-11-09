@@ -576,14 +576,21 @@ namespace NyriaNest.Application.Services
                 response.StatusCode = HttpStatusCode.NotFound;
                 return response;
             }
-            if (user.Reviews == null || !user.Reviews.Any())
+            // Read straight from the reviews: the user as loaded above doesn't include them,
+            // so this list always looked empty (#117)
+            var reviews = await _dbContext.ReviewItems
+                .Include(r => r.Book)
+                .Include(r => r.RatingItem)
+                .Where(r => r.UserId == userId)
+                .ToListAsync();
+            if (!reviews.Any())
             {
                 response.ErrorMessages.Add("No reviews found for this user.");
                 response.StatusCode = HttpStatusCode.NotFound;
                 return response;
             }
 
-            var reviewDtos = _mapper.Map<List<ReviewItemDto>>(user.Reviews);
+            var reviewDtos = _mapper.Map<List<ReviewItemDto>>(reviews);
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
             response.Result = reviewDtos;
@@ -596,8 +603,15 @@ namespace NyriaNest.Application.Services
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
             };
-            var user = _userRepo.GetByIdAsync<User>(reviewItemDto.UserId).Result;
-            var book = _bookRepo.GetByIdAsync(reviewItemDto.BookId).Result;
+            var user = await _userRepo.GetByIdAsync<User>(reviewItemDto.UserId);
+            var book = await _bookRepo.GetByIdAsync(reviewItemDto.BookId);
+            // Without these checks an unknown book crashed with a 500 (#117)
+            if (user == null || book == null)
+            {
+                response.ErrorMessages.Add(book == null ? "Book not found." : "User not found.");
+                response.StatusCode = HttpStatusCode.NotFound;
+                return response;
+            }
             var newReview = new ReviewItem
             {
                 BookId = book.BookId,
