@@ -415,9 +415,12 @@ export class UserSettingsComponent implements OnInit, HasUnsavedChanges {
     this.saving[card] = true;
     this.apiErrors[card] = [];
     this.userActionsService.updateUser(payload).subscribe({
-      next: () => {
+      next: (response) => {
         this.saving[card] = false;
         this.submitted[card] = false;
+        // A new password or email ends every session; the API sends this device a new token
+        const token: string | undefined = response?.result?.token;
+        if (token) this.authService.replaceToken(token);
         onSuccess();
       },
       // Show the API's reason, e.g. a wrong current password or an email that's taken

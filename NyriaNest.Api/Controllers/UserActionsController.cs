@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Services;
+using NyriaNest.Domain.Entities;
 
 namespace NyriaNest.Api.Controllers
 {
@@ -16,12 +19,17 @@ namespace NyriaNest.Api.Controllers
         private readonly IUserService _userService;
         private readonly IUserActionsService _userActionsService;
         private readonly IProfilePictureService _profilePictures;
+        private readonly UserManager<User> _userManager;
+        private readonly ITokenService _tokens;
 
-        public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures)
+        public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures,
+            UserManager<User> userManager, ITokenService tokens)
         {
             _userService = userService;
             _userActionsService = userActionsService;
             _profilePictures = profilePictures;
+            _userManager = userManager;
+            _tokens = tokens;
         }
 
         // Set by AuthController when it issues the token. [Authorize] guarantees a valid
@@ -53,7 +61,21 @@ namespace NyriaNest.Api.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
         {
+            updateUserDto.Token = null; // never taken from the request
             var response = await _userActionsService.UpdateUserAsync(CurrentUserId, updateUserDto);
+
+            // A new password or email changes the security stamp, which ends every session,
+            // this one too (#113). The caller proved who they are (current password), so
+            // they get a new token and stay logged in here.
+            if (response.IsSuccess && response.Result is not null)
+            {
+                var user = await _userManager.FindByIdAsync(CurrentUserId);
+                if (user is not null
+                    && await _userManager.GetSecurityStampAsync(user) != User.FindFirst(TokenService.SecurityStampClaim)?.Value)
+                {
+                    response.Result.Token = (await _tokens.CreateTokenAsync(user)).Token;
+                }
+            }
             return StatusCode((int)response.StatusCode, response);
         }
 

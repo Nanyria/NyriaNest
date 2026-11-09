@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using NyriaNest.Api.Auth;
 using NyriaNest.Api.Controllers;
 using NyriaNest.Application;
 using NyriaNest.Domain.Entities;
@@ -14,6 +15,10 @@ namespace NyriaNest.Api
 {
     public class Program
     {
+        // A token refused because the user's password or email changed (#113)
+        private const string SessionEndedMessage = "The session has ended: the password or email has changed.";
+        public const string SessionEndedHeader = "X-Session-Ended";
+
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -53,7 +58,8 @@ namespace NyriaNest.Api
             var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
             builder.Services.AddCors(setup => setup.AddPolicy("default", options =>
             {
-                options.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader();
+                options.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader()
+                    .WithExposedHeaders(SessionEndedHeader); // readable by the app from another origin too
             }));
 
             builder.Services.AddIdentity<User, IdentityRole>(options =>
@@ -116,7 +122,41 @@ namespace NyriaNest.Api
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
                 };
+
+                // A token is only good while its security stamp matches the user's. Identity
+                // changes the stamp on every password and email change, so such a change
+                // ends the user's other sessions at once (#113). Not cached: one lookup by
+                // primary key per request, and an old token stops working immediately.
+                // Tokens without a stamp (issued before #113) are refused: log in again.
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var userId = context.Principal?.FindFirst(TokenService.UserIdClaim)?.Value;
+                        var stamp = context.Principal?.FindFirst(TokenService.SecurityStampClaim)?.Value;
+                        if (userId is null || stamp is null)
+                        {
+                            context.Fail("The token has no user or security stamp.");
+                            return;
+                        }
+
+                        var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<User>>();
+                        var user = await userManager.FindByIdAsync(userId);
+                        if (user is null || await userManager.GetSecurityStampAsync(user) != stamp)
+                            context.Fail(SessionEndedMessage);
+                    },
+                    // Says why, so the app can tell the user their password or email was
+                    // changed, instead of just "please log in again"
+                    OnChallenge = context =>
+                    {
+                        if (context.AuthenticateFailure?.Message == SessionEndedMessage)
+                            context.Response.Headers[SessionEndedHeader] = "credentials-changed";
+                        return Task.CompletedTask;
+                    },
+                };
             });
+
+            builder.Services.AddScoped<ITokenService, TokenService>();
 
             var app = builder.Build();
 

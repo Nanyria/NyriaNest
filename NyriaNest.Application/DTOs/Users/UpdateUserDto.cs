@@ -11,5 +11,8 @@
         public string? ProfilePictureUrl { get; set; } // Add this for profile picture selection
         public string? Bio { get; set; } // Add this for biograph
 
+        // Only in the response: a new login token when the change ended the user's
+        // sessions (a new password or email), so the device that made it stays logged in
+        public string? Token { get; set; }
     }
 }

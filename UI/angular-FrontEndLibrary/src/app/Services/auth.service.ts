@@ -92,6 +92,12 @@ constructor(private http: HttpClient, private userService: UserService, private 
     localStorage.setItem('current_user', JSON.stringify(user));
   }
 
+  // A new login token for this device, sent back by the API when a new password or
+  // email ended the user's sessions (#113), so this one stays logged in
+  replaceToken(token: string): void {
+    localStorage.setItem(this.tokenKey, token);
+  }
+
   // Emails a reset link if an account has this email. The answer is the same either way.
   forgotPassword(email: string): Observable<{ isSuccess: boolean; result: string }> {
     return this.http.post<{ isSuccess: boolean; result: string }>(`${this.apiUrl}/forgot-password`, { email });

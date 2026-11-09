@@ -1,13 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.IdentityModel.Tokens;
+using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Services;
 using NyriaNest.Domain.Entities;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace NyriaNest.Api.Controllers
 {
@@ -18,13 +15,13 @@ namespace NyriaNest.Api.Controllers
         public const string PasswordResetRateLimit = "password-reset";
 
         private readonly UserManager<User> _userManager;
-        private readonly IConfiguration _configuration;
+        private readonly ITokenService _tokens;
         private readonly IPasswordResetService _passwordReset;
 
-        public AuthController(UserManager<User> userManager, IConfiguration configuration, IPasswordResetService passwordReset)
+        public AuthController(UserManager<User> userManager, ITokenService tokens, IPasswordResetService passwordReset)
         {
             _userManager = userManager;
-            _configuration = configuration;
+            _tokens = tokens;
             _passwordReset = passwordReset;
         }
 
@@ -53,33 +50,8 @@ namespace NyriaNest.Api.Controllers
             var user = await _userManager.FindByNameAsync(loginDto.Username);
             if (user != null && await _userManager.CheckPasswordAsync(user, loginDto.Password))
             {
-                var userRoles = await _userManager.GetRolesAsync(user);
-
-                var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, user.Id), // Use user.Id here
-	                new Claim("userId", user.Id), // Custom claim for clarity
-                };
-
-                // Add role claims
-                authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    audience: _configuration["Jwt:Audience"],
-                    expires: DateTime.Now.AddHours(3),
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-                );
-
-                return Ok(new
-                {
-                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                    expiration = token.ValidTo
-                });
+                var issued = await _tokens.CreateTokenAsync(user);
+                return Ok(new { token = issued.Token, expiration = issued.Expires });
             }
             return Unauthorized();
         }

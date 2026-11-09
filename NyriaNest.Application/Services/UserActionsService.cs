@@ -165,6 +165,12 @@ namespace NyriaNest.Application.Services
                     return response;
                 }
 
+                // A new email ends the user's other sessions, like a new password (#113).
+                // The password change already renewed the security stamp; the email is set
+                // directly above, so its stamp is renewed here.
+                if (changesEmail)
+                    await _userManager.UpdateSecurityStampAsync(user);
+
                 // Switched away from an uploaded picture: its file isn't needed any more
                 if (user.ProfilePictureUrl != oldPicture)
                     await _profilePictures.DeleteUploadAsync(oldPicture);
