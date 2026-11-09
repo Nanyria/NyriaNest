@@ -22,6 +22,7 @@ namespace NyriaNest.Application
             services.AddScoped<IReadingListService, ReadingListService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IAvailabilityService, AvailabilityService>();
+            services.AddScoped<IReservationService, ReservationService>();
 
             services.AddAutoMapper(cfg =>
             {

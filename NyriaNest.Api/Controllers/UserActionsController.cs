@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
+using NyriaNest.Application.Loans;
 using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Services;
@@ -25,11 +26,13 @@ namespace NyriaNest.Api.Controllers
         private readonly ITokenService _tokens;
         private readonly IReadingListService _readingList;
         private readonly IReviewService _reviews;
+        private readonly IReservationService _reservations;
 
         public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews)
+            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews, IReservationService reservations)
         {
             _reviews = reviews;
+            _reservations = reservations;
             _userService = userService;
             _userActionsService = userActionsService;
             _profilePictures = profilePictures;
@@ -126,19 +129,19 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("reserved")]
         public async Task<IActionResult> GetReservedBooks()
         {
-            var response = await _userActionsService.GetReservedBooksAsync(CurrentUserId);
+            var response = await _reservations.GetReservedBooksAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("reserve/{bookId}")]
         public async Task<IActionResult> ReserveBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.ReserveBookAsync(CurrentUserId, bookId);
+            var response = await _reservations.ReserveBookAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpPut("unreserve/{bookId}")]
         public async Task<IActionResult> UnreserveBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.CancelReservationAsync(CurrentUserId, bookId);
+            var response = await _reservations.CancelReservationAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 

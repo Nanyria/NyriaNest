@@ -23,7 +23,6 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<bool>> DeleteBookAsync(int id);
         Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
-        Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
         Task<APIResponse<bool>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
@@ -445,28 +444,6 @@ namespace NyriaNest.Application.Services
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
                 response.Result = _mapper.Map<List<StatusHistoryItemDto>>(history);
-            }
-            else
-            {
-                response.ErrorMessages.Add($"Book {bookId} was not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-            }
-            return response;
-        }
-        // Admins only (BookController). Readers see their own place as MyQueuePosition (#71)
-        public async Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId)
-        {
-            var response = new APIResponse<List<BookReservationDto>>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-            var book = await _bookRepo.GetByIdAsync(bookId);
-            if (book != null)
-            {
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-                response.Result = await _bookRepo.GetReservationQueueAsync(bookId);
             }
             else
             {

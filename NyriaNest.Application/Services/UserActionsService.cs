@@ -19,11 +19,6 @@ namespace NyriaNest.Application.Services
         // Register methods
         Task<APIResponse<CreateUserDto>> AddUserAsync(CreateUserDto createUserDTO);
         Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
-        // Reservation methods
-        Task<APIResponse<List<ReservationItemDto>>> GetReservedBooksAsync(string userId);
-        Task<APIResponse<UserDto>> ReserveBookAsync(string userId, int bookId);
-        Task<APIResponse<UserDto>> CancelReservationAsync(string userId, int bookId);
-
         // Borrow methods
         Task<APIResponse<List<CheckedOutItemDto>>> GetCheckedOutBooksAsync(string userId);
         Task<APIResponse<UserDto>> CheckOutBookAsync(string userId, int bookId);
@@ -37,12 +32,13 @@ namespace NyriaNest.Application.Services
         private readonly IMapper _mapper;
         private readonly IBookService _bookService;
         private readonly IAvailabilityService _availability;
+        private readonly IReservationService _reservations;
         private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
         private readonly IProfilePictureService _profilePictures;
 
-        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAvailabilityService availability, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
+        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAvailabilityService availability, IReservationService reservations, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
         {
             _profilePictures = profilePictures;
             _userRepo = userRepo;
@@ -50,6 +46,7 @@ namespace NyriaNest.Application.Services
             _mapper = mapper;
             _bookService = bookService;
             _availability = availability;
+            _reservations = reservations;
             _dbContext = dbContext;
             _userManager = userManager;
             _emailService = emailService;
@@ -188,184 +185,6 @@ namespace NyriaNest.Application.Services
                 throw new Exception("UserName already exists.");
             }
         }
-        // Reservation methods
-        public async Task<APIResponse<List<ReservationItemDto>>> GetReservedBooksAsync(string userId)
-        {
-            var response = new APIResponse<List<ReservationItemDto>>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            // Check if user exists
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            if (user == null)
-            {
-                response.ErrorMessages.Add("User not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-
-            // Query ReservationItems directly and include the Book
-            var reservations = await _dbContext.ReservationItems
-                .Where(r => r.UserId == userId)
-                .Include(r => r.Book)
-                .OrderByDescending(r => r.ReservationDate)
-                .ToListAsync();
-
-            // Map to DTOs
-            var reservationDtos = _mapper.Map<List<ReservationItemDto>>(reservations);
-
-            response.IsSuccess = true;
-            response.StatusCode = HttpStatusCode.OK;
-            response.Result = reservationDtos;
-            return response;
-        }
-        public async Task<APIResponse<UserDto>> ReserveBookAsync(string userId, int bookId)
-        {
-            var response = new APIResponse<UserDto>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            var book = await _bookRepo.GetByIdAsync(bookId);
-
-            if (user == null || book == null)
-            {
-                response.ErrorMessages.Add("User or Book not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-
-            // A book an admin has marked Lost or Removed can't be reserved
-            if (book.AdminStatus != null)
-            {
-                response.ErrorMessages.Add("This book isn't available.");
-                response.StatusCode = HttpStatusCode.Conflict;
-                return response;
-            }
-
-            if (user != null && book != null)
-            {
-                if (user.ReservedBooks.Any(r => r.BookId == book.BookId))
-                {
-                    response.ErrorMessages.Add("Book already reserved by user.");
-                    response.StatusCode = HttpStatusCode.Conflict;
-                    return response;
-                }
-                else if (user.CheckedOutBooks.Any(b => b.BookId == book.BookId))
-                {
-                    response.ErrorMessages.Add("Book already checked out by user.");
-                    response.StatusCode = HttpStatusCode.Conflict;
-                    return response;
-                }
-                ;
-
-                AddReservation(user, book);
-
-                await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Reserved, $"Book reserved by {user.UserName}"); // Update the book status to Reserved
-
-                await _dbContext.SaveChangesAsync();
-
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-                response.Result = _mapper.Map<UserDto>(user);
-            }
-            else
-            {
-                response.ErrorMessages.Add("User or Book not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-            }
-
-            return response;
-        }
-        private void AddReservation(User user, Book book)
-        {
-            var reservation = new ReservationItem
-            {
-                BookId = book.BookId,
-                Book = book,
-                BookIsAvaliableEmailSent = null,
-                AvailabilityDate = null, // Will be set after calculation
-                UserId = user.Id,
-                User = user,
-                ReservationDate = DateTime.UtcNow
-            };
-            user.ReservedBooks.Add(reservation);
-            book.Reservations.Add(reservation);
-            _dbContext.ReservationItems.Add(reservation);
-
-            // Now update all availability dates, including the new reservation
-            _availability.RecalculateAvailabilityDates(book);
-        }
-
-        public bool RemoveReservation(User user, Book book)
-        {
-            // Find the reservation item for the given book
-            var reservationItem = user.ReservedBooks.FirstOrDefault(r => r.BookId == book.BookId);
-            if (reservationItem != null)
-            {
-                // Remove the reservation from both the user and the book
-                user.ReservedBooks.Remove(reservationItem);
-                book.Reservations.Remove(reservationItem);
-                _dbContext.ReservationItems.Remove(reservationItem);
-
-                // Update all availability dates for remaining reservations
-                _availability.RecalculateAvailabilityDates(book);
-
-                return true;
-            }
-
-            return false;
-        }
-
-        public async Task<APIResponse<UserDto>> CancelReservationAsync(string userId, int bookId)
-        {
-            var response = new APIResponse<UserDto>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            var bookResponse = await _bookService.GetBookByIdAsync(bookId);
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            var book = bookResponse.Result;
-
-
-
-            if (user != null && book != null)
-            {
-                // Use the refactored RemoveReservation method
-                if (RemoveReservation(user, book))
-                {
-                    // Returned means "recalculate": Reserved if others are still queued, otherwise Available
-                    await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Reservation cancelled by {user.UserName}");
-
-                    await _userRepo.SaveAsync();
-                    await _bookRepo.SaveAsync();
-
-
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                    response.Result = _mapper.Map<UserDto>(user);
-                }
-                else
-                {
-                    response.ErrorMessages.Add("Book not reserved by user.");
-                    response.StatusCode = HttpStatusCode.Conflict;
-                }
-            }
-            else
-            {
-                response.ErrorMessages.Add("User or Book not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-            }
-
-            return response;
-        }
-
         // Borrow methods
         public async Task<APIResponse<List<CheckedOutItemDto>>> GetCheckedOutBooksAsync(string userId)
         {
@@ -450,7 +269,7 @@ namespace NyriaNest.Application.Services
                 return response;
             }
 
-            RemoveReservation(user, book); // Does nothing if they had no reservation
+            _reservations.RemoveReservation(user, book); // Does nothing if they had no reservation
             SetCheckedOutBook(user, book);
 
             // The rest of the queue now waits for this new loan's due date
