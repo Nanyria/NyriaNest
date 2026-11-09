@@ -22,13 +22,11 @@ namespace NyriaNest.Api.Controllers
         private readonly IProfilePictureService _profilePictures;
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
-        private readonly IReservationService _reservations;
         private readonly ILoanService _loans;
 
         public UserActionsController(IUserAdminService users, IAccountService accounts, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens, IReservationService reservations, ILoanService loans)
+            UserManager<User> userManager, ITokenService tokens, ILoanService loans)
         {
-            _reservations = reservations;
             _loans = loans;
             _users = users;
             _accounts = accounts;
@@ -110,28 +108,6 @@ namespace NyriaNest.Api.Controllers
         public async Task<IActionResult> ReturnBook([FromRoute] int bookId)
         {
             var response = await _loans.ReturnBookAsync(User.GetUserId(), bookId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-
-
-        // Reserve methods
-
-        [HttpGet("reserved")]
-        public async Task<IActionResult> GetReservedBooks()
-        {
-            var response = await _reservations.GetReservedBooksAsync(User.GetUserId());
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpPut("reserve/{bookId}")]
-        public async Task<IActionResult> ReserveBook([FromRoute] int bookId)
-        {
-            var response = await _reservations.ReserveBookAsync(User.GetUserId(), bookId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpPut("unreserve/{bookId}")]
-        public async Task<IActionResult> UnreserveBook([FromRoute] int bookId)
-        {
-            var response = await _reservations.CancelReservationAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
     }
