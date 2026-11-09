@@ -3,10 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Auth;
 using NyriaNest.Application.Accounts;
-using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Loans;
-using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Users;
 using NyriaNest.Domain.Entities;
 
@@ -24,14 +22,12 @@ namespace NyriaNest.Api.Controllers
         private readonly IProfilePictureService _profilePictures;
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
-        private readonly IReviewService _reviews;
         private readonly IReservationService _reservations;
         private readonly ILoanService _loans;
 
         public UserActionsController(IUserAdminService users, IAccountService accounts, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens, IReviewService reviews, IReservationService reservations, ILoanService loans)
+            UserManager<User> userManager, ITokenService tokens, IReservationService reservations, ILoanService loans)
         {
-            _reviews = reviews;
             _reservations = reservations;
             _loans = loans;
             _users = users;
@@ -136,48 +132,6 @@ namespace NyriaNest.Api.Controllers
         public async Task<IActionResult> UnreserveBook([FromRoute] int bookId)
         {
             var response = await _reservations.CancelReservationAsync(User.GetUserId(), bookId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-
-        // Review methods
-        [HttpGet("reviews")]
-        public async Task<IActionResult> GetUserReviews()
-        {
-            var response = await _reviews.GetUserReviewsAsync(User.GetUserId());
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpPost("newReview")]
-        public async Task<IActionResult> CreateReview([FromBody] CreateReviewItemDto createReviewDto)
-        {
-            // Whatever userId the body says, the review is written by the logged-in user
-            createReviewDto.UserId = User.GetUserId();
-            var response = await _reviews.CreateReviewAsync(createReviewDto);
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpPut("editReview/{reviewId}")]
-        public async Task<IActionResult> EditReview([FromRoute] int reviewId, [FromBody] ReviewItemDto updateReviewDto)
-        {
-            var response = await _reviews.EditReviewAsync(User.GetUserId(), reviewId, updateReviewDto);
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpDelete("deleteReview/{reviewId}")]
-        public async Task<IActionResult> DeleteReview([FromRoute] int reviewId)
-        {
-            var response = await _reviews.RemoveReviewItemAsync(User.GetUserId(), reviewId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-
-        // Rating methods
-        [HttpPut("editRating/{reviewId}")]
-        public async Task<IActionResult> EditRating([FromRoute] int reviewId, [FromBody] RatingItemDto ratingDto)
-        {
-            var response = await _reviews.EditRatingAsync(User.GetUserId(), reviewId, ratingDto);
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpDelete("deleteRating/{reviewId}")]
-        public async Task<IActionResult> DeleteRating([FromRoute] int reviewId)
-        {
-            var response = await _reviews.RemoveRatingAsync(User.GetUserId(), reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
     }
