@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Application.Books;
-using NyriaNest.Application.Reviews;
 using System.Security.Claims;
 
 
@@ -9,11 +8,9 @@ using System.Security.Claims;
 public class LibraryController : ControllerBase
 {
     private readonly IBookService _bookService;
-    private readonly IReviewService _reviews;
-    public LibraryController(IBookService bookService, IReviewService reviews)
+    public LibraryController(IBookService bookService)
     {
         _bookService = bookService;
-        _reviews = reviews;
     }
 
     [HttpGet]
@@ -26,13 +23,6 @@ public class LibraryController : ControllerBase
 
     // No reservations endpoint here: readers see their own place in the queue in the
     // list above (MyQueuePosition), and the whole queue is admin-only (#71)
-
-    [HttpGet("review/{bookId:int}")]
-    public async Task<IActionResult> GetBookReview(int bookId)
-    {
-        var response = await _reviews.GetBookReviewsAsync(bookId);
-        return StatusCode((int)response.StatusCode, response);
-    }
 
 
 }

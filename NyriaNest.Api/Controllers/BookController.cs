@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Controllers;
 using NyriaNest.Application.Books;
 using NyriaNest.Application.DTOs.Books;
-using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Security.Claims;
@@ -15,11 +14,9 @@ using System.Security.Claims;
 public class BookController : ControllerBase
 {
     private readonly IBookService _bookService;
-    private readonly IReservationService _reservations;
-    public BookController(IBookService bookService, IReservationService reservations)
+    public BookController(IBookService bookService)
     {
         _bookService = bookService;
-        _reservations = reservations;
     }
 
     /// <summary>Admin catalogue with search, filters, sorting and paging.</summary>
@@ -88,14 +85,6 @@ public class BookController : ControllerBase
     public async Task<IActionResult> GetBookHistory(int bookId)
     {
         var response = await _bookService.GetBookHistoryAsync(bookId);
-        return StatusCode((int)response.StatusCode, response);
-    }
-
-    /// <summary>The whole reservation queue, oldest first, with each reader's name (admins only, #71).</summary>
-    [HttpGet("{bookId:int}/reservations")]
-    public async Task<IActionResult> GetBookReservations(int bookId)
-    {
-        var response = await _reservations.GetBookReservationsAsync(bookId);
         return StatusCode((int)response.StatusCode, response);
     }
 
