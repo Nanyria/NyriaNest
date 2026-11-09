@@ -266,7 +266,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(admin, target.Id, new { firstName = "Renamed" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await LibraryDataOf(target.Id)).Should().Be((Loans: 1, Reservations: 1, Favourites: 1, History: 1));
+        (await LibraryDataOf(target.Id)).Should().Be(OneOfEach);
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await FirstNameOf(target.Id)).Should().Be("Renamed");
-        (await LibraryDataOf(target.Id)).Should().Be((Loans: 1, Reservations: 1, Favourites: 1, History: 1));
+        (await LibraryDataOf(target.Id)).Should().Be(OneOfEach);
     }
 
     [Fact]
@@ -317,6 +317,9 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         db.StatusHistoryItems.Add(new() { BookId = loaned.BookId, UserId = userId, BookStatus = BookStatusEnum.CheckedOut });
         await db.SaveChangesAsync(Ct);
     });
+
+    // A typed field, because names in a tuple literal passed to Should().Be(object) are ignored (CS8123)
+    private static readonly (int Loans, int Reservations, int Favourites, int History) OneOfEach = (1, 1, 1, 1);
 
     private Task<(int Loans, int Reservations, int Favourites, int History)> LibraryDataOf(string userId) =>
         factory.WithDbAsync(async db => (
