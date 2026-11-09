@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Users;
 
 /// <summary>
 /// Security finding 4 (#48): what an Admin and a SuperAdmin may do to other users
@@ -61,7 +61,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(admin, target.Id, new { password = NewPassword });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await CanLogIn(target.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(target.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(admin, target.Id, new { role = Roles.Admin });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await RolesOf(target.Id)).Should().Equal(Roles.User);
+        (await factory.RolesOfAsync(target.Id)).Should().Equal(Roles.User);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(admin, me.Id, new { role = Roles.SuperAdmin });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await RolesOf(me.Id)).Should().Equal(Roles.Admin);
+        (await factory.RolesOfAsync(me.Id)).Should().Equal(Roles.Admin);
     }
 
     [Theory]
@@ -101,7 +101,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         rename.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         password.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await FirstNameOf(target.Id)).Should().Be("Test");
-        (await CanLogIn(target.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(target.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(superAdmin, target.Id, new { role = Roles.Admin });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await RolesOf(target.Id)).Should().Equal(Roles.Admin);
+        (await factory.RolesOfAsync(target.Id)).Should().Equal(Roles.Admin);
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(superAdmin, target.Id, new { password = NewPassword });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await CanLogIn(target.UserName!, NewPassword)).Should().BeTrue();
+        (await factory.CanLogInAsync(target.UserName!, NewPassword)).Should().BeTrue();
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(superAdmin, me.Id, new { role = Roles.User });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await RolesOf(me.Id)).Should().Equal(Roles.SuperAdmin);
+        (await factory.RolesOfAsync(me.Id)).Should().Equal(Roles.SuperAdmin);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(superAdmin, target.Id, new { role = "Overlord" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await RolesOf(target.Id)).Should().Equal(Roles.User);
+        (await factory.RolesOfAsync(target.Id)).Should().Equal(Roles.User);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(superAdmin, other.Id, new { password = NewPassword });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await CanLogIn(other.UserName!, TestAuth.Password)).Should().BeTrue();
+        (await factory.CanLogInAsync(other.UserName!, TestAuth.Password)).Should().BeTrue();
     }
 
     [Fact]
@@ -266,7 +266,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await Update(admin, target.Id, new { firstName = "Renamed" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await LibraryDataOf(target.Id)).Should().Be((Loans: 1, Reservations: 1, Favourites: 1, History: 1));
+        (await LibraryDataOf(target.Id)).Should().Be(OneOfEach);
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await FirstNameOf(target.Id)).Should().Be("Renamed");
-        (await LibraryDataOf(target.Id)).Should().Be((Loans: 1, Reservations: 1, Favourites: 1, History: 1));
+        (await LibraryDataOf(target.Id)).Should().Be(OneOfEach);
     }
 
     [Fact]
@@ -318,6 +318,9 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await db.SaveChangesAsync(Ct);
     });
 
+    // A typed field, because names in a tuple literal passed to Should().Be(object) are ignored (CS8123)
+    private static readonly (int Loans, int Reservations, int Favourites, int History) OneOfEach = (1, 1, 1, 1);
+
     private Task<(int Loans, int Reservations, int Favourites, int History)> LibraryDataOf(string userId) =>
         factory.WithDbAsync(async db => (
             await db.CheckOutItems.CountAsync(c => c.UserId == userId, Ct),
@@ -335,16 +338,4 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private Task<bool> Exists(string userId) => factory.WithDbAsync(db =>
         db.Users.AnyAsync(u => u.Id == userId, Ct));
-
-    private Task<List<string>> RolesOf(string userId) => factory.WithDbAsync(db =>
-        db.UserRoles.Where(ur => ur.UserId == userId)
-            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (_, r) => r.Name!)
-            .ToListAsync(Ct));
-
-    private async Task<bool> CanLogIn(string username, string password)
-    {
-        using var client = factory.CreateClient();
-        var response = await client.PostLoginAsync(username, password);
-        return response.IsSuccessStatusCode;
-    }
 }

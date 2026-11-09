@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Users;
 
 /// <summary>
 /// #116: pins down creating an admin, getting one user and a user's history (api/User)
@@ -29,7 +29,7 @@ public class UserAdminTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var userId = await IdOf(name);
-        (await RolesOf(userId!)).Should().Equal(Roles.Admin);
+        (await factory.RolesOfAsync(userId!)).Should().Equal(Roles.Admin);
         using var asNewAdmin = factory.CreateClient();
         asNewAdmin.DefaultRequestHeaders.Authorization = new("Bearer", await factory.GetTokenAsync(name));
         (await asNewAdmin.GetAsync("api/User", Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -139,9 +139,4 @@ public class UserAdminTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private Task<string?> IdOf(string userName) => factory.WithDbAsync(db =>
         db.Users.Where(u => u.UserName == userName).Select(u => u.Id).SingleOrDefaultAsync(Ct));
-
-    private Task<List<string>> RolesOf(string userId) => factory.WithDbAsync(db =>
-        db.UserRoles.Where(ur => ur.UserId == userId)
-            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (_, r) => r.Name!)
-            .ToListAsync(Ct));
 }

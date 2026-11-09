@@ -3,7 +3,7 @@ using NyriaNest.Api.Tests.TestSupport;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// Security findings 5 and 6 (#48): passwords are never emailed, and there's

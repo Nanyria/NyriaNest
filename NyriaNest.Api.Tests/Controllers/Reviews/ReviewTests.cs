@@ -5,12 +5,12 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Reviews;
 
 /// <summary>
 /// Pins down how reviews and ratings behave today (creating, listing, a book's reviews,
 /// changing your own rating), so #116 can move the code into ReviewService without
-/// changing it. Who may change whose review is covered in UserActionsControllerTests.
+/// changing it. Who may change whose review is covered in ReviewOwnershipTests.
 /// </summary>
 public class ReviewTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
@@ -22,7 +22,7 @@ public class ReviewTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     // The request must have a userId (the DTO says it's required), but the API replaces it
-    // with the logged-in user, as UserActionsControllerTests shows
+    // with the logged-in user, as ReviewOwnershipTests shows
     private const string IgnoredUserId = "replaced-by-the-api";
 
     // ---- create ----

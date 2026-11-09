@@ -23,9 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="Services\BookService\" />
-    <Folder Include="Services\UserActionsService\" />
     <Folder Include="TestSupport\" />
   </ItemGroup>
 

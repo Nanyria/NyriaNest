@@ -9,7 +9,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// Login, and that the JWT it hands out is what [Authorize] accepts – and nothing else is.

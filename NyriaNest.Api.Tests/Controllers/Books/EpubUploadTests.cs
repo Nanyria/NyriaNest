@@ -5,10 +5,9 @@ using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// Pins down how EPUB uploads behave today (POST api/Book/{id}/epub and
@@ -29,10 +28,10 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
         byte[]? saved = null;
         factory.FileStorage
             .Setup(s => s.SaveAsync(It.IsAny<Stream>(), It.Is<string>(k => k.StartsWith($"{bookId}/")), It.IsAny<CancellationToken>()))
-            .Callback((Stream content, string _, CancellationToken _) => saved = ReadAll(content))
+            .Callback((Stream content, string _, CancellationToken _) => saved = TestFiles.ReadAll(content))
             .ReturnsAsync((Stream _, string key, CancellationToken _) => key);
 
-        var response = await admin.PostAsync($"api/Book/{bookId}/epub", Form(epub, "My Book.epub"), Ct);
+        var response = await admin.PostAsync($"api/Book/{bookId}/epub", TestFiles.Form(epub, "My Book.epub", TestFiles.EpubContentType), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         saved.Should().Equal(epub, "the file is read again after validation, from the start");
@@ -47,11 +46,11 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
         var bookId = await AddBookAsync(BookTypeEnums.EBook);
-        await admin.PostAsync($"api/Book/{bookId}/epub", Form(ValidEpub(), "first.epub"), Ct);
+        await admin.PostAsync($"api/Book/{bookId}/epub", TestFiles.Form(ValidEpub(), "first.epub", TestFiles.EpubContentType), Ct);
         var firstKey = await factory.WithDbAsync(db =>
             db.Books.Where(b => b.BookId == bookId).Select(b => b.EpubFileKey).SingleAsync(Ct));
 
-        var response = await admin.PostAsync($"api/Book/{bookId}/epub", Form(ValidEpub(), "second.epub"), Ct);
+        var response = await admin.PostAsync($"api/Book/{bookId}/epub", TestFiles.Form(ValidEpub(), "second.epub", TestFiles.EpubContentType), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         factory.FileStorage.Verify(s => s.DeleteAsync(firstKey!, It.IsAny<CancellationToken>()), Times.Once);
@@ -66,7 +65,7 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var bookId = await AddBookAsync(BookTypeEnums.EBook);
         var content = validContent ? ValidEpub() : Encoding.UTF8.GetBytes("just some text, not a zip file at all, long enough to read");
 
-        var response = await admin.PostAsync($"api/Book/{bookId}/epub", Form(content, fileName), Ct);
+        var response = await admin.PostAsync($"api/Book/{bookId}/epub", TestFiles.Form(content, fileName, TestFiles.EpubContentType), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain(message);
@@ -79,7 +78,7 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
         var bookId = await AddBookAsync(BookTypeEnums.EBook);
 
-        var response = await admin.PostAsync($"api/Book/{bookId}/epub", Form([], "empty.epub"), Ct);
+        var response = await admin.PostAsync($"api/Book/{bookId}/epub", TestFiles.Form([], "empty.epub", TestFiles.EpubContentType), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         AssertNothingSavedFor(bookId);
@@ -91,7 +90,7 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
         var bookId = await AddBookAsync(BookTypeEnums.Paperback);
 
-        var response = await admin.PostAsync($"api/Book/{bookId}/epub", Form(ValidEpub(), "book.epub"), Ct);
+        var response = await admin.PostAsync($"api/Book/{bookId}/epub", TestFiles.Form(ValidEpub(), "book.epub", TestFiles.EpubContentType), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("Only e-books can have an EPUB file.");
@@ -146,16 +145,9 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
         return [.. header, .. name, .. mime, .. Encoding.ASCII.GetBytes("…rest of the book…")];
     }
 
-    private static MultipartFormDataContent Form(byte[] content, string fileName)
-    {
-        var file = new ByteArrayContent(content);
-        file.Headers.ContentType = new MediaTypeHeaderValue("application/epub+zip");
-        return new MultipartFormDataContent { { file, "file", fileName } };
-    }
-
     private static MultipartFormDataContent EbookForm(string title, byte[] content, string fileName)
     {
-        var form = Form(content, fileName);
+        var form = TestFiles.Form(content, fileName, TestFiles.EpubContentType);
         form.Add(new StringContent(title), "title");
         form.Add(new StringContent("Test Author"), "author");
         form.Add(new StringContent("2020"), "publicationYear");
@@ -168,13 +160,6 @@ public class EpubUploadTests(ApiFactory factory) : IClassFixture<ApiFactory>
         factory.FileStorage.Verify(
             s => s.SaveAsync(It.IsAny<Stream>(), It.Is<string>(k => k.StartsWith($"{bookId}/")), It.IsAny<CancellationToken>()),
             Times.Never);
-
-    private static byte[] ReadAll(Stream content)
-    {
-        using var copy = new MemoryStream();
-        content.CopyTo(copy);
-        return copy.ToArray();
-    }
 
     private Task<int> AddBookAsync(BookTypeEnums type) => factory.WithDbAsync(async db =>
     {

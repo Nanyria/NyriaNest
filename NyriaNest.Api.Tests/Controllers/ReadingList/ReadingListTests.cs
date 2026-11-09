@@ -4,7 +4,7 @@ using NyriaNest.Api.Tests.TestSupport;
 using System.Net;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.ReadingList;
 
 /// <summary>
 /// Pins down how the reading list ("favorites") behaves today, through

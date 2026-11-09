@@ -5,7 +5,7 @@ using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Net;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// #39 part B: DELETE api/Book/{bookId}. A book someone has borrowed can't be

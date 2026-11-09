@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
@@ -56,6 +57,20 @@ public static class TestAuth
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return (client, user);
     }
+
+    /// <summary>True when the login endpoint accepts this username and password.</summary>
+    public static async Task<bool> CanLogInAsync(this ApiFactory factory, string username, string password)
+    {
+        using var client = factory.CreateClient();
+        var response = await client.PostLoginAsync(username, password);
+        return response.IsSuccessStatusCode;
+    }
+
+    /// <summary>The user's roles as Identity stores them (AspNetUserRoles), not the Role column.</summary>
+    public static Task<List<string>> RolesOfAsync(this ApiFactory factory, string userId) => factory.WithDbAsync(db =>
+        db.UserRoles.Where(ur => ur.UserId == userId)
+            .Join(db.Roles, ur => ur.RoleId, r => r.Id, (_, r) => r.Name!)
+            .ToListAsync(TestContext.Current.CancellationToken));
 
     public sealed record LoginResponse(string Token, DateTime Expiration);
 

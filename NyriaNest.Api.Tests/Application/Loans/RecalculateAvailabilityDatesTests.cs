@@ -5,7 +5,7 @@ using NyriaNest.Application.Interfaces;
 using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Enums;
 
-namespace NyriaNest.Api.Tests.Services.BookService;
+namespace NyriaNest.Api.Tests.Application.Loans;
 
 /// <summary>
 /// #39 part B: each reader's expected date in the queue. First come, first served:

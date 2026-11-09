@@ -11,7 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Accounts;
 
 /// <summary>
 /// #113: changing the password or email ends every other session. Logins are JWTs, so

@@ -8,7 +8,7 @@ using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Net.Http.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// #39 part C: PUT api/Book/{bookId}, which the edit book page uses. It always

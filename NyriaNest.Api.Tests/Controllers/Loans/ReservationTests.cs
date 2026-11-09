@@ -6,7 +6,7 @@ using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Text.Json;
 
-namespace NyriaNest.Api.Tests.Controllers;
+namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
 /// Pins down how reservations behave today, through GET api/UserActions/reserved,
