@@ -56,7 +56,12 @@ namespace NyriaNest.Application.Services
                 return response;
 
             }
-            CheckIfExists(createAdminUserDto.Email, createAdminUserDto.UserName);
+            var taken = await CheckIfExistsAsync(createAdminUserDto.Email, createAdminUserDto.UserName);
+            if (taken != null)
+            {
+                response.ErrorMessages.Add(taken);
+                return response;
+            }
             var user = _mapper.Map<User>(createAdminUserDto);
 
             // Create user with password
@@ -81,18 +86,14 @@ namespace NyriaNest.Application.Services
             return response;
         }
 
-        private void CheckIfExists(string email, string userName)
+        // The reason the email or username can't be used, or null if both are free
+        private async Task<string?> CheckIfExistsAsync(string email, string userName)
         {
-            var user = _userRepo.GetByEmailAsync<User>(email).Result;
-            if (user != null)
-            {
-                throw new Exception("Email already exists.");
-            }
-            var userNameExists = _userRepo.GetByUserNameAsync<User>(userName).Result;
-            if (userNameExists != null)
-            {
-                throw new Exception("UserName already exists.");
-            }
+            if (await _userRepo.GetByEmailAsync<User>(email) != null)
+                return "Email already exists.";
+            if (await _userRepo.GetByUserNameAsync<User>(userName) != null)
+                return "UserName already exists.";
+            return null;
         }
         public async Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId)
         {
