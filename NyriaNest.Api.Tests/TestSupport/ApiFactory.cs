@@ -28,6 +28,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string JwtAudience = "NyriaNest.Client";
     public const string SeedAdminEmail = "superadmin@test.local";
     public const string AllowedOrigin = "https://frontend.test.local";
+    public const string FrontendBaseUrl = AllowedOrigin; // where emailed links point
     public const string SeedAdminPassword = "Test-SuperAdmin-123!";
 
     private readonly SqliteConnection _connection = SqliteDb.OpenConnection();
@@ -49,6 +50,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("SeedAdmin:Password", SeedAdminPassword);
         builder.UseSetting("ConnectionStrings:ConnectionToDB", "not-used-in-tests");
         builder.UseSetting("Cors:AllowedOrigins:0", AllowedOrigin);
+        builder.UseSetting("Frontend:BaseUrl", FrontendBaseUrl);
+        // High, so tests sharing a server never hit it; PasswordResetTests lowers it to test it
+        builder.UseSetting("RateLimiting:PasswordResetPermitLimit", "1000");
 
         builder.ConfigureServices(services =>
         {
