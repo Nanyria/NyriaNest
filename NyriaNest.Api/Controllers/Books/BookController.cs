@@ -7,6 +7,7 @@ using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Security.Claims;
 
+namespace NyriaNest.Api.Controllers.Books;
 
 [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
 [Route("api/[controller]")]

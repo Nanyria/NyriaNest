@@ -2,6 +2,7 @@
 using NyriaNest.Application.Books;
 using System.Security.Claims;
 
+namespace NyriaNest.Api.Controllers.Books;
 
 [Route("api/[controller]")]
 [ApiController]

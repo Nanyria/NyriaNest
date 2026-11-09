@@ -6,7 +6,7 @@ using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Accounts;
 using NyriaNest.Domain.Entities;
 
-namespace NyriaNest.Api.Controllers
+namespace NyriaNest.Api.Controllers.Accounts
 {
     [ApiController]
     [Route("api/[controller]")]

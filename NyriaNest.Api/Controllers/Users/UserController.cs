@@ -5,7 +5,7 @@ using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Users;
 using NyriaNest.Domain.Constants;
 
-namespace NyriaNest.Api.Controllers
+namespace NyriaNest.Api.Controllers.Users
 {
     [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
     [ApiController]
