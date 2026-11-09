@@ -34,6 +34,24 @@
   color: var(--nn-ink-strong);
 }
 
+/* Why the app logged the user out: information, not an error */
+.auth-form__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nn-space-2);
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--nn-gold-soft);
+  border-radius: var(--nn-radius);
+  background-color: var(--nn-surface-sunken);
+  color: var(--nn-ink);
+}
+
+.auth-form__notice .bi {
+  color: var(--nn-gold-ink);
+  margin-top: 2px;
+}
+
 .auth-form__error {
   display: flex;
   align-items: center;

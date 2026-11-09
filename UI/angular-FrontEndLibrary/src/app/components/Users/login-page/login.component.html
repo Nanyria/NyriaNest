@@ -4,6 +4,12 @@
     <p>Log in to continue your adventure.</p>
   </div>
 
+  @if (sessionNotice) {
+    <p class="auth-form__notice" role="status">
+      <i class="bi bi-shield-lock" aria-hidden="true"></i>{{ sessionNotice }}
+    </p>
+  }
+
   <div class="nn-field">
     <i class="bi bi-person-fill"></i>
     <input
