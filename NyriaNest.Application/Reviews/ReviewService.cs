@@ -15,7 +15,7 @@ namespace NyriaNest.Application.Reviews
         Task<APIResponse<CreateReviewItemDto>> CreateReviewAsync(CreateReviewItemDto reviewItemDto);
         // userId = who is asking. Only the review's author may change or delete it,
         // except isModerator: true lets any review or rating be deleted. Only admin
-        // endpoints pass it (#50); UserActionsController never does.
+        // endpoints pass it (#50); ReviewController never does.
         Task<APIResponse<ReviewItemDto>> EditReviewAsync(string userId, int reviewId, ReviewItemDto reviewItemDto);
         Task<APIResponse<ReviewItemDto>> RemoveReviewItemAsync(string userId, int reviewId, bool isModerator = false);
         Task<APIResponse<RatingItemDto>> EditRatingAsync(string userId, int reviewId, RatingItemDto ratingItemDto);

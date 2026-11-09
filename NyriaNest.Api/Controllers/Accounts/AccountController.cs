@@ -7,14 +7,14 @@ using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Users;
 using NyriaNest.Domain.Entities;
 
-namespace NyriaNest.Api.Controllers
+namespace NyriaNest.Api.Controllers.Accounts
 {
     // Everything here needs a login, except registering. The user an action applies to
     // is always the logged-in one, taken from the token – never from the URL or the body.
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
-    public class UserActionsController : ControllerBase
+    [Route("api/UserActions")]
+    public class AccountController : ControllerBase
     {
         private readonly IUserAdminService _users;
         private readonly IAccountService _accounts;
@@ -22,7 +22,7 @@ namespace NyriaNest.Api.Controllers
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
 
-        public UserActionsController(IUserAdminService users, IAccountService accounts, IProfilePictureService profilePictures,
+        public AccountController(IUserAdminService users, IAccountService accounts, IProfilePictureService profilePictures,
             UserManager<User> userManager, ITokenService tokens)
         {
             _users = users;
