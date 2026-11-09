@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NyriaNest.Application.Loans;
 using NyriaNest.Application.Mapping;
 using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Reviews;
@@ -20,6 +21,7 @@ namespace NyriaNest.Application
             services.AddScoped<IPasswordResetService, PasswordResetService>();
             services.AddScoped<IReadingListService, ReadingListService>();
             services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IAvailabilityService, AvailabilityService>();
 
             services.AddAutoMapper(cfg =>
             {

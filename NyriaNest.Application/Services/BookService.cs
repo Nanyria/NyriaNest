@@ -5,6 +5,7 @@ using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Books;
 using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
@@ -21,10 +22,8 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<int>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
         Task<APIResponse<bool>> DeleteBookAsync(int id);
         Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
-        Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId);
-        void RecalculateAvailabilityDates(Book book);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
         Task<APIResponse<bool>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
@@ -32,10 +31,6 @@ namespace NyriaNest.Application.Services
     }
     public class BookService : IBookService
     {
-        // How long a loan lasts. Used for the due date and for spacing out the
-        // reservation queue, so the two can't drift apart.
-        public const int LoanPeriodMonths = 1;
-
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IUserRepo _userRepo;
@@ -43,9 +38,10 @@ namespace NyriaNest.Application.Services
         private readonly IFileStorage _fileStorage;
         private readonly ILogger<BookService> _logger;
         private readonly IEpubService _epubService;
+        private readonly IAvailabilityService _availability;
 
         public BookService(IBookRepo bookRepo, IMapper mapper, IUserRepo userRepo, IAppDbContext dbContext,
-            IFileStorage fileStorage, ILogger<BookService> logger, IEpubService epubService)
+            IFileStorage fileStorage, ILogger<BookService> logger, IEpubService epubService, IAvailabilityService availability)
         {
             _bookRepo = bookRepo;
             _mapper = mapper;
@@ -54,6 +50,7 @@ namespace NyriaNest.Application.Services
             _fileStorage = fileStorage;
             _logger = logger;
             _epubService = epubService;
+            _availability = availability;
         }
 
         public async Task<APIResponse<Book>> GetBookByIdAsync(int id)
@@ -434,126 +431,6 @@ namespace NyriaNest.Application.Services
 
             return response;
         }
-        public async Task<APIResponse<Book>> UpdateBookStatusAsync(Book book, string? userId, BookStatusEnum bookStatus, string? notes)
-        {
-            var response = new APIResponse<Book>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            User? user = null;
-            if (!string.IsNullOrEmpty(userId))
-                user = await _userRepo.GetByIdAsync<User>(userId);
-
-            if (book == null)
-            {
-                response.ErrorMessages.Add("Book not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-
-            var newBookStatus = GetBookStatus(book, bookStatus);
-
-            // Only add status history if user is present
-            if (user != null)
-                AddStatusHistoryItem(user, book, bookStatus, notes);
-
-            book.BookStatus = newBookStatus.BookStatus;
-            book.CheckedOutBy = newBookStatus.CheckedOutBy ?? book.CheckedOutBy;
-            book.Reservations = newBookStatus.Reservations ?? book.Reservations;
-
-            if (user != null)
-                await _userRepo.UpdateAsync(user);
-
-            await _bookRepo.UpdateAsync(book);
-            await _bookRepo.SaveAsync();
-
-            response.Result = newBookStatus;
-            response.IsSuccess = true;
-            response.StatusCode = HttpStatusCode.OK;
-            return response;
-        }
-        /// <summary>
-        /// Recalculates when the book is expected to be available for each person in
-        /// the reservation queue. Call it whenever the loan or the queue changes.
-        /// A reservation's AvailabilityDate is an estimate, not a hold expiry.
-        /// </summary>
-        // Plain (not async) on purpose: it only updates tracked entities in memory,
-        // and callers used to block on it with .Wait(), which can deadlock.
-        public void RecalculateAvailabilityDates(Book book)
-        {
-            // The queue starts when the current loan is due, or today if nobody has the book
-            var baseDate = book.CheckedOutBy?.ReturnDate ?? DateTime.UtcNow;
-
-            // First come, first served
-            var queue = book.Reservations
-                .OrderBy(r => r.ReservationDate)
-                .ToList();
-
-            // Each person after the first waits one more loan period
-            for (int i = 0; i < queue.Count; i++)
-            {
-                queue[i].AvailabilityDate = baseDate.AddMonths(i * LoanPeriodMonths);
-            }
-
-            // The book's own date is when the last person in the queue gets it
-            // (or when it's free, if there's no queue)
-            book.AvailabilityDate = queue.Count > 0
-                ? queue[^1].AvailabilityDate ?? baseDate
-                : baseDate;
-        }
-        public void AddStatusHistoryItem(User user, Book book, BookStatusEnum bookStatus, string? notes)
-        {
-            var statusHistoryItem = new StatusHistoryItem
-            {
-                UserId = user.Id,
-                BookId = book.BookId,
-                BookStatus = bookStatus,
-                Timestamp = DateTime.UtcNow,
-                Notes = notes
-            };
-
-            _dbContext.StatusHistoryItems.Add(statusHistoryItem);
-            user.UserHistory.Add(statusHistoryItem);
-            book.StatusHistory.Add(statusHistoryItem);
-
-        }
-        public Book GetBookStatus(Book book, BookStatusEnum bookStatus)
-        {
-            // An admin-set status (Lost/Removed) always wins
-            if (book.AdminStatus is BookStatusEnum.Lost or BookStatusEnum.Removed)
-            {
-                book.BookStatus = book.AdminStatus.Value;
-                return book;
-            }
-            // If the book was checked out and the user is now removed
-            if (book.CheckedOutBy == null && (bookStatus == BookStatusEnum.CheckedOut || bookStatus == BookStatusEnum.Returned))
-            {
-                // If there are reservations, set to Reserved, else Available
-                book.BookStatus = (book.Reservations != null && book.Reservations.Any())
-                    ? BookStatusEnum.Reserved
-                    : BookStatusEnum.Available;
-            }
-            else if (bookStatus == BookStatusEnum.Returned)
-            {
-                // Returned while someone still has the book: a cancelled reservation,
-                // not a return (a return clears CheckedOutBy first and is handled above).
-                // The loan still decides, so the book stays checked out (#39).
-                book.BookStatus = BookStatusEnum.CheckedOut;
-            }
-            else if (book.BookStatus != bookStatus)
-            {
-                // Determine status based on CheckedOutBy and Reservations
-                book.BookStatus = book.CheckedOutBy != null
-                    ? BookStatusEnum.CheckedOut
-                    : (book.Reservations != null && book.Reservations.Any())
-                        ? BookStatusEnum.Reserved
-                        : BookStatusEnum.Available;
-            }
-
-            return book;
-        }
         public async Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId)
         {
             var response = new APIResponse<List<StatusHistoryItemDto>>
@@ -673,7 +550,7 @@ namespace NyriaNest.Application.Services
             book.AdminStatus = status;
             book.AdminStatusSetAt = DateTime.UtcNow;
             book.AdminStatusNotes = notes;
-            GetBookStatus(book, status);
+            _availability.GetBookStatus(book, status);
 
             await AddHistoryIfAdminAsync(adminUserId, book, status, notes);
             await _bookRepo.UpdateAsync(book);
@@ -695,7 +572,7 @@ namespace NyriaNest.Application.Services
             book.AdminStatusSetAt = null;
             book.AdminStatusNotes = null;
             // "Returned" makes GetBookStatus recompute: Reserved if there are reservations, else Available
-            GetBookStatus(book, BookStatusEnum.Returned);
+            _availability.GetBookStatus(book, BookStatusEnum.Returned);
 
             await AddHistoryIfAdminAsync(adminUserId, book, book.BookStatus, "Restored by admin");
             await _bookRepo.UpdateAsync(book);
@@ -711,7 +588,7 @@ namespace NyriaNest.Application.Services
         {
             if (string.IsNullOrEmpty(adminUserId)) return;
             var admin = await _userRepo.GetByIdAsync<User>(adminUserId);
-            if (admin != null) AddStatusHistoryItem(admin, book, status, notes);
+            if (admin != null) _availability.AddStatusHistoryItem(admin, book, status, notes);
         }
 
     }

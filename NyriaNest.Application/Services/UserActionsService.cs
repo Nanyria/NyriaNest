@@ -6,6 +6,7 @@ using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
@@ -35,18 +36,20 @@ namespace NyriaNest.Application.Services
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
         private readonly IBookService _bookService;
+        private readonly IAvailabilityService _availability;
         private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
         private readonly IProfilePictureService _profilePictures;
 
-        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
+        public UserActionsService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAvailabilityService availability, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
         {
             _profilePictures = profilePictures;
             _userRepo = userRepo;
             _bookRepo = bookRepo;
             _mapper = mapper;
             _bookService = bookService;
+            _availability = availability;
             _dbContext = dbContext;
             _userManager = userManager;
             _emailService = emailService;
@@ -262,7 +265,7 @@ namespace NyriaNest.Application.Services
 
                 AddReservation(user, book);
 
-                await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Reserved, $"Book reserved by {user.UserName}"); // Update the book status to Reserved
+                await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Reserved, $"Book reserved by {user.UserName}"); // Update the book status to Reserved
 
                 await _dbContext.SaveChangesAsync();
 
@@ -295,7 +298,7 @@ namespace NyriaNest.Application.Services
             _dbContext.ReservationItems.Add(reservation);
 
             // Now update all availability dates, including the new reservation
-            _bookService.RecalculateAvailabilityDates(book);
+            _availability.RecalculateAvailabilityDates(book);
         }
 
         public bool RemoveReservation(User user, Book book)
@@ -310,7 +313,7 @@ namespace NyriaNest.Application.Services
                 _dbContext.ReservationItems.Remove(reservationItem);
 
                 // Update all availability dates for remaining reservations
-                _bookService.RecalculateAvailabilityDates(book);
+                _availability.RecalculateAvailabilityDates(book);
 
                 return true;
             }
@@ -338,7 +341,7 @@ namespace NyriaNest.Application.Services
                 if (RemoveReservation(user, book))
                 {
                     // Returned means "recalculate": Reserved if others are still queued, otherwise Available
-                    await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Reservation cancelled by {user.UserName}");
+                    await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Reservation cancelled by {user.UserName}");
 
                     await _userRepo.SaveAsync();
                     await _bookRepo.SaveAsync();
@@ -451,12 +454,12 @@ namespace NyriaNest.Application.Services
             SetCheckedOutBook(user, book);
 
             // The rest of the queue now waits for this new loan's due date
-            _bookService.RecalculateAvailabilityDates(book);
+            _availability.RecalculateAvailabilityDates(book);
 
             try
             {
                 // UpdateBookStatusAsync saves the changes
-                await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.CheckedOut, $"Checked out by {user.UserName}");
+                await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.CheckedOut, $"Checked out by {user.UserName}");
                 await _userRepo.UpdateAsync(user);
                 await _userRepo.SaveAsync();
             }
@@ -483,7 +486,7 @@ namespace NyriaNest.Application.Services
                 BookId = book.BookId,
                 UserId = user.Id,
                 CheckOutDate = DateTime.UtcNow,
-                ReturnDate = DateTime.UtcNow.AddMonths(BookService.LoanPeriodMonths), // the due date
+                ReturnDate = DateTime.UtcNow.AddMonths(AvailabilityService.LoanPeriodMonths), // the due date
             };
             user.CheckedOutBooks.Add(checkedOutItem);
             book.CheckedOutBy = checkedOutItem;
@@ -514,9 +517,9 @@ namespace NyriaNest.Application.Services
 
                 // The book may come back early, so the queue restarts from today
                 // instead of from the old due date
-                _bookService.RecalculateAvailabilityDates(book);
+                _availability.RecalculateAvailabilityDates(book);
 
-                await _bookService.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Returned by {user.UserName}");
+                await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Returned by {user.UserName}");
 
                 await _userRepo.SaveAsync();
                 await _bookRepo.SaveAsync();

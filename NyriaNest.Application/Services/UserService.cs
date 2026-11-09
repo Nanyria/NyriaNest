@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NyriaNest.Application.Common;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
@@ -27,16 +28,16 @@ namespace NyriaNest.Application.Services
         private readonly IUserRepo _userRepo;
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
-        private readonly IBookService _bookService;
+        private readonly IAvailabilityService _availability;
         private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
-        public UserService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
+        public UserService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IAvailabilityService availability, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
         {
             _userRepo = userRepo;
             _bookRepo = bookRepo;
             _mapper = mapper;
-            _bookService = bookService;
+            _availability = availability;
             _dbContext = dbContext;
             _userManager = userManager;
             _emailService = emailService;
@@ -157,8 +158,8 @@ namespace NyriaNest.Application.Services
                     // As after a cancel or a return: the queue may move up, and "Returned"
                     // makes the status be worked out again (CheckedOut, Reserved or Available).
                     // Passing the book's old status left it Reserved with an empty queue (#118).
-                    _bookService.RecalculateAvailabilityDates(book);
-                    await _bookService.UpdateBookStatusAsync(book, null, BookStatusEnum.Returned, "Updated after user deletion");
+                    _availability.RecalculateAvailabilityDates(book);
+                    await _availability.UpdateBookStatusAsync(book, null, BookStatusEnum.Returned, "Updated after user deletion");
                 }
 
                 await _dbContext.SaveChangesAsync();
