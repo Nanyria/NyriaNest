@@ -6,7 +6,6 @@ using NyriaNest.Application.Accounts;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Loans;
-using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Users;
 using NyriaNest.Domain.Entities;
@@ -25,13 +24,12 @@ namespace NyriaNest.Api.Controllers
         private readonly IProfilePictureService _profilePictures;
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
-        private readonly IReadingListService _readingList;
         private readonly IReviewService _reviews;
         private readonly IReservationService _reservations;
         private readonly ILoanService _loans;
 
         public UserActionsController(IUserAdminService users, IAccountService accounts, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews, IReservationService reservations, ILoanService loans)
+            UserManager<User> userManager, ITokenService tokens, IReviewService reviews, IReservationService reservations, ILoanService loans)
         {
             _reviews = reviews;
             _reservations = reservations;
@@ -41,7 +39,6 @@ namespace NyriaNest.Api.Controllers
             _profilePictures = profilePictures;
             _userManager = userManager;
             _tokens = tokens;
-            _readingList = readingList;
         }
 
         // Own things only, for every role. What admins do for or to other users
@@ -183,28 +180,5 @@ namespace NyriaNest.Api.Controllers
             var response = await _reviews.RemoveRatingAsync(User.GetUserId(), reviewId);
             return StatusCode((int)response.StatusCode, response);
         }
-
-        // Favorite methods
-
-        [HttpGet("favorites")]
-        public async Task<IActionResult> GetFavoriteBooks()
-        {
-            var response = await _readingList.GetFavoriteItemsAsync(User.GetUserId());
-            return StatusCode((int)response.StatusCode, response);
-        }
-
-        [HttpPut("favorite/{bookId}")]
-        public async Task<IActionResult> AddToFavorites([FromRoute] int bookId)
-        {
-            var response = await _readingList.AddToFavoritesAsync(User.GetUserId(), bookId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-        [HttpDelete("unfavorite/{bookId}")]
-        public async Task<IActionResult> RemoveFromFavorites([FromRoute] int bookId)
-        {
-            var response = await _readingList.RemoveFromFavoritesAsync(User.GetUserId(), bookId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-
     }
 }
