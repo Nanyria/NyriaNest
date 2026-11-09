@@ -27,12 +27,14 @@ namespace NyriaNest.Api.Controllers
         private readonly IReadingListService _readingList;
         private readonly IReviewService _reviews;
         private readonly IReservationService _reservations;
+        private readonly ILoanService _loans;
 
         public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews, IReservationService reservations)
+            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList, IReviewService reviews, IReservationService reservations, ILoanService loans)
         {
             _reviews = reviews;
             _reservations = reservations;
+            _loans = loans;
             _userService = userService;
             _userActionsService = userActionsService;
             _profilePictures = profilePictures;
@@ -105,21 +107,21 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("checkedout")]
         public async Task<IActionResult> GetCheckedOutBooks()
         {
-            var response = await _userActionsService.GetCheckedOutBooksAsync(CurrentUserId);
+            var response = await _loans.GetCheckedOutBooksAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
 
         [HttpPut("borrow/{bookId}")]
         public async Task<IActionResult> BorrowBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.CheckOutBookAsync(CurrentUserId, bookId);
+            var response = await _loans.CheckOutBookAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
         [HttpPut("return/{bookId}")]
         public async Task<IActionResult> ReturnBook([FromRoute] int bookId)
         {
-            var response = await _userActionsService.ReturnBookAsync(CurrentUserId, bookId);
+            var response = await _loans.ReturnBookAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 

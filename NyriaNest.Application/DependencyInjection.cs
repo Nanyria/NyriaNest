@@ -23,6 +23,7 @@ namespace NyriaNest.Application
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IAvailabilityService, AvailabilityService>();
             services.AddScoped<IReservationService, ReservationService>();
+            services.AddScoped<ILoanService, LoanService>();
 
             services.AddAutoMapper(cfg =>
             {
