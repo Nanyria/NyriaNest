@@ -14,7 +14,6 @@ namespace NyriaNest.Application.Services
 {
     public interface IBookService
     {
-        Task<APIResponse<List<Book>>> GetAllBooksAsync();
         Task<APIResponse<Book>> GetBookByIdAsync(int id);
         Task<APIResponse<EditBookDto>> GetBookForEditAsync(int id);
         // Accept optional userId of the actor who adds the book
@@ -58,28 +57,6 @@ namespace NyriaNest.Application.Services
             _epubService = epubService;
         }
 
-        public async Task<APIResponse<List<Book>>> GetAllBooksAsync()
-        {
-            var response = new APIResponse<List<Book>>();
-
-            try
-            {
-                var books = await _bookRepo.GetAllAsync();
-
-
-                response.Result = books.ToList();
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-            }
-            catch (Exception ex)
-            {
-                response.IsSuccess = false;
-                response.ErrorMessages.Add(ex.Message);
-                response.StatusCode = HttpStatusCode.InternalServerError;
-            }
-
-            return response;
-        }
         public async Task<APIResponse<Book>> GetBookByIdAsync(int id)
         {
             var response = new APIResponse<Book>();

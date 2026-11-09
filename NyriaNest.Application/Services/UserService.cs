@@ -15,7 +15,6 @@ namespace NyriaNest.Application.Services
         // callerId / callerIsSuperAdmin = the admin asking. The rules are in AdminMayNotUpdate/-Delete.
         Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
         Task<APIResponse<UserDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
-        Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
         Task<APIResponse<UserDto>> GetUserByIdAsync(string userId);
         Task<APIResponse<List<UserDto>>> GetAllUsersAsync();
         Task<APIResponse<CreateAdminUserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto);
@@ -288,50 +287,6 @@ namespace NyriaNest.Application.Services
 
                 // The same shape as GET api/User returns, without Identity internals
                 var updatedUserDto = _mapper.Map<UserDto>(user);
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-                response.Result = updatedUserDto;
-            }
-            else
-            {
-                response.ErrorMessages.Add("User not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-            }
-            return response;
-        }
-        public async Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate)
-        {
-            var response = new APIResponse<UpdateUserDto>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            if (user != null)
-            {
-
-                // Map UpdateUserDto to User
-                _mapper.Map(userToUpdate, user);
-
-                if (!string.IsNullOrWhiteSpace(userToUpdate.Password))
-                {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, userToUpdate.Password);
-                    if (!passwordResult.Succeeded)
-                    {
-                        response.ErrorMessages.AddRange(passwordResult.Errors.Select(e => e.Description));
-                        return response;
-                    }
-                }
-
-                var updateResult = await _userManager.UpdateAsync(user);
-                if (!updateResult.Succeeded)
-                {
-                    response.ErrorMessages.AddRange(updateResult.Errors.Select(e => e.Description));
-                    return response;
-                }
-
-                var updatedUserDto = _mapper.Map<UpdateUserDto>(user);
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
                 response.Result = updatedUserDto;
