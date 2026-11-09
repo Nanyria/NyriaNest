@@ -6,7 +6,7 @@ using NyriaNest.Domain.Entities;
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Accounts
 {
     public record ProfilePictureFile(Stream Content, string ContentType);
 

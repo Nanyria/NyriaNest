@@ -30,14 +30,6 @@ namespace NyriaNest.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<Book>> GetAllAsync()
-        {
-            return await _db.Books
-                .Include(b => b.CheckedOutBy)
-                .Include(b => b.Reviews)// to access current status
-                .ToListAsync();
-        }
-
         public async Task<Book?> GetByIdAsync(int id)
         {
             return await _db.Books

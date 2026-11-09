@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Application.Services;
+using NyriaNest.Application.Books;
 using NyriaNest.Domain.Constants;
 using System.Security.Claims;
 
-namespace NyriaNest.Api.Controllers
+namespace NyriaNest.Api.Controllers.Books
 {
     [Route("api/Book/{bookId:int}/epub")]
     [ApiController]

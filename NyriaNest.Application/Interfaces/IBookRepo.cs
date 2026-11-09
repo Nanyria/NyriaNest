@@ -6,7 +6,6 @@ namespace NyriaNest.Application.Interfaces
 {
     public interface IBookRepo
     {
-        Task<IEnumerable<Book>> GetAllAsync();
         Task<Book?> GetByIdAsync(int bookId);
         /// <summary>The book's status history, newest first, with the book loaded. Read-only.</summary>
         Task<List<StatusHistoryItem>> GetStatusHistoryAsync(int bookId);

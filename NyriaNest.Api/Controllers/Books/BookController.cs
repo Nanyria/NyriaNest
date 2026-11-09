@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Controllers;
+using NyriaNest.Application.Books;
 using NyriaNest.Application.DTOs.Books;
-using NyriaNest.Application.Services;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Security.Claims;
 
+namespace NyriaNest.Api.Controllers.Books;
 
 [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
 [Route("api/[controller]")]
@@ -85,14 +86,6 @@ public class BookController : ControllerBase
     public async Task<IActionResult> GetBookHistory(int bookId)
     {
         var response = await _bookService.GetBookHistoryAsync(bookId);
-        return StatusCode((int)response.StatusCode, response);
-    }
-
-    /// <summary>The whole reservation queue, oldest first, with each reader's name (admins only, #71).</summary>
-    [HttpGet("{bookId:int}/reservations")]
-    public async Task<IActionResult> GetBookReservations(int bookId)
-    {
-        var response = await _bookService.GetBookReservationsAsync(bookId);
         return StatusCode((int)response.StatusCode, response);
     }
 

@@ -1,7 +1,12 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NyriaNest.Application.Accounts;
+using NyriaNest.Application.Books;
+using NyriaNest.Application.Loans;
 using NyriaNest.Application.Mapping;
-using NyriaNest.Application.Services;
+using NyriaNest.Application.ReadingList;
+using NyriaNest.Application.Reviews;
+using NyriaNest.Application.Users;
 
 namespace NyriaNest.Application
 {
@@ -11,11 +16,16 @@ namespace NyriaNest.Application
         public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<IBookService, BookService>();
-            services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IUserActionsService, UserActionsService>();
+            services.AddScoped<IUserAdminService, UserAdminService>();
+            services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IEpubService, EpubService>();
             services.AddScoped<IProfilePictureService, ProfilePictureService>();
             services.AddScoped<IPasswordResetService, PasswordResetService>();
+            services.AddScoped<IReadingListService, ReadingListService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IAvailabilityService, AvailabilityService>();
+            services.AddScoped<IReservationService, ReservationService>();
+            services.AddScoped<ILoanService, LoanService>();
 
             services.AddAutoMapper(cfg =>
             {

@@ -4,39 +4,40 @@ using Microsoft.EntityFrameworkCore;
 using NyriaNest.Application.Common;
 using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
+using NyriaNest.Domain.Enums;
 using System.Net;
 
-namespace NyriaNest.Application.Services
+namespace NyriaNest.Application.Users
 {
-    public interface IUserService
+    public interface IUserAdminService
     {
         // callerId / callerIsSuperAdmin = the admin asking. The rules are in AdminMayNotUpdate/-Delete.
         Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId);
         Task<APIResponse<UserDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
-        Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
         Task<APIResponse<UserDto>> GetUserByIdAsync(string userId);
         Task<APIResponse<List<UserDto>>> GetAllUsersAsync();
         Task<APIResponse<CreateAdminUserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto);
         Task<APIResponse<List<StatusHistoryItem>>> GetUserHistoryAsync(string userId);
     }
 
-    public class UserService : IUserService
+    public class UserAdminService : IUserAdminService
     {
         private readonly IUserRepo _userRepo;
         private readonly IBookRepo _bookRepo;
         private readonly IMapper _mapper;
-        private readonly IBookService _bookService;
+        private readonly IAvailabilityService _availability;
         private readonly IAppDbContext _dbContext;
         private readonly UserManager<User> _userManager;
         private readonly IEmailService _emailService;
-        public UserService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IBookService bookService, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
+        public UserAdminService(IUserRepo userRepo, IBookRepo bookRepo, IMapper mapper, IAvailabilityService availability, IAppDbContext dbContext, UserManager<User> userManager, IEmailService emailService)
         {
             _userRepo = userRepo;
             _bookRepo = bookRepo;
             _mapper = mapper;
-            _bookService = bookService;
+            _availability = availability;
             _dbContext = dbContext;
             _userManager = userManager;
             _emailService = emailService;
@@ -55,7 +56,12 @@ namespace NyriaNest.Application.Services
                 return response;
 
             }
-            CheckIfExists(createAdminUserDto.Email, createAdminUserDto.UserName);
+            var taken = await CheckIfExistsAsync(createAdminUserDto.Email, createAdminUserDto.UserName);
+            if (taken != null)
+            {
+                response.ErrorMessages.Add(taken);
+                return response;
+            }
             var user = _mapper.Map<User>(createAdminUserDto);
 
             // Create user with password
@@ -80,18 +86,14 @@ namespace NyriaNest.Application.Services
             return response;
         }
 
-        private void CheckIfExists(string email, string userName)
+        // The reason the email or username can't be used, or null if both are free
+        private async Task<string?> CheckIfExistsAsync(string email, string userName)
         {
-            var user = _userRepo.GetByEmailAsync<User>(email).Result;
-            if (user != null)
-            {
-                throw new Exception("Email already exists.");
-            }
-            var userNameExists = _userRepo.GetByUserNameAsync<User>(userName).Result;
-            if (userNameExists != null)
-            {
-                throw new Exception("UserName already exists.");
-            }
+            if (await _userRepo.GetByEmailAsync<User>(email) != null)
+                return "Email already exists.";
+            if (await _userRepo.GetByUserNameAsync<User>(userName) != null)
+                return "UserName already exists.";
+            return null;
         }
         public async Task<APIResponse<UserDto>> DeleteUserAsync(bool callerIsSuperAdmin, string userId)
         {
@@ -134,13 +136,15 @@ namespace NyriaNest.Application.Services
                 var statusHistory = await _dbContext.StatusHistoryItems.Where(s => s.UserId == userId).ToListAsync();
                 _dbContext.StatusHistoryItems.RemoveRange(statusHistory);
 
-                // Remove from Book lists (if needed, EF should handle this if relationships are set up with cascade delete)
-                // But to be explicit, update each affected book:
+                // Put right the books the user had a loan or a reservation on. Other books
+                // aren't affected: their status and queue don't depend on this user.
                 var books = await _dbContext.Books
                     .Include(b => b.Reservations)
                     .Include(b => b.CheckedOutBy)
                     .Include(b => b.Reviews)
                     .Include(b => b.StatusHistory)
+                    .Where(b => b.Reservations.Any(r => r.UserId == userId)
+                        || (b.CheckedOutBy != null && b.CheckedOutBy.UserId == userId))
                     .ToListAsync();
 
                 foreach (var book in books)
@@ -152,8 +156,11 @@ namespace NyriaNest.Application.Services
                     book.Reviews.RemoveAll(r => r.UserId == userId);
                     book.StatusHistory.RemoveAll(s => s.UserId == userId);
 
-                    // Always update status after user-related items are removed
-                    await _bookService.UpdateBookStatusAsync(book, null, book.BookStatus, "Updated after user deletion");
+                    // As after a cancel or a return: the queue may move up, and "Returned"
+                    // makes the status be worked out again (CheckedOut, Reserved or Available).
+                    // Passing the book's old status left it Reserved with an empty queue (#118).
+                    _availability.RecalculateAvailabilityDates(book);
+                    await _availability.UpdateBookStatusAsync(book, null, BookStatusEnum.Returned, "Updated after user deletion");
                 }
 
                 await _dbContext.SaveChangesAsync();
@@ -288,50 +295,6 @@ namespace NyriaNest.Application.Services
 
                 // The same shape as GET api/User returns, without Identity internals
                 var updatedUserDto = _mapper.Map<UserDto>(user);
-                response.IsSuccess = true;
-                response.StatusCode = HttpStatusCode.OK;
-                response.Result = updatedUserDto;
-            }
-            else
-            {
-                response.ErrorMessages.Add("User not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-            }
-            return response;
-        }
-        public async Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate)
-        {
-            var response = new APIResponse<UpdateUserDto>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            if (user != null)
-            {
-
-                // Map UpdateUserDto to User
-                _mapper.Map(userToUpdate, user);
-
-                if (!string.IsNullOrWhiteSpace(userToUpdate.Password))
-                {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, userToUpdate.Password);
-                    if (!passwordResult.Succeeded)
-                    {
-                        response.ErrorMessages.AddRange(passwordResult.Errors.Select(e => e.Description));
-                        return response;
-                    }
-                }
-
-                var updateResult = await _userManager.UpdateAsync(user);
-                if (!updateResult.Succeeded)
-                {
-                    response.ErrorMessages.AddRange(updateResult.Errors.Select(e => e.Description));
-                    return response;
-                }
-
-                var updatedUserDto = _mapper.Map<UpdateUserDto>(user);
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
                 response.Result = updatedUserDto;

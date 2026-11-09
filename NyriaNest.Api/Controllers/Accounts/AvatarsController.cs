@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NyriaNest.Application.Services;
+using NyriaNest.Application.Accounts;
 
-namespace NyriaNest.Api.Controllers
+namespace NyriaNest.Api.Controllers.Accounts
 {
     /// <summary>
     /// Serves uploaded profile pictures. Public, because an img tag can't send the

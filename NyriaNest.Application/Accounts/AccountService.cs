@@ -1,0 +1,176 @@
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
+using NyriaNest.Application.Common;
+using NyriaNest.Application.DTOs.Users;
+using NyriaNest.Application.Interfaces;
+using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
+using System.Net;
+
+namespace NyriaNest.Application.Accounts
+{
+    public interface IAccountService
+    {
+        // Register methods
+        Task<APIResponse<CreateUserDto>> AddUserAsync(CreateUserDto createUserDTO);
+        Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate);
+    }
+
+    /// <summary>
+    /// The user's own account: register and update profile, email and password.
+    /// Was UserActionsService; the rest of it moved to feature services (#116).
+    /// </summary>
+    public class AccountService : IAccountService
+    {
+        private readonly IUserRepo _userRepo;
+        private readonly IMapper _mapper;
+        private readonly UserManager<User> _userManager;
+        private readonly IEmailService _emailService;
+        private readonly IProfilePictureService _profilePictures;
+
+        public AccountService(IUserRepo userRepo, IMapper mapper, UserManager<User> userManager, IEmailService emailService, IProfilePictureService profilePictures)
+        {
+            _profilePictures = profilePictures;
+            _userRepo = userRepo;
+            _mapper = mapper;
+            _userManager = userManager;
+            _emailService = emailService;
+        }
+        //Register methods
+        public async Task<APIResponse<CreateUserDto>> AddUserAsync(CreateUserDto createUserDTO)
+        {
+            var response = new APIResponse<CreateUserDto>
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest
+            };
+            var taken = await CheckIfExistsAsync(createUserDTO.Email, createUserDTO.UserName);
+            if (taken != null)
+            {
+                response.ErrorMessages.Add(taken);
+                return response;
+            }
+
+            var user = _mapper.Map<User>(createUserDTO);
+            user.Role = Roles.User; // always, whatever the request contains
+            // Create user with password
+            var result = await _userManager.CreateAsync(user, createUserDTO.Password);
+            if (!result.Succeeded)
+            {
+                response.ErrorMessages.AddRange(result.Errors.Select(e => e.Description));
+                return response;
+            }
+            await _userManager.AddToRoleAsync(user, Roles.User);
+            await _emailService.SendRegistrationEmailAsync(
+                createUserDTO.Email,
+                createUserDTO.FirstName,
+                createUserDTO.UserName
+            );
+
+            var createdUserDto = _mapper.Map<CreateUserDto>(user);
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.Created;
+            response.Result = createdUserDto;
+            return response;
+        }
+
+        public async Task<APIResponse<UpdateUserDto>> UpdateUserAsync(string userId, UpdateUserDto userToUpdate)
+        {
+            var response = new APIResponse<UpdateUserDto>
+            {
+                IsSuccess = false,
+                StatusCode = HttpStatusCode.BadRequest
+            };
+            var user = await _userRepo.GetByIdAsync<User>(userId);
+            if (user != null)
+            {
+                // Names are optional in the request (null = unchanged), but can't be cleared
+                if ((userToUpdate.FirstName != null && string.IsNullOrWhiteSpace(userToUpdate.FirstName))
+                    || (userToUpdate.LastName != null && string.IsNullOrWhiteSpace(userToUpdate.LastName)))
+                {
+                    response.ErrorMessages.Add("First name and last name can't be empty.");
+                    return response;
+                }
+
+                if (userToUpdate.Bio != null && userToUpdate.Bio.Length > UserLimits.BioMaxLength)
+                {
+                    response.ErrorMessages.Add($"The bio can be at most {UserLimits.BioMaxLength} characters.");
+                    return response;
+                }
+
+                // A preset or the user's own upload, never any URL: other readers' browsers load it
+                if (userToUpdate.ProfilePictureUrl != null && !_profilePictures.IsAllowed(userToUpdate.ProfilePictureUrl, user))
+                {
+                    response.ErrorMessages.Add("Choose one of the preset pictures or upload your own.");
+                    return response;
+                }
+                var oldPicture = user.ProfilePictureUrl;
+
+                // Changing the password or the email needs the current password.
+                // Resending the email you already have (the profile page does) doesn't count.
+                var changesPassword = !string.IsNullOrWhiteSpace(userToUpdate.Password);
+                var changesEmail = !string.IsNullOrWhiteSpace(userToUpdate.Email)
+                    && !string.Equals(userToUpdate.Email, user.Email, StringComparison.OrdinalIgnoreCase);
+                if ((changesPassword || changesEmail)
+                    && (string.IsNullOrEmpty(userToUpdate.CurrentPassword)
+                        || !await _userManager.CheckPasswordAsync(user, userToUpdate.CurrentPassword)))
+                {
+                    response.ErrorMessages.Add("The current password you entered is incorrect. Please try again.");
+                    return response;
+                }
+
+                // Map UpdateUserDto to User
+                _mapper.Map(userToUpdate, user);
+
+                if (changesPassword)
+                {
+                    var passwordResult = await _userManager.ChangePasswordAsync(
+                        user, userToUpdate.CurrentPassword!, userToUpdate.Password!);
+                    if (!passwordResult.Succeeded)
+                    {
+                        response.ErrorMessages.AddRange(passwordResult.Errors.Select(e => e.Description));
+                        return response;
+                    }
+                }
+
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    response.ErrorMessages.AddRange(updateResult.Errors.Select(e => e.Description));
+                    return response;
+                }
+
+                // A new email ends the user's other sessions, like a new password (#113).
+                // The password change already renewed the security stamp; the email is set
+                // directly above, so its stamp is renewed here.
+                if (changesEmail)
+                    await _userManager.UpdateSecurityStampAsync(user);
+
+                // Switched away from an uploaded picture: its file isn't needed any more
+                if (user.ProfilePictureUrl != oldPicture)
+                    await _profilePictures.DeleteUploadAsync(oldPicture);
+
+                var updatedUserDto = _mapper.Map<UpdateUserDto>(user);
+                response.IsSuccess = true;
+                response.StatusCode = HttpStatusCode.OK;
+                response.Result = updatedUserDto;
+            }
+            else
+            {
+                response.ErrorMessages.Add("User not found.");
+                response.StatusCode = HttpStatusCode.NotFound;
+            }
+            return response;
+        }
+        // The reason the email or username can't be used, or null if both are free
+        private async Task<string?> CheckIfExistsAsync(string email, string userName)
+        {
+            if (await _userRepo.GetByEmailAsync<User>(email) != null)
+                return "Email already exists.";
+            if (await _userRepo.GetByUserNameAsync<User>(userName) != null)
+                return "UserName already exists.";
+            return null;
+        }
+    }
+}
+

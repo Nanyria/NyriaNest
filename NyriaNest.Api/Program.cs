@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using NyriaNest.Api.Auth;
-using NyriaNest.Api.Controllers;
+using NyriaNest.Api.Controllers.Accounts;
 using NyriaNest.Application;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Infrastructure;

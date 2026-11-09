@@ -1,12 +1,9 @@
-using AutoMapper;
 using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Application.Interfaces;
-using NyriaNest.Application.Services;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Enums;
-using BookServiceClass = NyriaNest.Application.Services.BookService;
 
 namespace NyriaNest.Api.Tests.Services.BookService;
 
@@ -17,17 +14,13 @@ namespace NyriaNest.Api.Tests.Services.BookService;
 /// </summary>
 public class RecalculateAvailabilityDatesTests
 {
-    private static readonly int Period = BookServiceClass.LoanPeriodMonths;
+    private static readonly int Period = AvailabilityService.LoanPeriodMonths;
 
     // Like GetBookStatusTests: the method only works on the book it's given
-    private readonly BookServiceClass _service = new(
-        Mock.Of<IBookRepo>(),
-        Mock.Of<IMapper>(),
+    private readonly AvailabilityService _service = new(
         Mock.Of<IUserRepo>(),
-        dbContext: null!,
-        Mock.Of<IFileStorage>(),
-        NullLogger<BookServiceClass>.Instance,
-        Mock.Of<IEpubService>());
+        Mock.Of<IBookRepo>(),
+        dbContext: null!);
 
     [Fact]
     public void WithALoan_TheQueueStartsAtTheDueDate_SpacedByTheLoanPeriod_InReservationOrder()
