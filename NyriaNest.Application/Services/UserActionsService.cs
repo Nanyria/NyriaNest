@@ -37,11 +37,6 @@ namespace NyriaNest.Application.Services
         Task<APIResponse<ReviewItemDto>> RemoveReviewItemAsync(string userId, int reviewId, bool isModerator = false);
         Task<APIResponse<RatingItemDto>> EditRatingAsync(string userId, int reviewId, RatingItemDto ratingItemDto);
         Task<APIResponse<RatingItemDto>> RemoveRatingAsync(string userId, int reviewId, bool isModerator = false);
-
-        // FavoriteItem methods
-        Task<APIResponse<List<FavoriteItemDto>>> GetFavoriteItemsAsync(string userId);
-        Task<APIResponse<FavoriteItemDto>> AddToFavoritesAsync(string userId, int bookId);
-        Task<APIResponse<FavoriteItemDto>> RemoveFromFavoritesAsync(string userId, int bookId);
     }
 
     public class UserActionsService : IUserActionsService
@@ -795,106 +790,6 @@ namespace NyriaNest.Application.Services
             response.ErrorMessages.Add("You do not have permission to change this review.");
             response.StatusCode = HttpStatusCode.Forbidden;
         }
-
-        // FavoriteItem methods
-        public async Task<APIResponse<List<FavoriteItemDto>>> GetFavoriteItemsAsync(string userId)
-        {
-            var response = new APIResponse<List<FavoriteItemDto>>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            if (user == null)
-            {
-                response.ErrorMessages.Add("User not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-            if (user.ReadList == null || !user.ReadList.Any())
-            {
-                response.ErrorMessages.Add("No favorites found for this user.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-
-            var favoriteDtos = _mapper.Map<List<FavoriteItemDto>>(user.ReadList);
-            response.IsSuccess = true;
-            response.StatusCode = HttpStatusCode.OK;
-            response.Result = favoriteDtos;
-            return response;
-        }
-        public async Task<APIResponse<FavoriteItemDto>> AddToFavoritesAsync(string userId, int bookId)
-        {
-            var response = new APIResponse<FavoriteItemDto>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            var user = await _userRepo.GetByIdAsync<User>(userId);
-            var book = await _bookRepo.GetByIdAsync(bookId);
-
-            if (user == null || book == null)
-            {
-                response.ErrorMessages.Add("User or Book not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-
-            // Prevent duplicates
-            if (user.ReadList.Any(f => f.BookId == bookId))
-            {
-                response.ErrorMessages.Add("Book already in favorites.");
-                response.StatusCode = HttpStatusCode.Conflict;
-                return response;
-            }
-
-            var newFavorite = new FavoriteItem
-            {
-                BookId = book.BookId,
-                UserId = user.Id,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _dbContext.FavoriteItems.Add(newFavorite);
-            user.ReadList.Add(newFavorite);
-            await _dbContext.SaveChangesAsync();
-
-            var resultDto = _mapper.Map<FavoriteItemDto>(newFavorite);
-            response.IsSuccess = true;
-            response.StatusCode = HttpStatusCode.Created;
-            response.Result = resultDto;
-            return response;
-        }
-        public async Task<APIResponse<FavoriteItemDto>> RemoveFromFavoritesAsync(string userId, int bookId)
-        {
-            var response = new APIResponse<FavoriteItemDto>
-            {
-                IsSuccess = false,
-                StatusCode = HttpStatusCode.BadRequest
-            };
-
-            var favorite = await _dbContext.FavoriteItems
-                .FirstOrDefaultAsync(f => f.UserId == userId && f.BookId == bookId);
-
-            if (favorite == null)
-            {
-                response.ErrorMessages.Add("Favorite item not found.");
-                response.StatusCode = HttpStatusCode.NotFound;
-                return response;
-            }
-
-            _dbContext.FavoriteItems.Remove(favorite);
-            await _dbContext.SaveChangesAsync();
-
-            response.IsSuccess = true;
-            response.StatusCode = HttpStatusCode.OK;
-            response.Result = _mapper.Map<FavoriteItemDto>(favorite);
-            return response;
-        }
-
-
     }
 }
 

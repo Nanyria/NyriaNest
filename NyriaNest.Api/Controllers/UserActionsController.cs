@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Users;
+using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Services;
 using NyriaNest.Domain.Entities;
 
@@ -21,15 +22,17 @@ namespace NyriaNest.Api.Controllers
         private readonly IProfilePictureService _profilePictures;
         private readonly UserManager<User> _userManager;
         private readonly ITokenService _tokens;
+        private readonly IReadingListService _readingList;
 
         public UserActionsController(IUserService userService, IUserActionsService userActionsService, IProfilePictureService profilePictures,
-            UserManager<User> userManager, ITokenService tokens)
+            UserManager<User> userManager, ITokenService tokens, IReadingListService readingList)
         {
             _userService = userService;
             _userActionsService = userActionsService;
             _profilePictures = profilePictures;
             _userManager = userManager;
             _tokens = tokens;
+            _readingList = readingList;
         }
 
         // Set by AuthController when it issues the token. [Authorize] guarantees a valid
@@ -183,20 +186,20 @@ namespace NyriaNest.Api.Controllers
         [HttpGet("favorites")]
         public async Task<IActionResult> GetFavoriteBooks()
         {
-            var response = await _userActionsService.GetFavoriteItemsAsync(CurrentUserId);
+            var response = await _readingList.GetFavoriteItemsAsync(CurrentUserId);
             return StatusCode((int)response.StatusCode, response);
         }
 
         [HttpPut("favorite/{bookId}")]
         public async Task<IActionResult> AddToFavorites([FromRoute] int bookId)
         {
-            var response = await _userActionsService.AddToFavoritesAsync(CurrentUserId, bookId);
+            var response = await _readingList.AddToFavoritesAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
         [HttpDelete("unfavorite/{bookId}")]
         public async Task<IActionResult> RemoveFromFavorites([FromRoute] int bookId)
         {
-            var response = await _userActionsService.RemoveFromFavoritesAsync(CurrentUserId, bookId);
+            var response = await _readingList.RemoveFromFavoritesAsync(CurrentUserId, bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 

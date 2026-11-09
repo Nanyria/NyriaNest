@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NyriaNest.Application.Mapping;
+using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Services;
 
 namespace NyriaNest.Application
@@ -16,6 +17,7 @@ namespace NyriaNest.Application
             services.AddScoped<IEpubService, EpubService>();
             services.AddScoped<IProfilePictureService, ProfilePictureService>();
             services.AddScoped<IPasswordResetService, PasswordResetService>();
+            services.AddScoped<IReadingListService, ReadingListService>();
 
             services.AddAutoMapper(cfg =>
             {
