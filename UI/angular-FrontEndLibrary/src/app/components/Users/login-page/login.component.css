@@ -24,12 +24,14 @@
   font-size: 0.95rem;
 }
 
-/* Styled like a link to match the mockup, but it's a placeholder for now */
 .auth-form__forgot {
   color: var(--nn-gold-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
-  cursor: default;
+}
+
+.auth-form__forgot:hover {
+  color: var(--nn-ink-strong);
 }
 
 .auth-form__error {

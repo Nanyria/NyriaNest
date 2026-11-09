@@ -31,7 +31,18 @@
       </div>
       <div class="nn-divider"><span class="nn-divider__mark"></span></div>
 
-      @if (!showRegister) {
+      @if (mode === 'forgot') {
+        <app-forgot-password></app-forgot-password>
+        <p class="start-auth__switch">
+          Remembered it?
+          <a class="nn-link-button" routerLink="/">Log in</a>
+        </p>
+      } @else if (mode === 'reset') {
+        <app-reset-password></app-reset-password>
+        <p class="start-auth__switch">
+          <a class="nn-link-button" routerLink="/">Back to log in</a>
+        </p>
+      } @else if (!showRegister) {
         <app-login></app-login>
         <p class="start-auth__switch">
           New to the Nest?

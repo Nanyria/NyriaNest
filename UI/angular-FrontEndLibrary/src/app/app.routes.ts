@@ -17,6 +17,10 @@ import { StartPageComponent } from './components/start-page/start-page.component
 import { MorePageComponent } from './components/more-page/more-page.component';
 export const routes: Routes = [
   { path: '', component: StartPageComponent, canActivate: [AuthGuard] }, // Add canActivate here
+  // Resetting a forgotten password (#51), in the start page's card. Open to everyone:
+  // they're for people who can't log in (and Settings links to the first one).
+  { path: 'forgot-password', component: StartPageComponent, data: { mode: 'forgot' } },
+  { path: 'reset-password', component: StartPageComponent, data: { mode: 'reset' } },
   {
     path: '',
     canActivateChild: [AuthGuard],

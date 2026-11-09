@@ -458,25 +458,17 @@
 }
 
 /* Why Save is grey: shown in place of Cancel while nothing has changed */
-/* "Forgot password?" on the right of the current-password label: muted, not a link
-   yet (#51), with a small Soon tag like the topbar's */
+/* "Forgot password?" on the right of the current-password label, a link like the
+   login page's */
 .settings__forgot {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   font-size: 0.85rem;
-  color: var(--nn-ink-faint);
-  cursor: default;
+  color: var(--nn-gold-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.settings__soon-tag {
-  padding: 0 6px;
-  border: 1px solid var(--nn-border-strong);
-  border-radius: var(--nn-radius-pill);
-  font-size: 0.65rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--nn-ink-muted);
+.settings__forgot:hover {
+  color: var(--nn-ink-strong);
 }
 
 /* Save profile, with a note under it while nothing has changed */

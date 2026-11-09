@@ -92,6 +92,16 @@ constructor(private http: HttpClient, private userService: UserService, private 
     localStorage.setItem('current_user', JSON.stringify(user));
   }
 
+  // Emails a reset link if an account has this email. The answer is the same either way.
+  forgotPassword(email: string): Observable<{ isSuccess: boolean; result: string }> {
+    return this.http.post<{ isSuccess: boolean; result: string }>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  // Sets a new password with the email and token from the emailed link
+  resetPassword(email: string, token: string, newPassword: string): Observable<{ isSuccess: boolean; result: string }> {
+    return this.http.post<{ isSuccess: boolean; result: string }>(`${this.apiUrl}/reset-password`, { email, token, newPassword });
+  }
+
   logout(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem('current_user');
