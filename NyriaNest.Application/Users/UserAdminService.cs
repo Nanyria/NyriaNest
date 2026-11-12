@@ -19,7 +19,7 @@ namespace NyriaNest.Application.Users
         Task<APIResponse<UserDto>> UpdateUserAsAdminAsync(string callerId, bool callerIsSuperAdmin, string userId, UpdateUserAsAdminDto userToUpdate);
         Task<APIResponse<UserDto>> GetUserByIdAsync(string userId);
         Task<APIResponse<List<UserDto>>> GetAllUsersAsync();
-        Task<APIResponse<CreateAdminUserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto);
+        Task<APIResponse<UserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto);
         Task<APIResponse<List<StatusHistoryItem>>> GetUserHistoryAsync(string userId);
     }
 
@@ -43,9 +43,9 @@ namespace NyriaNest.Application.Users
             _emailService = emailService;
         }
 
-        public async Task<APIResponse<CreateAdminUserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto)
+        public async Task<APIResponse<UserDto>> CreateAdminUserAsync(CreateAdminUserDto createAdminUserDto)
         {
-            var response = new APIResponse<CreateAdminUserDto>
+            var response = new APIResponse<UserDto>
             {
                 IsSuccess = false,
                 StatusCode = HttpStatusCode.BadRequest
@@ -82,7 +82,8 @@ namespace NyriaNest.Application.Users
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.Created;
-            response.Result = createAdminUserDto;
+            // The created user, never the request: that carries the password (#122)
+            response.Result = _mapper.Map<UserDto>(user);
             return response;
         }
 
