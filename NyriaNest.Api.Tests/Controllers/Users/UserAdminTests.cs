@@ -59,6 +59,23 @@ public class UserAdminTests(ApiFactory factory) : IClassFixture<ApiFactory>
         (await IdOf(name)).Should().BeNull();
     }
 
+    // #122: the response used to echo the request, password included
+    [Fact]
+    public async Task CreateAdmin_ReturnsTheNewAdminAsAUserDto_WithoutThePassword()
+    {
+        var (superAdmin, _) = await factory.LoginAsAsync(Roles.SuperAdmin);
+        var name = NewName();
+
+        var response = await CreateAdmin(superAdmin, name, Roles.Admin);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        var result = JsonDocument.Parse(body).RootElement.GetProperty("result");
+        result.GetProperty("userId").GetString().Should().Be(await IdOf(name));
+        foreach (var field in new[] { "password", "passwordHash", "securityStamp" })
+            body.Should().NotContainEquivalentOf($"\"{field}\"");
+    }
+
     // ---- one user ----
 
     [Fact]
