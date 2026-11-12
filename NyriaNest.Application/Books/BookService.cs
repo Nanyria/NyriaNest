@@ -6,6 +6,7 @@ using NyriaNest.Application.DTOs.Books;
 using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Application.Loans;
+using NyriaNest.Application.Notifications;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
@@ -38,9 +39,11 @@ namespace NyriaNest.Application.Books
         private readonly ILogger<BookService> _logger;
         private readonly IEpubService _epubService;
         private readonly IAvailabilityService _availability;
+        private readonly INotificationService _notifications;
 
         public BookService(IBookRepo bookRepo, IMapper mapper, IUserRepo userRepo, IAppDbContext dbContext,
-            IFileStorage fileStorage, ILogger<BookService> logger, IEpubService epubService, IAvailabilityService availability)
+            IFileStorage fileStorage, ILogger<BookService> logger, IEpubService epubService, IAvailabilityService availability,
+            INotificationService notifications)
         {
             _bookRepo = bookRepo;
             _mapper = mapper;
@@ -50,6 +53,7 @@ namespace NyriaNest.Application.Books
             _logger = logger;
             _epubService = epubService;
             _availability = availability;
+            _notifications = notifications;
         }
 
         public async Task<APIResponse<Book>> GetBookByIdAsync(int id)
@@ -315,7 +319,8 @@ namespace NyriaNest.Application.Books
                 {
                     // Reservations go with the book (decided in #39). Their FK is Restrict,
                     // so they have to be removed explicitly, in the same save as the book.
-                    // Telling the readers is #75.
+                    // The readers are told in the same save (#75).
+                    await _notifications.NotifyBookRemovedAsync(bookToDelete, BookRemovedReason.DeletedByAdmin);
                     _dbContext.ReservationItems.RemoveRange(bookToDelete.Reservations);
                     await _bookRepo.DeleteAsync(bookToDelete);
                     await _bookRepo.SaveAsync();

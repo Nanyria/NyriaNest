@@ -4,6 +4,7 @@ using NyriaNest.Application.Accounts;
 using NyriaNest.Application.Books;
 using NyriaNest.Application.Loans;
 using NyriaNest.Application.Mapping;
+using NyriaNest.Application.Notifications;
 using NyriaNest.Application.ReadingList;
 using NyriaNest.Application.Reviews;
 using NyriaNest.Application.Users;
@@ -26,6 +27,7 @@ namespace NyriaNest.Application
             services.AddScoped<IAvailabilityService, AvailabilityService>();
             services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<ILoanService, LoanService>();
+            services.AddScoped<INotificationService, NotificationService>();
 
             services.AddAutoMapper(cfg =>
             {

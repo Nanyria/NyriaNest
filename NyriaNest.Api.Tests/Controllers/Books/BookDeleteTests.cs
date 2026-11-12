@@ -10,7 +10,7 @@ namespace NyriaNest.Api.Tests.Controllers.Books;
 /// <summary>
 /// #39 part B: DELETE api/Book/{bookId}. A book someone has borrowed can't be
 /// deleted; a book with only reservations can, and its reservations go with it
-/// (decided in #39; telling the readers is #75).
+/// (decided in #39). Telling the readers is tested in BookRemovedNotificationTests (#75).
 /// </summary>
 public class BookDeleteTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
