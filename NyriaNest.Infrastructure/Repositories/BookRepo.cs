@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using NyriaNest.Application.DTOs;
 using NyriaNest.Application.DTOs.Books;
 using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
