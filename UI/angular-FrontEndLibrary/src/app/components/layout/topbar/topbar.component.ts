@@ -4,12 +4,14 @@ import {
   HostListener,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../../Services/auth.service';
 import { LibraryUiService } from '../../../Services/library-ui.service';
-import { ILoggedInUser } from '../../../Models/interfaces';
+import { NotificationService } from '../../../Services/notification.service';
+import { ToastService } from '../../../Services/toast.service';
+import { ILoggedInUser, NotificationItem } from '../../../Models/interfaces';
 import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
 import {
   ADMIN_NAV,
@@ -30,7 +32,7 @@ type TopbarEntry =
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterModule, NgTemplateOutlet],
+  imports: [RouterModule, NgTemplateOutlet, DatePipe],
 })
 export class TopbarComponent {
   currentUser: ILoggedInUser | null = null;
@@ -50,9 +52,16 @@ export class TopbarComponent {
   readonly adminGroup = ADMIN_NAV;
   readonly defaultPicture = DEFAULT_PROFILE_PICTURE;
 
+  // The bell's dropdown: the newest unread notifications, loaded each time it opens
+  bellItems: NotificationItem[] = [];
+  bellState: 'loading' | 'error' | 'ready' = 'loading';
+  readonly bellLimit = 3;
+
   constructor(
     private authService: AuthService,
     private libraryUi: LibraryUiService,
+    private notificationService: NotificationService,
+    private toast: ToastService,
     private router: Router,
     private elementRef: ElementRef,
   ) {
@@ -77,8 +86,48 @@ export class TopbarComponent {
     if (!img.src.endsWith(this.defaultPicture)) img.src = this.defaultPicture;
   }
 
+  get unreadCount(): number {
+    return this.notificationService.unreadCount();
+  }
+
   get hasNewNotification(): boolean {
-    return !!this.currentUser?.notifications?.some((n) => !n.isRead);
+    return this.unreadCount > 0;
+  }
+
+  toggleNotifications(): void {
+    this.toggleMenu('notifications');
+    if (this.openMenu === 'notifications') this.loadBellItems();
+  }
+
+  loadBellItems(): void {
+    this.bellState = 'loading';
+    this.notificationService.getNotifications(true, 1, this.bellLimit).subscribe({
+      next: (response) => {
+        this.bellItems = response.result.items;
+        this.bellState = 'ready';
+      },
+      error: () => (this.bellState = 'error'),
+    });
+  }
+
+  // Stays in the list, shown as read, so the list doesn't jump under the pointer
+  markAsRead(item: NotificationItem): void {
+    if (item.isRead) return;
+    this.notificationService.markAsRead(item.id).subscribe({
+      next: () => (item.isRead = true),
+      error: () => this.toast.error("Couldn't mark the notification as read"),
+    });
+  }
+
+  markAllAsRead(): void {
+    this.notificationService.markAllAsRead().subscribe({
+      next: () => this.bellItems.forEach((item) => (item.isRead = true)),
+      error: () => this.toast.error("Couldn't mark the notifications as read"),
+    });
+  }
+
+  get hasUnreadInBell(): boolean {
+    return this.bellItems.some((item) => !item.isRead);
   }
 
   get isAdmin(): boolean {

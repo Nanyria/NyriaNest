@@ -82,3 +82,20 @@ export const LanguageDisplayNames: { [key in LanguageEnums]: string } = {
     [LanguageEnums.Swedish]: 'Swedish',
     [LanguageEnums.English]: 'English'
 }   
+
+// Travels as a number: must match the backend's NotificationType exactly.
+// Never change or reuse a number, only add at the end. Only BookRemoved is sent so far.
+export enum NotificationType {
+    BookRemoved = 0,
+    LoanRequested = 1,
+    LoanRequestAnswered = 2,
+    ReturnReminderDue = 3,
+    LoanOverdue = 4,
+    ReturnMarked = 5,
+    ReturnConfirmed = 6,
+    ReservationAvailable = 7,
+    SharedLibraryRequestAnswered = 8,
+    FriendRequestReceived = 9,
+    FriendRequestAccepted = 10,
+    FriendAddedBook = 11,
+}

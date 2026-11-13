@@ -1,0 +1,74 @@
+<section class="notifications">
+  <header class="notifications__header">
+    <i class="bi nn-icon-notification notifications__icon" aria-hidden="true"></i>
+    <div class="notifications__heading">
+      <h1 class="notifications__title">Notifications</h1>
+      <p class="notifications__subtitle">What has happened to your books.</p>
+    </div>
+    @if (hasUnread) {
+      <button type="button" class="nn-btn nn-btn--outline notifications__mark-all" (click)="markAllAsRead()">
+        Mark all as read
+      </button>
+    }
+  </header>
+
+  @switch (state) {
+    @case ('loading') {
+      <p class="notifications__state" aria-busy="true">Loading notifications…</p>
+    }
+    @case ('error') {
+      <div class="notifications__state">
+        <p>Couldn't load your notifications.</p>
+        <button type="button" class="nn-btn nn-btn--outline" (click)="load(page?.page ?? 1)">Try again</button>
+      </div>
+    }
+    @default {
+      @let p = page!;
+      @if (p.items.length === 0) {
+        <div class="notifications__state">
+          <p>No notifications</p>
+          <!-- e.g. a later page that has become empty -->
+          @if (p.page > 1 && p.totalCount > 0) {
+            <button type="button" class="nn-btn nn-btn--outline" (click)="load(1)">Go to the first page</button>
+          }
+        </div>
+      } @else {
+        <ul class="notifications__list nn-panel">
+          @for (item of p.items; track item.id) {
+            <li class="notifications__item" [class.is-unread]="!item.isRead">
+              <div class="notifications__body">
+                @if (!item.isRead) {
+                  <span class="visually-hidden">Unread: </span>
+                }
+                <p class="notifications__message">{{ item.message }}</p>
+                <span class="notifications__date">{{ item.createdAt | date: 'yyyy-MM-dd' }}</span>
+              </div>
+              @if (!item.isRead) {
+                <button type="button" class="nn-btn nn-btn--ghost notifications__mark" (click)="markAsRead(item)">
+                  Mark as read
+                </button>
+              }
+            </li>
+          }
+        </ul>
+
+        @if (totalPages > 1) {
+          <nav class="notifications__pager" aria-label="Pagination">
+            <span class="notifications__count">
+              Showing {{ (p.page - 1) * p.pageSize + 1 }}–{{ (p.page - 1) * p.pageSize + p.items.length }}
+              of {{ p.totalCount }}
+            </span>
+            <div class="notifications__pager-buttons">
+              <button type="button" class="nn-btn nn-btn--outline" [disabled]="p.page === 1" (click)="load(p.page - 1)">
+                Previous
+              </button>
+              <button type="button" class="nn-btn nn-btn--outline" [disabled]="p.page === totalPages" (click)="load(p.page + 1)">
+                Next
+              </button>
+            </div>
+          </nav>
+        }
+      }
+    }
+  }
+</section>

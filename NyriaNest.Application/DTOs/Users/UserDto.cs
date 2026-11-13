@@ -21,7 +21,6 @@ namespace NyriaNest.Application.DTOs.Users
         public List<CheckedOutItemDto> CheckedOutBooks { get; set; } = new List<CheckedOutItemDto>();
         public List<ReservationItemDto> ReservedBooks { get; set; } = new List<ReservationItemDto>();
         public List<StatusHistoryItemDto> UserHistory { get; set; } = new List<StatusHistoryItemDto>();
-        public List<NotificationItemDto> Notifications { get; set; } = new();
 
     }
 }

@@ -105,14 +105,68 @@
   }
 
   <div class="topbar__actions">
-    <span
-      class="topbar__bell"
-      [class.has-unread]="hasNewNotification"
-      [attr.aria-label]="hasNewNotification ? 'You have unread notifications' : 'No new notifications'"
-      role="img"
-    >
-      <i class="bi nn-icon-notification"></i>
-    </span>
+    <div class="topbar__notifications">
+      <button
+        type="button"
+        class="topbar__bell"
+        [class.has-unread]="hasNewNotification"
+        [attr.aria-label]="hasNewNotification ? 'Notifications, ' + unreadCount + ' unread' : 'Notifications, none unread'"
+        [attr.aria-expanded]="openMenu === 'notifications'"
+        aria-controls="topbar-notifications"
+        (click)="toggleNotifications()"
+      >
+        <i class="bi nn-icon-notification" aria-hidden="true"></i>
+      </button>
+
+      @if (openMenu === 'notifications') {
+        <div id="topbar-notifications" class="topbar__menu-panel topbar__notif-panel nn-panel" role="region" aria-label="Notifications">
+          <div class="topbar__notif-head">
+            <span class="topbar__notif-title">Notifications</span>
+            @if (hasUnreadInBell) {
+              <button type="button" class="topbar__notif-link" (click)="markAllAsRead()">Mark all as read</button>
+            }
+          </div>
+
+          @switch (bellState) {
+            @case ('loading') {
+              <p class="topbar__notif-state" aria-busy="true">Loading notifications…</p>
+            }
+            @case ('error') {
+              <p class="topbar__notif-state">
+                Couldn't load notifications.
+                <button type="button" class="topbar__notif-link" (click)="loadBellItems()">Try again</button>
+              </p>
+            }
+            @default {
+              @if (bellItems.length === 0) {
+                <p class="topbar__notif-state">No new notifications</p>
+              } @else {
+                <ul class="topbar__notif-list">
+                  @for (item of bellItems; track item.id) {
+                    <li>
+                      <button
+                        type="button"
+                        class="topbar__notif-item"
+                        [class.is-unread]="!item.isRead"
+                        [attr.aria-label]="(item.isRead ? '' : 'Unread: ') + item.message"
+                        [title]="item.isRead ? '' : 'Mark as read'"
+                        (click)="markAsRead(item)"
+                      >
+                        <span class="topbar__notif-message">{{ item.message }}</span>
+                        <span class="topbar__notif-date">{{ item.createdAt | date: 'yyyy-MM-dd' }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          }
+
+          <hr class="topbar__menu-rule" />
+          <a routerLink="/notifications" class="topbar__notif-all" (click)="openMenu = null">See all</a>
+        </div>
+      }
+    </div>
 
     <div class="topbar__user">
       <button

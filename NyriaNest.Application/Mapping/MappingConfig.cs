@@ -54,7 +54,6 @@ namespace NyriaNest.Application.Mapping
                 .ReverseMap()
                 .ForMember(dest => dest.User, opt => opt.Ignore());
 
-            CreateMap<NotificationItem, NotificationItemDto>().ReverseMap();
             CreateMap<ReviewItem, ReviewItemDto>()
                 .ForMember(dest => dest.Book, opt => opt.MapFrom(src => src.Book))
                 .ForMember(dest => dest.RatingItem, opt => opt.MapFrom(src => src.RatingItem))

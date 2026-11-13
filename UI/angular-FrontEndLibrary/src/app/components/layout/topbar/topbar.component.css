@@ -223,11 +223,24 @@ button.topbar__link:hover {
   margin-left: auto;
 }
 
+.topbar__notifications {
+  position: relative;
+}
+
 .topbar__bell {
   position: relative;
+  padding: 0;
+  border: none;
+  background: none;
   font-size: 1.6rem; /* the same height as the menu and search icons */
   line-height: 1;
   color: var(--nn-gold);
+  cursor: pointer;
+}
+
+.topbar__bell:hover,
+.topbar__bell[aria-expanded='true'] {
+  color: var(--nn-gold-ink);
 }
 
 .topbar__bell.has-unread::after {
@@ -331,6 +344,104 @@ button.topbar__link:hover {
 .topbar__menu-panel .is-placeholder {
   color: var(--nn-ink-muted);
   cursor: default;
+}
+
+/* ---------- The bell's dropdown ---------- */
+/* Messages wrap, and the panel never gets wider than the screen */
+.topbar__notif-panel {
+  width: min(340px, calc(100vw - 32px));
+}
+
+.topbar__notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nn-space-3);
+  padding: 4px 12px 8px;
+}
+
+.topbar__notif-title {
+  font-family: var(--nn-font-display);
+  font-size: 1.1rem;
+  color: var(--nn-ink-strong);
+}
+
+.topbar__menu-panel .topbar__notif-link {
+  display: inline;
+  padding: 0;
+  color: var(--nn-primary);
+  font-size: 0.95rem;
+  text-decoration: underline;
+}
+
+.topbar__menu-panel .topbar__notif-link:hover {
+  background: none;
+  color: var(--nn-primary-hover);
+}
+
+.topbar__notif-state {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--nn-ink-muted);
+}
+
+.topbar__notif-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topbar__menu-panel .topbar__notif-item {
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border-left: 3px solid transparent;
+  white-space: normal;
+  color: var(--nn-ink-muted);
+}
+
+/* Unread: an accent edge, a tinted background and stronger text */
+.topbar__menu-panel .topbar__notif-item.is-unread {
+  border-left-color: var(--nn-accent);
+  background-color: var(--nn-gold-soft);
+  color: var(--nn-ink-strong);
+  font-weight: 600;
+}
+
+.topbar__menu-panel .topbar__notif-item:not(.is-unread) {
+  cursor: default;
+}
+
+.topbar__menu-panel .topbar__notif-item:not(.is-unread):hover {
+  background: none;
+}
+
+.topbar__notif-date {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--nn-ink-muted);
+}
+
+.topbar__menu-panel .topbar__notif-all {
+  justify-content: center;
+  color: var(--nn-primary);
+  font-weight: 600;
+}
+
+/* Phones: the bell isn't at the screen edge, so a panel hung from it would run off the
+   left side. Pin it under the bar instead, with the page's 16px margins. */
+@media (max-width: 640px) {
+  .topbar__notif-panel {
+    position: fixed;
+    top: var(--topbar-height, 64px);
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
 }
 
 .topbar__menu-rule {

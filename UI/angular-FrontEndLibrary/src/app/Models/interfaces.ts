@@ -3,7 +3,8 @@ import {
   GenreEnums,
   BookStatusEnum,
   BookTypeEnums,
-  LanguageEnums
+  LanguageEnums,
+  NotificationType
 } from '../Helpers/Enums/enum';
 
 // Book interfaces
@@ -200,7 +201,6 @@ export interface ILoggedInUser {
   checkedOutBooks: CheckedOutItem[];
   reservedBooks: ReservationItem[];
   userHistory: StatusHistoryItem[];
-  notifications: NotificationItem[];
   adminRole?: boolean;
   isSuperAdmin: boolean;
 }
@@ -216,11 +216,13 @@ export interface UserHistory {
   notes?: string;
 }
 export interface NotificationItem {
-  notificationId: string;
+  id: number;
   userId: string;
   message: string;
   isRead: boolean;
-  createdAt: Date;
+  createdAt: string;
+  type: NotificationType;
+  bookId: number | null; // null when the notification has no book, or the book is gone
 }
 export interface CreateRatingItemDto {
   rating: number;
