@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using NyriaNest.Application.Interfaces;
@@ -25,9 +26,37 @@ namespace NyriaNest.Infrastructure.Data
         public DbSet<CheckedOutItem> CheckOutItems { get; set; }
         public DbSet<ReservationItem> ReservationItems { get; set; }
         public DbSet<NotificationItem> NotificationItems { get; set; }
+
+        private const string IdentitySchema = "identity";
+        private const string LibrarySchema = "library";
+
+        // #59: login data goes in "identity", library data in "library". Every new table needs a line
+        // here (SchemaTests fails otherwise). The migrations history table stays in dbo.
+        // Raw SQL must name the schema, and IDENTITY is a T-SQL keyword: write [identity].[AspNetUsers].
+        private static void MapSchemas(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<User>().ToTable("AspNetUsers", IdentitySchema);
+            modelBuilder.Entity<IdentityRole>().ToTable("AspNetRoles", IdentitySchema);
+            modelBuilder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles", IdentitySchema);
+            modelBuilder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaims", IdentitySchema);
+            modelBuilder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins", IdentitySchema);
+            modelBuilder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens", IdentitySchema);
+            modelBuilder.Entity<IdentityRoleClaim<string>>().ToTable("AspNetRoleClaims", IdentitySchema);
+
+            modelBuilder.Entity<Book>().ToTable("Books", LibrarySchema);
+            modelBuilder.Entity<CheckedOutItem>().ToTable("CheckOutItems", LibrarySchema);
+            modelBuilder.Entity<ReservationItem>().ToTable("ReservationItems", LibrarySchema);
+            modelBuilder.Entity<StatusHistoryItem>().ToTable("StatusHistoryItems", LibrarySchema);
+            modelBuilder.Entity<ReviewItem>().ToTable("ReviewItems", LibrarySchema);
+            modelBuilder.Entity<RatingItem>().ToTable("RatingItems", LibrarySchema);
+            modelBuilder.Entity<FavoriteItem>().ToTable("FavoriteItems", LibrarySchema);
+            modelBuilder.Entity<NotificationItem>().ToTable("NotificationItems", LibrarySchema);
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            MapSchemas(modelBuilder);
 
             // ReviewItem: User (many reviews per user)
             modelBuilder.Entity<ReviewItem>()

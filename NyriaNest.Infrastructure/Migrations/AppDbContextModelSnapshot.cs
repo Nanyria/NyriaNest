@@ -46,7 +46,7 @@ namespace NyriaNest.Infrastructure.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("AspNetRoles", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -71,7 +71,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("AspNetRoleClaims", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -96,7 +96,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("AspNetUserClaims", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -118,7 +118,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("AspNetUserLogins", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -133,7 +133,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("AspNetUserRoles", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -152,7 +152,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("AspNetUserTokens", "identity");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.Book", b =>
@@ -227,7 +227,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasKey("BookId");
 
-                    b.ToTable("Books");
+                    b.ToTable("Books", "library");
 
                     b.HasData(
                         new
@@ -319,7 +319,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CheckOutItems");
+                    b.ToTable("CheckOutItems", "library");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.FavoriteItem", b =>
@@ -346,7 +346,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("FavoriteItems");
+                    b.ToTable("FavoriteItems", "library");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.NotificationItem", b =>
@@ -383,7 +383,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("NotificationItems");
+                    b.ToTable("NotificationItems", "library");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.RatingItem", b =>
@@ -408,7 +408,7 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.HasIndex("ReviewItemId")
                         .IsUnique();
 
-                    b.ToTable("RatingItems");
+                    b.ToTable("RatingItems", "library");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.ReservationItem", b =>
@@ -441,7 +441,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ReservationItems");
+                    b.ToTable("ReservationItems", "library");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.ReviewItem", b =>
@@ -474,7 +474,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ReviewItems");
+                    b.ToTable("ReviewItems", "library");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.StatusHistoryItem", b =>
@@ -506,7 +506,7 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("StatusHistoryItems");
+                    b.ToTable("StatusHistoryItems", "library");
 
                     b.HasData(
                         new
@@ -627,7 +627,7 @@ namespace NyriaNest.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
