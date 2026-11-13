@@ -1,4 +1,5 @@
-﻿using NyriaNest.Application.DTOs.Books;
+﻿using NyriaNest.Application.DTOs;
+using NyriaNest.Application.DTOs.Books;
 using NyriaNest.Application.DTOs.History;
 using NyriaNest.Domain.Entities;
 

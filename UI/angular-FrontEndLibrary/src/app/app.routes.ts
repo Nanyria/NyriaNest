@@ -15,6 +15,7 @@ import { AuthGuard } from './Services/auth.guard';
 import { unsavedChangesGuard } from './Services/unsaved-changes.guard';
 import { StartPageComponent } from './components/start-page/start-page.component';
 import { MorePageComponent } from './components/more-page/more-page.component';
+import { NotificationsPageComponent } from './components/Users/notifications-page/notifications-page.component';
 export const routes: Routes = [
   { path: '', component: StartPageComponent, canActivate: [AuthGuard] }, // Add canActivate here
   // Resetting a forgotten password (#51), in the start page's card. Open to everyone:
@@ -29,6 +30,8 @@ export const routes: Routes = [
       { path: 'library', component: LibraryComponent },
       // The bottom bar's More tab on small screens
       { path: 'more', component: MorePageComponent },
+      // Every notification, read and unread; the topbar's bell links here (#91)
+      { path: 'notifications', component: NotificationsPageComponent },
       { path: 'add-book', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
       // Same page in edit mode. Kept outside the admin wrapper so it lays out
       // exactly like Add book; listed before 'admin' so that route doesn't claim it.

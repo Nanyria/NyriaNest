@@ -109,6 +109,13 @@ namespace NyriaNest.Infrastructure.Data
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Deleting a book keeps its notifications and just clears the link (#91)
+            modelBuilder.Entity<NotificationItem>()
+                .HasOne(n => n.Book)
+                .WithMany()
+                .HasForeignKey(n => n.BookId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<Book>()
                 .Property(b => b.BookId)
                 .ValueGeneratedOnAdd()
