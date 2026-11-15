@@ -17,6 +17,15 @@ namespace NyriaNest.Application.Notifications
         /// </summary>
         Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason, string? details = null);
 
+        /// <summary>
+        /// Tells the owner that an admin marked their book as lent to someone, and why (#83).
+        /// Doesn't save: the caller saves it together with the loan.
+        /// </summary>
+        void NotifyOwnerOfAdminLend(Book book, string borrower, string reason);
+
+        /// <summary>Tells the owner that an admin marked their book as returned, and why (#83). Doesn't save.</summary>
+        void NotifyOwnerOfAdminReturn(Book book, string borrower, string reason);
+
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
 
@@ -70,6 +79,26 @@ namespace NyriaNest.Application.Notifications
 
             // Async because later reasons (#83) have to query for who to tell
             return Task.CompletedTask;
+        }
+
+        public void NotifyOwnerOfAdminLend(Book book, string borrower, string reason) =>
+            NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as lent to {borrower}. Reason: {reason}");
+
+        public void NotifyOwnerOfAdminReturn(Book book, string borrower, string reason) =>
+            NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as returned by {borrower}. Reason: {reason}");
+
+        // The book still exists here, so the notification points at it
+        private void NotifyOwner(Book book, string message)
+        {
+            if (book.OwnerId is null)
+                return;
+            _dbContext.NotificationItems.Add(new NotificationItem
+            {
+                UserId = book.OwnerId,
+                Message = message,
+                Type = NotificationType.BookLoanChangedByAdmin,
+                BookId = book.BookId,
+            });
         }
 
         public async Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(

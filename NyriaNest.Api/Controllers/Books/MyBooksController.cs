@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NyriaNest.Api.Auth;
 using NyriaNest.Application.Books;
 using NyriaNest.Application.DTOs.Books;
+using NyriaNest.Application.Loans;
 
 namespace NyriaNest.Api.Controllers.Books;
 
@@ -15,10 +16,12 @@ namespace NyriaNest.Api.Controllers.Books;
 public class MyBooksController : ControllerBase
 {
     private readonly IBookService _bookService;
+    private readonly ILendingService _lendingService;
 
-    public MyBooksController(IBookService bookService)
+    public MyBooksController(IBookService bookService, ILendingService lendingService)
     {
         _bookService = bookService;
+        _lendingService = lendingService;
     }
 
     [HttpGet]
@@ -55,6 +58,23 @@ public class MyBooksController : ControllerBase
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] DeleteMyBookRequest? body)
     {
         var response = await _bookService.DeleteOwnBookAsync(bookId, User.GetUserId(), body?.ConfirmLent ?? false);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // Lent to a name for now; a member's user id is refused until friends exist (#85)
+    [HttpPost("{bookId:int}/lend")]
+    public async Task<IActionResult> LendMyBook(int bookId, [FromBody] LendBookRequest body)
+    {
+        var response = await _lendingService.LendOwnBookAsync(bookId, User.GetUserId(), body);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // The body is optional: without a date it was returned today
+    [HttpPost("{bookId:int}/return")]
+    public async Task<IActionResult> ReturnMyBook(int bookId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ReturnBookRequest? body)
+    {
+        var response = await _lendingService.ReturnOwnBookAsync(bookId, User.GetUserId(), body ?? new ReturnBookRequest(null));
         return StatusCode((int)response.StatusCode, response);
     }
 

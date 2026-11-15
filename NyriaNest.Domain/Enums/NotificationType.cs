@@ -42,5 +42,8 @@
 
         /// <summary>A friend added a new book; will be possible to turn off (#82/#84).</summary>
         FriendAddedBook = 11,
+
+        /// <summary>An admin lent or returned the user's own book, with a reason (#83).</summary>
+        BookLoanChangedByAdmin = 12,
     }
 }

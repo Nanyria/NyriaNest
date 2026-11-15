@@ -5,6 +5,7 @@ using NyriaNest.Api.Auth;
 using NyriaNest.Api.Controllers;
 using NyriaNest.Application.Books;
 using NyriaNest.Application.DTOs.Books;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Security.Claims;
@@ -17,9 +18,11 @@ namespace NyriaNest.Api.Controllers.Books;
 public class BookController : ControllerBase
 {
     private readonly IBookService _bookService;
-    public BookController(IBookService bookService)
+    private readonly ILendingService _lendingService;
+    public BookController(IBookService bookService, ILendingService lendingService)
     {
         _bookService = bookService;
+        _lendingService = lendingService;
     }
 
     /// <summary>Admin catalogue with search, filters, sorting and paging.</summary>
@@ -69,6 +72,22 @@ public class BookController : ControllerBase
     public async Task<IActionResult> UpdateBookInfo(int bookId, [FromBody] BookEditRequest bookInfo)
     {
         var response = await _bookService.UpdateBookInfoAsync(bookId, bookInfo, User.GetUserId(), bookInfo.Reason);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // Putting right a loan on someone's book (#83): needs a reason, which goes into the
+    // history and a notification to the owner. Shared-library books aren't lent by name.
+    [HttpPost("{bookId:int}/lend")]
+    public async Task<IActionResult> LendBook(int bookId, [FromBody] AdminLendBookRequest body)
+    {
+        var response = await _lendingService.LendAsAdminAsync(bookId, User.GetUserId(), body);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    [HttpPost("{bookId:int}/return")]
+    public async Task<IActionResult> ReturnBook(int bookId, [FromBody] AdminReturnBookRequest body)
+    {
+        var response = await _lendingService.ReturnAsAdminAsync(bookId, User.GetUserId(), body);
         return StatusCode((int)response.StatusCode, response);
     }
 
