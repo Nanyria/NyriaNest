@@ -63,23 +63,38 @@ namespace NyriaNest.Application.Notifications
             _dbContext = dbContext;
         }
 
-        public Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason, string? details = null)
+        public async Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason, string? details = null)
         {
-            var message = MessageFor(book.Title, reason, details);
+            // The owner gets their own message, with the admin's reason, and is never one of the others
+            if (reason == BookRemovedReason.DeletedByAdminFromOwner && book.OwnerId is not null)
+                AddRemovedNotification(book.OwnerId, $"An admin removed your book \"{book.Title}\". Reason: {details}");
 
-            // Distinct: one person can hold more than one reservation on the same book
-            foreach (var userId in RecipientsOf(book, reason).Distinct())
+            // Everyone with a current interaction (#83): a reservation or a favorite. Past reviews
+            // and ratings don't count. Favorites go with the book, so they're read before the delete.
+            var reservers = book.Reservations.Select(r => r.UserId).ToHashSet();
+            var favoriters = await _dbContext.FavoriteItems
+                .Where(f => f.BookId == book.BookId)
+                .Select(f => f.UserId)
+                .ToListAsync();
+
+            // A set: one person can hold two reservations, or a reservation and a favorite. One message each.
+            var others = reservers.Union(favoriters).Where(userId => userId != book.OwnerId);
+            foreach (var userId in others)
             {
-                _dbContext.NotificationItems.Add(new NotificationItem
-                {
-                    UserId = userId,
-                    Message = message,
-                });
+                // The reservation is the bigger loss, so it's the one that's named
+                var consequence = reservers.Contains(userId)
+                    ? "so your reservation was cancelled."
+                    : "so it's no longer in your favorites.";
+                AddRemovedNotification(userId, $"{WhatHappenedTo(book.Title, reason)}, {consequence}");
             }
-
-            // Async because later reasons (#83) have to query for who to tell
-            return Task.CompletedTask;
         }
+
+        private void AddRemovedNotification(string userId, string message) =>
+            _dbContext.NotificationItems.Add(new NotificationItem
+            {
+                UserId = userId,
+                Message = message,
+            });
 
         public void NotifyOwnerOfAdminLend(Book book, string borrower, string reason) =>
             NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as lent to {borrower}. Reason: {reason}");
@@ -177,19 +192,12 @@ namespace NyriaNest.Application.Notifications
             Result = result,
         };
 
-        private static IEnumerable<string> RecipientsOf(Book book, BookRemovedReason reason) => reason switch
+        // What the others are told happened. The admin's reason is only for the owner.
+        private static string WhatHappenedTo(string title, BookRemovedReason reason) => reason switch
         {
-            BookRemovedReason.DeletedByAdmin => book.Reservations.Select(r => r.UserId),
-            BookRemovedReason.DeletedByOwner => [], // the friends who can see it come with #85
-            BookRemovedReason.DeletedByAdminFromOwner => book.OwnerId is null ? [] : [book.OwnerId],
-            _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
-        };
-
-        private static string MessageFor(string title, BookRemovedReason reason, string? details) => reason switch
-        {
-            BookRemovedReason.DeletedByAdmin => $"\"{title}\" was removed, so your reservation was cancelled.",
-            BookRemovedReason.DeletedByOwner => $"\"{title}\" was removed by its owner.",
-            BookRemovedReason.DeletedByAdminFromOwner => $"An admin removed your book \"{title}\". Reason: {details}",
+            BookRemovedReason.RemovedFromSharedLibrary => $"\"{title}\" was removed from the shared library",
+            BookRemovedReason.DeletedByOwner => $"\"{title}\" was removed by its owner",
+            BookRemovedReason.DeletedByAdminFromOwner => $"\"{title}\" was removed",
             _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
         };
     }

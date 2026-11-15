@@ -352,7 +352,7 @@ namespace NyriaNest.Application.Books
                 _dbContext.CheckOutItems.Remove(loan);
             }
 
-            var removedReason = book.OwnerId == null ? BookRemovedReason.DeletedByAdmin
+            var removedReason = book.OwnerId == null ? BookRemovedReason.RemovedFromSharedLibrary
                 : someoneElses ? BookRemovedReason.DeletedByAdminFromOwner
                 : BookRemovedReason.DeletedByOwner;
 

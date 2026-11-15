@@ -252,7 +252,8 @@ public class NotificationsTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         var item = (await GetPageAsync(reader, "api/notifications?unreadOnly=true&pageSize=3")).GetProperty("items")
             .EnumerateArray().Should().ContainSingle().Subject;
-        item.GetProperty("message").GetString().Should().Contain("The Cruel Prince");
+        item.GetProperty("message").GetString().Should().Be(
+            "\"The Cruel Prince\" was removed from the shared library, so your reservation was cancelled.");
         item.GetProperty("isRead").GetBoolean().Should().BeFalse();
         item.GetProperty("type").GetInt32().Should().Be((int)NotificationType.BookRemoved);
         item.GetProperty("bookId").ValueKind.Should().Be(JsonValueKind.Null); // the book is gone, so nothing to link to
