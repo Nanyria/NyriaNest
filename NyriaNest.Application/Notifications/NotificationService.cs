@@ -26,6 +26,17 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the owner that an admin marked their book as returned, and why (#83). Doesn't save.</summary>
         void NotifyOwnerOfAdminReturn(Book book, string borrower, string reason);
 
+        /// <summary>
+        /// An admin marked the book Lost or Removed, which counts as removing it for readers (#83):
+        /// everyone with a reservation or a favorite gets the same message as for a delete. With an
+        /// <paramref name="ownerReason"/> (the book is someone else's) the owner is told too, and why.
+        /// Doesn't save: call it before the reservations and favorites are removed, and save together.
+        /// </summary>
+        Task NotifyBookTakenDownAsync(Book book, BookStatusEnum status, string? ownerReason);
+
+        /// <summary>Tells the owner that an admin restored their book, and why (#83). Doesn't save.</summary>
+        void NotifyOwnerOfAdminRestore(Book book, string reason);
+
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
 
@@ -69,6 +80,26 @@ namespace NyriaNest.Application.Notifications
             if (reason == BookRemovedReason.DeletedByAdminFromOwner && book.OwnerId is not null)
                 AddRemovedNotification(book.OwnerId, $"An admin removed your book \"{book.Title}\". Reason: {details}");
 
+            await NotifyOthersAsync(book, WhatHappenedTo(book.Title, reason));
+        }
+
+        public async Task NotifyBookTakenDownAsync(Book book, BookStatusEnum status, string? ownerReason)
+        {
+            if (ownerReason is not null)
+                NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as {status.ToString().ToLowerInvariant()}. Reason: {ownerReason}",
+                    NotificationType.BookStatusChangedByAdmin);
+
+            // Readers are told exactly what a delete would tell them
+            var sameAsDelete = book.OwnerId is null ? BookRemovedReason.RemovedFromSharedLibrary : BookRemovedReason.DeletedByAdminFromOwner;
+            await NotifyOthersAsync(book, WhatHappenedTo(book.Title, sameAsDelete));
+        }
+
+        public void NotifyOwnerOfAdminRestore(Book book, string reason) =>
+            NotifyOwner(book, $"An admin restored your book \"{book.Title}\". Reason: {reason}", NotificationType.BookStatusChangedByAdmin);
+
+        /// <summary>One message to each person with a current interaction with the book, the owner excluded.</summary>
+        private async Task NotifyOthersAsync(Book book, string whatHappened)
+        {
             // Everyone with a current interaction (#83): a reservation or a favorite. Past reviews
             // and ratings don't count. Favorites go with the book, so they're read before the delete.
             var reservers = book.Reservations.Select(r => r.UserId).ToHashSet();
@@ -85,7 +116,7 @@ namespace NyriaNest.Application.Notifications
                 var consequence = reservers.Contains(userId)
                     ? "so your reservation was cancelled."
                     : "so it's no longer in your favorites.";
-                AddRemovedNotification(userId, $"{WhatHappenedTo(book.Title, reason)}, {consequence}");
+                AddRemovedNotification(userId, $"{whatHappened}, {consequence}");
             }
         }
 
@@ -97,13 +128,15 @@ namespace NyriaNest.Application.Notifications
             });
 
         public void NotifyOwnerOfAdminLend(Book book, string borrower, string reason) =>
-            NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as lent to {borrower}. Reason: {reason}");
+            NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as lent to {borrower}. Reason: {reason}",
+                NotificationType.BookLoanChangedByAdmin);
 
         public void NotifyOwnerOfAdminReturn(Book book, string borrower, string reason) =>
-            NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as returned by {borrower}. Reason: {reason}");
+            NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as returned by {borrower}. Reason: {reason}",
+                NotificationType.BookLoanChangedByAdmin);
 
         // The book still exists here, so the notification points at it
-        private void NotifyOwner(Book book, string message)
+        private void NotifyOwner(Book book, string message, NotificationType type)
         {
             if (book.OwnerId is null)
                 return;
@@ -111,7 +144,7 @@ namespace NyriaNest.Application.Notifications
             {
                 UserId = book.OwnerId,
                 Message = message,
-                Type = NotificationType.BookLoanChangedByAdmin,
+                Type = type,
                 BookId = book.BookId,
             });
         }

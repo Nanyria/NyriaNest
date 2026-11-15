@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NyriaNest.Application.Common;
 using NyriaNest.Application.DTOs;
@@ -28,7 +29,7 @@ namespace NyriaNest.Application.Books
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
         Task<APIResponse<bool>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
-        Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId);
+        Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId, string? notes = null);
 
         // A user's own books (#83). Someone else's book or a shared-library book looks missing (404).
         Task<APIResponse<List<EditBookDto>>> GetOwnBooksAsync(string ownerId);
@@ -673,6 +674,19 @@ namespace NyriaNest.Application.Books
                 response.ErrorMessages.Add("Book not found.");
                 return response;
             }
+            // The shared library is e-books only (ADR 0004), and an e-book can't go missing
+            if (status == BookStatusEnum.Lost && book.OwnerId == null)
+            {
+                response.ErrorMessages.Add("E-books can't be lost.");
+                return response;
+            }
+            // Someone else's book: the notes are the reason, and the owner is told (#83)
+            var someoneElses = IsSomeoneElses(book, adminUserId ?? "");
+            if (someoneElses && string.IsNullOrWhiteSpace(notes))
+            {
+                response.ErrorMessages.Add(ReasonMessage);
+                return response;
+            }
             if (book.CheckedOutBy != null)
             {
                 response.ErrorMessages.Add("This book is checked out. Return it first.");
@@ -685,6 +699,15 @@ namespace NyriaNest.Application.Books
             _availability.GetBookStatus(book, status);
 
             await AddHistoryIfAdminAsync(adminUserId, book, status, notes);
+
+            // Lost or Removed counts as removed for readers (#83): they're told what a delete would
+            // tell them, then their reservations and favorites go, all in the same save.
+            // A restore doesn't bring them back.
+            await _notifications.NotifyBookTakenDownAsync(book, status, someoneElses ? notes!.Trim() : null);
+            _dbContext.ReservationItems.RemoveRange(book.Reservations);
+            _dbContext.FavoriteItems.RemoveRange(
+                await _dbContext.FavoriteItems.Where(f => f.BookId == book.BookId).ToListAsync());
+
             await _bookRepo.UpdateAsync(book);
             await _bookRepo.SaveAsync();
 
@@ -694,11 +717,17 @@ namespace NyriaNest.Application.Books
             return response;
         }
 
-        public async Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId)
+        public async Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId, string? notes = null)
         {
             var response = new APIResponse<bool> { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
             var book = await _bookRepo.GetByIdAsync(bookId);
             if (book == null) { response.ErrorMessages.Add("Book not found."); return response; }
+
+            // Someone else's book: the notes are the reason, and the owner is told (#83)
+            var someoneElses = IsSomeoneElses(book, adminUserId ?? "");
+            if (someoneElses && string.IsNullOrWhiteSpace(notes))
+                return Failure<bool>(HttpStatusCode.BadRequest, ReasonMessage);
+            var reason = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
 
             book.AdminStatus = null;
             book.AdminStatusSetAt = null;
@@ -706,7 +735,10 @@ namespace NyriaNest.Application.Books
             // "Returned" makes GetBookStatus recompute: Reserved if there are reservations, else Available
             _availability.GetBookStatus(book, BookStatusEnum.Returned);
 
-            await AddHistoryIfAdminAsync(adminUserId, book, book.BookStatus, "Restored by admin");
+            await AddHistoryIfAdminAsync(adminUserId, book, book.BookStatus,
+                reason is null ? "Restored by admin" : $"Restored by admin: {reason}");
+            if (someoneElses)
+                _notifications.NotifyOwnerOfAdminRestore(book, reason!);
             await _bookRepo.UpdateAsync(book);
             await _bookRepo.SaveAsync();
 

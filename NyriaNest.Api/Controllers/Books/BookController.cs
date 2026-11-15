@@ -100,10 +100,11 @@ public class BookController : ControllerBase
     }
 
     [HttpDelete("{bookId:int}/admin-status")]
-    public async Task<IActionResult> ClearAdminStatus(int bookId)
+    public async Task<IActionResult> ClearAdminStatus(int bookId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] AdminStatusClearRequest? body)
     {
         var adminId = User.FindFirstValue("userId");
-        var response = await _bookService.ClearAdminStatusAsync(bookId, adminId);
+        var response = await _bookService.ClearAdminStatusAsync(bookId, adminId, body?.Notes);
         return StatusCode((int)response.StatusCode, response);
     }
     [HttpGet("history/{bookId:int}")]
@@ -114,6 +115,9 @@ public class BookController : ControllerBase
     }
 
     public record AdminStatusRequest(BookStatusEnum Status, string? Notes);
+
+    // Notes are the reason, required when the book is someone else's (#83)
+    public record AdminStatusClearRequest(string? Notes);
 
 
 }

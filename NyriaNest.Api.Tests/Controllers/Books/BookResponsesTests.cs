@@ -90,18 +90,18 @@ public class BookResponsesTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var bookId = await ReservedAndReviewedBookAsync();
 
         var response = await admin.PutAsJsonAsync($"api/Book/{bookId}/admin-status",
-            new { status = BookStatusEnum.Lost, notes = "Gone missing" }, Ct);
+            new { status = BookStatusEnum.Removed, notes = "Copyright question" }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         ((bool)(await ResultOf(response))).Should().BeTrue();
-        (await StatusOf(bookId)).Should().Be(BookStatusEnum.Lost);
+        (await StatusOf(bookId)).Should().Be(BookStatusEnum.Removed);
     }
 
     [Fact]
     public async Task ClearAdminStatus_OnAReservedBook_Works_AndReturnsTrue()
     {
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
-        var bookId = await ReservedAndReviewedBookAsync(b => { b.AdminStatus = BookStatusEnum.Lost; b.BookStatus = BookStatusEnum.Lost; });
+        var bookId = await ReservedAndReviewedBookAsync(b => { b.AdminStatus = BookStatusEnum.Removed; b.BookStatus = BookStatusEnum.Removed; });
 
         var response = await admin.DeleteAsync($"api/Book/{bookId}/admin-status", Ct);
 

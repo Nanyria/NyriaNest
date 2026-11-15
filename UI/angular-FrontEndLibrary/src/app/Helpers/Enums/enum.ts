@@ -84,7 +84,8 @@ export const LanguageDisplayNames: { [key in LanguageEnums]: string } = {
 }   
 
 // Travels as a number: must match the backend's NotificationType exactly.
-// Never change or reuse a number, only add at the end. BookRemoved and BookLoanChangedByAdmin are sent so far.
+// Never change or reuse a number, only add at the end. BookRemoved, BookLoanChangedByAdmin and
+// BookStatusChangedByAdmin are sent so far.
 export enum NotificationType {
     BookRemoved = 0,
     LoanRequested = 1,
@@ -99,4 +100,5 @@ export enum NotificationType {
     FriendRequestAccepted = 10,
     FriendAddedBook = 11,
     BookLoanChangedByAdmin = 12,
+    BookStatusChangedByAdmin = 13,
 }
