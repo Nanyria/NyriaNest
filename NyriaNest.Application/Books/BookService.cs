@@ -21,8 +21,9 @@ namespace NyriaNest.Application.Books
         // Accept optional userId of the actor who adds the book
         Task<APIResponse<int>> AddBookAsync(SlimBookDto book, string? userId = null);
         Task<APIResponse<int>> AddEbookAsync(SlimBookDto bookDto, UploadedFile file, CancellationToken ct = default);
-        Task<APIResponse<bool>> DeleteBookAsync(int id);
-        Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto bookDto);
+        // actorId: who is doing it. When that isn't the book's owner, a reason is required (#83).
+        Task<APIResponse<bool>> DeleteBookAsync(int id, string actorId, string? reason = null, bool confirmLent = false);
+        Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto bookDto, string actorId, string? reason = null);
         Task<APIResponse<List<StatusHistoryItemDto>>> GetBookHistoryAsync(int bookId);
         Task<APIResponse<List<LibraryBookDto>>> GetLibraryAsync(string? userId);
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
@@ -311,25 +312,58 @@ namespace NyriaNest.Application.Books
             // created holds the new book's id, and the book now has its EPUB
             return created;
         }
-        public async Task<APIResponse<bool>> DeleteBookAsync(int id)
+        public async Task<APIResponse<bool>> DeleteBookAsync(int id, string actorId, string? reason = null, bool confirmLent = false)
         {
             var bookToDelete = await _bookRepo.GetByIdAsync(id);
             if (bookToDelete == null)
                 return Failure<bool>(HttpStatusCode.NotFound, "Book not found.");
 
-            // Deleting a book someone has borrowed would wipe out their loan
-            // (and the loan's FK is Restrict, so the delete would fail anyway)
-            if (bookToDelete.CheckedOutBy != null)
-                return Failure<bool>(HttpStatusCode.Conflict, "Return this book before deleting it.");
+            return await DeleteAsActorAsync(bookToDelete, actorId, reason, confirmLent);
+        }
 
-            return await RemoveBookAsync(bookToDelete, BookRemovedReason.DeletedByAdmin);
+        // The rule goes by actor, not role (#83): an admin who owns the book is just its owner
+        private static bool IsSomeoneElses(Book book, string actorId) =>
+            book.OwnerId != null && book.OwnerId != actorId;
+
+        private const string ReasonMessage = "Give a reason: this book belongs to someone else.";
+
+        /// <summary>The checks every delete goes through, whoever asks, then the delete itself.</summary>
+        private async Task<APIResponse<bool>> DeleteAsActorAsync(Book book, string actorId, string? reason, bool confirmLent)
+        {
+            var someoneElses = IsSomeoneElses(book, actorId);
+            if (someoneElses && string.IsNullOrWhiteSpace(reason))
+                return Failure<bool>(HttpStatusCode.BadRequest, ReasonMessage);
+
+            var loan = book.CheckedOutBy;
+            if (loan != null)
+            {
+                // Lent to a member: deleting would wipe out their loan (and the loan's FK is
+                // Restrict, so the delete would fail anyway). Friend loans decide more in #85.
+                if (loan.BorrowerName == null)
+                    return Failure<bool>(HttpStatusCode.Conflict, "Return this book before deleting it.");
+
+                // Lent to a name: it may be deleted anyway (it came back unmarked,
+                // or it's lost or given away), so the client asks and sends confirmLent
+                if (!confirmLent)
+                    return Failure<bool>(HttpStatusCode.Conflict,
+                        $"This book is marked as lent to {loan.BorrowerName}. Delete it anyway? The loan is removed too.");
+
+                _dbContext.CheckOutItems.Remove(loan);
+            }
+
+            var removedReason = book.OwnerId == null ? BookRemovedReason.DeletedByAdmin
+                : someoneElses ? BookRemovedReason.DeletedByAdminFromOwner
+                : BookRemovedReason.DeletedByOwner;
+
+            // No history row: the history goes with the book. The owner's notification is the record.
+            return await RemoveBookAsync(book, removedReason, someoneElses ? reason!.Trim() : null);
         }
 
         /// <summary>
         /// Deletes a book that has passed its caller's checks, telling whoever the reason says.
         /// A loan still on the book has to be removed by the caller first, in the same save.
         /// </summary>
-        private async Task<APIResponse<bool>> RemoveBookAsync(Book bookToDelete, BookRemovedReason reason)
+        private async Task<APIResponse<bool>> RemoveBookAsync(Book bookToDelete, BookRemovedReason reason, string? details)
         {
             var response = new APIResponse<bool>();
 
@@ -338,7 +372,7 @@ namespace NyriaNest.Application.Books
                 // Reservations go with the book (decided in #39). Their FK is Restrict,
                 // so they have to be removed explicitly, in the same save as the book.
                 // The readers are told in the same save (#75).
-                await _notifications.NotifyBookRemovedAsync(bookToDelete, reason);
+                await _notifications.NotifyBookRemovedAsync(bookToDelete, reason, details);
                 _dbContext.ReservationItems.RemoveRange(bookToDelete.Reservations);
                 await _bookRepo.DeleteAsync(bookToDelete);
                 await _bookRepo.SaveAsync();
@@ -438,7 +472,7 @@ namespace NyriaNest.Application.Books
             if (!OwnersCanHave(bookDto.BookType))
                 return Failure<bool>(HttpStatusCode.BadRequest, OwnTypeMessage);
 
-            return await UpdateBookInfoAsync(id, bookDto);
+            return await UpdateBookInfoAsync(id, bookDto, actorId: ownerId);
         }
 
         public async Task<APIResponse<bool>> DeleteOwnBookAsync(int id, string ownerId, bool confirmLent)
@@ -447,25 +481,9 @@ namespace NyriaNest.Application.Books
             if (book == null)
                 return Failure<bool>(HttpStatusCode.NotFound, "Book not found.");
 
-            var loan = book.CheckedOutBy;
-            if (loan != null)
-            {
-                // Lent to a member: not possible yet; decided with friend loans in #85
-                if (loan.BorrowerName == null)
-                    return Failure<bool>(HttpStatusCode.Conflict, "Return this book before deleting it.");
-
-                // Lent to a name: the owner may delete it anyway (it came back unmarked,
-                // or it's lost or given away), so the client asks and sends confirmLent
-                if (!confirmLent)
-                    return Failure<bool>(HttpStatusCode.Conflict,
-                        $"This book is marked as lent to {loan.BorrowerName}. Delete it anyway? The loan is removed too.");
-
-                _dbContext.CheckOutItems.Remove(loan);
-            }
-
-            return await RemoveBookAsync(book, BookRemovedReason.DeletedByOwner);
+            return await DeleteAsActorAsync(book, ownerId, reason: null, confirmLent);
         }
-        public async Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto updatedBook)
+        public async Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto updatedBook, string actorId, string? reason = null)
         {
             var response = new APIResponse<bool>
             {
@@ -478,6 +496,13 @@ namespace NyriaNest.Application.Books
                 var existingBook = await _bookRepo.GetByIdAsync(id);
                 if (existingBook != null)
                 {
+                    var someoneElses = IsSomeoneElses(existingBook, actorId);
+                    if (someoneElses && string.IsNullOrWhiteSpace(reason))
+                    {
+                        response.ErrorMessages.Add(ReasonMessage);
+                        return response;
+                    }
+
                     // The edit page always sends every field, so assign them as they are.
                     // That way a description or cover can be cleared.
                     existingBook.Title = updatedBook.Title.Trim();
@@ -498,6 +523,19 @@ namespace NyriaNest.Application.Books
                         existingBook.EpubFileKey = null;
                         existingBook.EpubFileName = null;
                         existingBook.EpubFileSize = null;
+                    }
+
+                    // Someone else changing a book is recorded; the owner's own edits aren't (#83)
+                    if (someoneElses)
+                    {
+                        _dbContext.StatusHistoryItems.Add(new StatusHistoryItem
+                        {
+                            UserId = actorId,
+                            BookId = existingBook.BookId,
+                            BookStatus = existingBook.BookStatus,
+                            Timestamp = DateTime.UtcNow,
+                            Notes = $"Edited by an admin: {reason!.Trim()}",
+                        });
                     }
 
                     await _bookRepo.SaveAsync();

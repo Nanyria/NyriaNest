@@ -108,6 +108,8 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         book.Title.Should().Be("New title");
         book.BookType.Should().Be(BookTypeEnums.Hardcover);
         book.OwnerId.Should().Be(me.Id);
+        // Only edits by someone other than the owner are recorded (3b)
+        (await factory.WithDbAsync(db => db.StatusHistoryItems.AnyAsync(h => h.BookId == bookId, Ct))).Should().BeFalse();
     }
 
     [Fact]

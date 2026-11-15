@@ -15,7 +15,7 @@ namespace NyriaNest.Application.Notifications
         /// Adds one notification for each person the removal affects. Doesn't save:
         /// the caller saves it together with the removal, so both happen or neither does.
         /// </summary>
-        Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason);
+        Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason, string? details = null);
 
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
@@ -54,9 +54,9 @@ namespace NyriaNest.Application.Notifications
             _dbContext = dbContext;
         }
 
-        public Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason)
+        public Task NotifyBookRemovedAsync(Book book, BookRemovedReason reason, string? details = null)
         {
-            var message = MessageFor(book.Title, reason);
+            var message = MessageFor(book.Title, reason, details);
 
             // Distinct: one person can hold more than one reservation on the same book
             foreach (var userId in RecipientsOf(book, reason).Distinct())
@@ -152,13 +152,15 @@ namespace NyriaNest.Application.Notifications
         {
             BookRemovedReason.DeletedByAdmin => book.Reservations.Select(r => r.UserId),
             BookRemovedReason.DeletedByOwner => [], // the friends who can see it come with #85
+            BookRemovedReason.DeletedByAdminFromOwner => book.OwnerId is null ? [] : [book.OwnerId],
             _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
         };
 
-        private static string MessageFor(string title, BookRemovedReason reason) => reason switch
+        private static string MessageFor(string title, BookRemovedReason reason, string? details) => reason switch
         {
             BookRemovedReason.DeletedByAdmin => $"\"{title}\" was removed, so your reservation was cancelled.",
             BookRemovedReason.DeletedByOwner => $"\"{title}\" was removed by its owner.",
+            BookRemovedReason.DeletedByAdminFromOwner => $"An admin removed your book \"{title}\". Reason: {details}",
             _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
         };
     }

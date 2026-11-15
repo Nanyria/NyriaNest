@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using NyriaNest.Api.Auth;
 using NyriaNest.Api.Controllers;
 using NyriaNest.Application.Books;
 using NyriaNest.Application.DTOs.Books;
@@ -53,17 +55,20 @@ public class BookController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
+    // Someone else's book needs { reason }; a book lent to a name needs { confirmLent: true } (#83)
     [HttpDelete("{bookId:int}")]
-    public async Task<IActionResult> DeleteBook(int bookId)
+    public async Task<IActionResult> DeleteBook(int bookId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] BookDeleteRequest? body)
     {
-        var response = await _bookService.DeleteBookAsync(bookId);
+        var response = await _bookService.DeleteBookAsync(bookId, User.GetUserId(), body?.Reason, body?.ConfirmLent ?? false);
         return StatusCode((int)response.StatusCode, response);
     }
 
+    // Someone else's book needs a reason, which goes into its history (#83)
     [HttpPut("{bookId:int}")]
-    public async Task<IActionResult> UpdateBookInfo(int bookId, [FromBody] SlimBookDto bookInfo)
+    public async Task<IActionResult> UpdateBookInfo(int bookId, [FromBody] BookEditRequest bookInfo)
     {
-        var response = await _bookService.UpdateBookInfoAsync(bookId, bookInfo);
+        var response = await _bookService.UpdateBookInfoAsync(bookId, bookInfo, User.GetUserId(), bookInfo.Reason);
         return StatusCode((int)response.StatusCode, response);
     }
 
