@@ -248,6 +248,46 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         AssertNoIdentityInternals(await response.Content.ReadAsStringAsync(Ct));
     }
 
+    [Fact]
+    public async Task DeleteUser_DeletesTheirOwnBooks_AndLeavesOtherBooksAlone()
+    {
+        // #83: a private shelf means nothing without its owner, and the borrower names on it
+        // are personal data about people without accounts, so the books go with the account.
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+        var other = await factory.CreateUserAsync(Roles.User);
+        var (ownBookId, othersBookId, sharedBookId) = await factory.WithDbAsync(async db =>
+        {
+            var own = TestData.Book("Target's book");
+            own.OwnerId = target.Id;
+            var others = TestData.Book("Other user's book");
+            others.OwnerId = other.Id;
+            var shared = TestData.Ebook("Shared e-book");
+            db.Books.AddRange(own, others, shared);
+            await db.SaveChangesAsync(Ct);
+
+            // Lent by name, with a history entry that has no user, and on someone else's favourites
+            db.CheckOutItems.Add(new() { BookId = own.BookId, BorrowerName = "Anna", CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
+            db.StatusHistoryItems.Add(new() { BookId = own.BookId, BookStatus = BookStatusEnum.CheckedOut, Notes = "Lent to Anna" });
+            db.FavoriteItems.Add(new() { BookId = own.BookId, UserId = other.Id, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync(Ct);
+            return (own.BookId, others.BookId, shared.BookId);
+        });
+
+        var response = await admin.DeleteAsync($"api/User/{target.Id}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Books.AnyAsync(b => b.BookId == ownBookId, Ct)).Should().BeFalse();
+            (await db.CheckOutItems.AnyAsync(c => c.BookId == ownBookId, Ct)).Should().BeFalse();
+            (await db.StatusHistoryItems.AnyAsync(h => h.BookId == ownBookId, Ct)).Should().BeFalse();
+            (await db.FavoriteItems.AnyAsync(f => f.BookId == ownBookId, Ct)).Should().BeFalse();
+            (await db.Books.AnyAsync(b => b.BookId == othersBookId, Ct)).Should().BeTrue();
+            (await db.Books.AnyAsync(b => b.BookId == sharedBookId, Ct)).Should().BeTrue();
+        });
+    }
+
     private static void AssertNoIdentityInternals(string body)
     {
         foreach (var field in new[] { "passwordHash", "securityStamp", "concurrencyStamp", "\"password\"" })

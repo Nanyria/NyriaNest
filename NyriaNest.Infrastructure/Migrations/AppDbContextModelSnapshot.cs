@@ -217,6 +217,9 @@ namespace NyriaNest.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<string>("OwnerId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("PublicationYear")
                         .HasColumnType("int");
 
@@ -227,51 +230,11 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasKey("BookId");
 
+                    b.HasIndex("OwnerId");
+
                     b.ToTable("Books", "library");
 
                     b.HasData(
-                        new
-                        {
-                            BookId = 1001,
-                            Author = "F. Scott Fitzgerald",
-                            AvailabilityDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            BookDescription = "Lorem Ipsum",
-                            BookStatus = 0,
-                            BookType = 2,
-                            DateAdded = new DateTime(2025, 5, 15, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Genre = 9,
-                            Language = 1,
-                            PublicationYear = 1925,
-                            Title = "The Great Gatsby"
-                        },
-                        new
-                        {
-                            BookId = 1002,
-                            Author = "Harper Lee",
-                            AvailabilityDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            BookDescription = "Lorem Ipsum",
-                            BookStatus = 0,
-                            BookType = 2,
-                            DateAdded = new DateTime(2025, 5, 15, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Genre = 9,
-                            Language = 1,
-                            PublicationYear = 1960,
-                            Title = "To Kill a Mockingbird"
-                        },
-                        new
-                        {
-                            BookId = 1003,
-                            Author = "George Orwell",
-                            AvailabilityDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            BookDescription = "Lorem Ipsum",
-                            BookStatus = 0,
-                            BookType = 1,
-                            DateAdded = new DateTime(2025, 5, 15, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Genre = 9,
-                            Language = 1,
-                            PublicationYear = 1949,
-                            Title = "1984"
-                        },
                         new
                         {
                             BookId = 1004,
@@ -299,6 +262,10 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Property<int>("BookId")
                         .HasColumnType("int");
 
+                    b.Property<string>("BorrowerName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("CheckOutDate")
                         .HasColumnType("datetime2");
 
@@ -309,7 +276,6 @@ namespace NyriaNest.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
@@ -319,7 +285,10 @@ namespace NyriaNest.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CheckOutItems", "library");
+                    b.ToTable("CheckOutItems", "library", t =>
+                        {
+                            t.HasCheckConstraint("CK_CheckOutItems_UserOrName", "([UserId] IS NOT NULL AND [BorrowerName] IS NULL) OR ([UserId] IS NULL AND [BorrowerName] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.FavoriteItem", b =>
@@ -511,30 +480,6 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            StatusHistoryItemId = 1001,
-                            BookId = 1001,
-                            BookStatus = 5,
-                            Notes = "Initial added status",
-                            Timestamp = new DateTime(2025, 5, 14, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            StatusHistoryItemId = 1002,
-                            BookId = 1002,
-                            BookStatus = 5,
-                            Notes = "Initial added status",
-                            Timestamp = new DateTime(2025, 5, 13, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            StatusHistoryItemId = 1003,
-                            BookId = 1003,
-                            BookStatus = 5,
-                            Notes = "Initial added status",
-                            Timestamp = new DateTime(2025, 5, 12, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
                             StatusHistoryItemId = 1004,
                             BookId = 1004,
                             BookStatus = 5,
@@ -681,6 +626,16 @@ namespace NyriaNest.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NyriaNest.Domain.Entities.Book", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.User", "Owner")
+                        .WithMany("OwnBooks")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("NyriaNest.Domain.Entities.CheckedOutItem", b =>
                 {
                     b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
@@ -692,8 +647,7 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.HasOne("NyriaNest.Domain.Entities.User", "User")
                         .WithMany("CheckedOutBooks")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Book");
 
@@ -825,6 +779,8 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Navigation("CheckedOutBooks");
 
                     b.Navigation("Notifications");
+
+                    b.Navigation("OwnBooks");
 
                     b.Navigation("ReadList");
 

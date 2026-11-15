@@ -118,6 +118,19 @@ namespace NyriaNest.Infrastructure.Data
                 .HasForeignKey<CheckedOutItem>(c => c.BookId)
                 .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete
 
+            // #83: a member or a name, exactly one. Written so SQL Server and SQLite both accept it.
+            modelBuilder.Entity<CheckedOutItem>().ToTable(t => t.HasCheckConstraint(
+                "CK_CheckOutItems_UserOrName",
+                "([UserId] IS NOT NULL AND [BorrowerName] IS NULL) OR ([UserId] IS NULL AND [BorrowerName] IS NOT NULL)"));
+
+            // #83: Restrict, so deleting a user must deal with their books on purpose.
+            // SetNull would move them into the shared library (OwnerId null = shared).
+            modelBuilder.Entity<Book>()
+                .HasOne(b => b.Owner)
+                .WithMany(u => u.OwnBooks)
+                .HasForeignKey(b => b.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // StatusHistoryItem relationships
             modelBuilder.Entity<StatusHistoryItem>()
                 .HasOne(sh => sh.Book)
@@ -190,46 +203,9 @@ namespace NyriaNest.Infrastructure.Data
                 .UseIdentityColumn(seed: 1001, increment: 1);
 
 
+            // #83: only the shared library's e-book is seeded here. Physical books have an owner,
+            // so they come from DatabaseSeeder with its users (the 1001-1003 physical books were removed).
             modelBuilder.Entity<Book>().HasData(
-                new Book
-                {
-                    BookId = 1001,
-                    Title = "The Great Gatsby",
-                    Author = "F. Scott Fitzgerald",
-                    Genre = GenreEnums.Fiction,
-                    PublicationYear = 1925,
-                    BookDescription = "Lorem Ipsum",
-                    BookType = BookTypeEnums.Hardcover,
-                    BookStatus = BookStatusEnum.Available,
-                    Language = LanguageEnums.English,
-                    DateAdded = new DateTime(2025, 5, 15, 0, 0, 0, DateTimeKind.Utc)
-                },
-                new Book
-                {
-                    BookId = 1002,
-                    Title = "To Kill a Mockingbird",
-                    Author = "Harper Lee",
-                    Genre = GenreEnums.Fiction,
-                    PublicationYear = 1960,
-                    BookDescription = "Lorem Ipsum",
-                    BookType = BookTypeEnums.Hardcover,
-                    BookStatus = BookStatusEnum.Available,
-                    Language = LanguageEnums.English,
-                    DateAdded = new DateTime(2025, 5, 15, 0, 0, 0, DateTimeKind.Utc)
-                },
-                new Book
-                {
-                    BookId = 1003,
-                    Title = "1984",
-                    Author = "George Orwell",
-                    Genre = GenreEnums.Fiction,
-                    PublicationYear = 1949,
-                    BookDescription = "Lorem Ipsum",
-                    BookType = BookTypeEnums.Paperback,
-                    BookStatus = BookStatusEnum.Available,
-                    Language = LanguageEnums.English,
-                    DateAdded = new DateTime(2025, 5, 15, 0, 0, 0, DateTimeKind.Utc)
-                },
                 new Book
                 {
                     BookId = 1004,
@@ -247,30 +223,6 @@ namespace NyriaNest.Infrastructure.Data
             );
 
             modelBuilder.Entity<StatusHistoryItem>().HasData(
-                new StatusHistoryItem
-                {
-                    StatusHistoryItemId = 1001,
-                    BookId = 1001,
-                    BookStatus = BookStatusEnum.Added,
-                    Timestamp = new DateTime(2025, 5, 14, 0, 0, 0, DateTimeKind.Utc),   // was DateTime.UtcNow.AddDays(-1)
-                    Notes = "Initial added status"
-                },
-                new StatusHistoryItem
-                {
-                    StatusHistoryItemId = 1002,
-                    BookId = 1002,
-                    BookStatus = BookStatusEnum.Added,
-                    Timestamp = new DateTime(2025, 5, 13, 0, 0, 0, DateTimeKind.Utc),   // was DateTime.UtcNow.AddDays(-2)
-                    Notes = "Initial added status"
-                },
-                new StatusHistoryItem
-                {
-                    StatusHistoryItemId = 1003,
-                    BookId = 1003,
-                    BookStatus = BookStatusEnum.Added,
-                    Timestamp = new DateTime(2025, 5, 12, 0, 0, 0, DateTimeKind.Utc),   // was DateTime.UtcNow.AddDays(-3)
-                    Notes = "Initial added status"
-                },
                 new StatusHistoryItem
                 {
                     StatusHistoryItemId = 1004,

@@ -137,6 +137,24 @@ namespace NyriaNest.Application.Users
                 var statusHistory = await _dbContext.StatusHistoryItems.Where(s => s.UserId == userId).ToListAsync();
                 _dbContext.StatusHistoryItems.RemoveRange(statusHistory);
 
+                // #83: the user's own books go with the account: a private shelf means nothing
+                // without its owner, and the borrower names on it are personal data. Loans and
+                // reservations are Restrict, so remove them first; history, reviews and
+                // favourites go by cascade. OwnerId is Restrict too, so this can't be skipped.
+                var ownBookIds = await _dbContext.Books
+                    .Where(b => b.OwnerId == userId)
+                    .Select(b => b.BookId)
+                    .ToListAsync();
+                if (ownBookIds.Count > 0)
+                {
+                    _dbContext.CheckOutItems.RemoveRange(
+                        await _dbContext.CheckOutItems.Where(c => ownBookIds.Contains(c.BookId)).ToListAsync());
+                    _dbContext.ReservationItems.RemoveRange(
+                        await _dbContext.ReservationItems.Where(r => ownBookIds.Contains(r.BookId)).ToListAsync());
+                    _dbContext.Books.RemoveRange(
+                        await _dbContext.Books.Where(b => ownBookIds.Contains(b.BookId)).ToListAsync());
+                }
+
                 // Put right the books the user had a loan or a reservation on. Other books
                 // aren't affected: their status and queue don't depend on this user.
                 var books = await _dbContext.Books
@@ -144,6 +162,7 @@ namespace NyriaNest.Application.Users
                     .Include(b => b.CheckedOutBy)
                     .Include(b => b.Reviews)
                     .Include(b => b.StatusHistory)
+                    .Where(b => b.OwnerId != userId)
                     .Where(b => b.Reservations.Any(r => r.UserId == userId)
                         || (b.CheckedOutBy != null && b.CheckedOutBy.UserId == userId))
                     .ToListAsync();

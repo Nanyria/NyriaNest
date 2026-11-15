@@ -26,6 +26,7 @@ namespace NyriaNest.Domain.Entities
         public List<ReservationItem> ReservedBooks { get; set; } = new List<ReservationItem>();
         public List<StatusHistoryItem> UserHistory { get; set; } = new List<StatusHistoryItem>();
         public List<NotificationItem> Notifications { get; set; } = new();
+        public List<Book> OwnBooks { get; set; } = new();
 
     }
 }
