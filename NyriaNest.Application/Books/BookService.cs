@@ -28,6 +28,13 @@ namespace NyriaNest.Application.Books
         Task<APIResponse<PagedResult<AdminBookDto>>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
         Task<APIResponse<bool>> SetAdminStatusAsync(int bookId, BookStatusEnum status, string? adminUserId, string? notes);
         Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId);
+
+        // A user's own books (#83). Someone else's book or a shared-library book looks missing (404).
+        Task<APIResponse<List<EditBookDto>>> GetOwnBooksAsync(string ownerId);
+        Task<APIResponse<EditBookDto>> GetOwnBookAsync(int id, string ownerId);
+        Task<APIResponse<int>> AddOwnBookAsync(SlimBookDto bookDto, string ownerId);
+        Task<APIResponse<bool>> UpdateOwnBookAsync(int id, string ownerId, SlimBookDto bookDto);
+        Task<APIResponse<bool>> DeleteOwnBookAsync(int id, string ownerId, bool confirmLent);
     }
     public class BookService : IBookService
     {
@@ -102,28 +109,34 @@ namespace NyriaNest.Application.Books
                 return response;
             }
 
-            response.Result = new EditBookDto
-            {
-                BookId = book.BookId,
-                Title = book.Title,
-                Author = book.Author,
-                BookDescription = book.BookDescription,
-                PublicationYear = book.PublicationYear,
-                CoverImagePath = book.CoverImagePath,
-                Genre = book.Genre,
-                BookType = book.BookType,
-                Language = book.Language,
-                HasEpub = book.HasEpub,
-                EpubFileName = book.EpubFileName,
-                EpubFileSize = book.EpubFileSize,
-            };
+            response.Result = ToEditDto(book);
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
             return response;
         }
 
+        private static EditBookDto ToEditDto(Book book) => new()
+        {
+            BookId = book.BookId,
+            Title = book.Title,
+            Author = book.Author,
+            BookDescription = book.BookDescription,
+            PublicationYear = book.PublicationYear,
+            CoverImagePath = book.CoverImagePath,
+            Genre = book.Genre,
+            BookType = book.BookType,
+            Language = book.Language,
+            HasEpub = book.HasEpub,
+            EpubFileName = book.EpubFileName,
+            EpubFileSize = book.EpubFileSize,
+        };
+
         // Returns the new book's id: the entity itself isn't sent to clients (#76)
-        public async Task<APIResponse<int>> AddBookAsync(SlimBookDto bookDto, string? userId = null)
+        public Task<APIResponse<int>> AddBookAsync(SlimBookDto bookDto, string? userId = null) =>
+            CreateBookAsync(bookDto, userId, ownerId: null);
+
+        // ownerId null = a shared-library book
+        private async Task<APIResponse<int>> CreateBookAsync(SlimBookDto bookDto, string? userId, string? ownerId)
         {
             var response = new APIResponse<int>
             {
@@ -149,6 +162,7 @@ namespace NyriaNest.Application.Books
                     PublicationYear = bookDto.PublicationYear,
                     BookType = bookDto.BookType,
                     CoverImagePath = bookDto.CoverImagePath,
+                    OwnerId = ownerId,
                     // current live status for the book (what clients should see)
                     BookStatus = BookStatusEnum.Available,
                     AvailabilityDate = DateTime.UtcNow
@@ -299,69 +313,157 @@ namespace NyriaNest.Application.Books
         }
         public async Task<APIResponse<bool>> DeleteBookAsync(int id)
         {
+            var bookToDelete = await _bookRepo.GetByIdAsync(id);
+            if (bookToDelete == null)
+                return Failure<bool>(HttpStatusCode.NotFound, "Book not found.");
+
+            // Deleting a book someone has borrowed would wipe out their loan
+            // (and the loan's FK is Restrict, so the delete would fail anyway)
+            if (bookToDelete.CheckedOutBy != null)
+                return Failure<bool>(HttpStatusCode.Conflict, "Return this book before deleting it.");
+
+            return await RemoveBookAsync(bookToDelete, BookRemovedReason.DeletedByAdmin);
+        }
+
+        /// <summary>
+        /// Deletes a book that has passed its caller's checks, telling whoever the reason says.
+        /// A loan still on the book has to be removed by the caller first, in the same save.
+        /// </summary>
+        private async Task<APIResponse<bool>> RemoveBookAsync(Book bookToDelete, BookRemovedReason reason)
+        {
             var response = new APIResponse<bool>();
 
             try
             {
-                var bookToDelete = await _bookRepo.GetByIdAsync(id);
+                // Reservations go with the book (decided in #39). Their FK is Restrict,
+                // so they have to be removed explicitly, in the same save as the book.
+                // The readers are told in the same save (#75).
+                await _notifications.NotifyBookRemovedAsync(bookToDelete, reason);
+                _dbContext.ReservationItems.RemoveRange(bookToDelete.Reservations);
+                await _bookRepo.DeleteAsync(bookToDelete);
+                await _bookRepo.SaveAsync();
 
-                // Deleting a book someone has borrowed would wipe out their loan
-                // (and the loan's FK is Restrict, so the delete would fail anyway)
-                if (bookToDelete?.CheckedOutBy != null)
+                // Delete the EPUB only after the book is gone from the database,
+                // so a failed DB delete never leaves a book pointing at a missing file
+                if (bookToDelete.EpubFileKey is not null)
                 {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("Return this book before deleting it.");
-                    response.StatusCode = HttpStatusCode.Conflict;
-                    return response;
-                }
-
-                if (bookToDelete != null)
-                {
-                    // Reservations go with the book (decided in #39). Their FK is Restrict,
-                    // so they have to be removed explicitly, in the same save as the book.
-                    // The readers are told in the same save (#75).
-                    await _notifications.NotifyBookRemovedAsync(bookToDelete, BookRemovedReason.DeletedByAdmin);
-                    _dbContext.ReservationItems.RemoveRange(bookToDelete.Reservations);
-                    await _bookRepo.DeleteAsync(bookToDelete);
-                    await _bookRepo.SaveAsync();
-
-                    // Delete the EPUB only after the book is gone from the database,
-                    // so a failed DB delete never leaves a book pointing at a missing file
-                    if (bookToDelete.EpubFileKey is not null)
+                    try
                     {
-                        try
-                        {
-                            await _fileStorage.DeleteAsync(bookToDelete.EpubFileKey);
-                        }
-                        catch (Exception ex)
-                        {
-                            // The book is already deleted; a leftover file is harmless, so log instead of failing
-                            _logger.LogWarning(ex, "Could not delete EPUB {Key} for deleted book {BookId}.", bookToDelete.EpubFileKey, id);
-                        }
+                        await _fileStorage.DeleteAsync(bookToDelete.EpubFileKey);
                     }
+                    catch (Exception ex)
+                    {
+                        // The book is already deleted; a leftover file is harmless, so log instead of failing
+                        _logger.LogWarning(ex, "Could not delete EPUB {Key} for deleted book {BookId}.", bookToDelete.EpubFileKey, bookToDelete.BookId);
+                    }
+                }
 
-                    // No entity in the response: it's deleted, and its navigations would loop
-                    response.Result = true;
-                    response.IsSuccess = true;
-                    response.StatusCode = HttpStatusCode.OK;
-                }
-                else
-                {
-                    response.IsSuccess = false;
-                    response.ErrorMessages.Add("Book not found.");
-                    response.StatusCode = HttpStatusCode.NotFound;
-                }
+                // No entity in the response: it's deleted, and its navigations would loop
+                response.Result = true;
+                response.IsSuccess = true;
+                response.StatusCode = HttpStatusCode.OK;
             }
             catch (Exception ex)
             {
                 // Log the real error; the client only gets a plain message, never
                 // EF's internal text about the data model
-                _logger.LogError(ex, "Could not delete book {BookId}.", id);
+                _logger.LogError(ex, "Could not delete book {BookId}.", bookToDelete.BookId);
                 response.ErrorMessages.Add("The book couldn't be deleted.");
                 response.StatusCode = HttpStatusCode.InternalServerError;
             }
 
             return response;
+        }
+
+        private static APIResponse<T> Failure<T>(HttpStatusCode status, string message) => new()
+        {
+            IsSuccess = false,
+            StatusCode = status,
+            ErrorMessages = { message },
+        };
+
+        // ---- A user's own books (#83) ----
+
+        // Own books are physical for now (ADR 0004). E-books come later: add EBook here then.
+        private static bool OwnersCanHave(BookTypeEnums type) =>
+            type is BookTypeEnums.Paperback or BookTypeEnums.Hardcover;
+
+        private const string OwnTypeMessage = "Your own books can be paperbacks or hardcovers.";
+
+        // Someone else's book and a shared-library book both look missing
+        private async Task<Book?> GetOwnAsync(int id, string ownerId)
+        {
+            var book = await _bookRepo.GetByIdAsync(id);
+            return book?.OwnerId == ownerId ? book : null;
+        }
+
+        public async Task<APIResponse<List<EditBookDto>>> GetOwnBooksAsync(string ownerId)
+        {
+            var books = await _bookRepo.GetOwnedByAsync(ownerId);
+            return new APIResponse<List<EditBookDto>>
+            {
+                IsSuccess = true,
+                StatusCode = HttpStatusCode.OK,
+                Result = books.Select(ToEditDto).ToList(),
+            };
+        }
+
+        public async Task<APIResponse<EditBookDto>> GetOwnBookAsync(int id, string ownerId)
+        {
+            var book = await GetOwnAsync(id, ownerId);
+            if (book == null)
+                return Failure<EditBookDto>(HttpStatusCode.NotFound, "Book not found.");
+
+            return new APIResponse<EditBookDto>
+            {
+                IsSuccess = true,
+                StatusCode = HttpStatusCode.OK,
+                Result = ToEditDto(book),
+            };
+        }
+
+        public Task<APIResponse<int>> AddOwnBookAsync(SlimBookDto bookDto, string ownerId)
+        {
+            if (!OwnersCanHave(bookDto.BookType))
+                return Task.FromResult(Failure<int>(HttpStatusCode.BadRequest, OwnTypeMessage));
+
+            // The owner is also the one who added it, in the history
+            return CreateBookAsync(bookDto, userId: ownerId, ownerId: ownerId);
+        }
+
+        public async Task<APIResponse<bool>> UpdateOwnBookAsync(int id, string ownerId, SlimBookDto bookDto)
+        {
+            if (await GetOwnAsync(id, ownerId) == null)
+                return Failure<bool>(HttpStatusCode.NotFound, "Book not found.");
+            if (!OwnersCanHave(bookDto.BookType))
+                return Failure<bool>(HttpStatusCode.BadRequest, OwnTypeMessage);
+
+            return await UpdateBookInfoAsync(id, bookDto);
+        }
+
+        public async Task<APIResponse<bool>> DeleteOwnBookAsync(int id, string ownerId, bool confirmLent)
+        {
+            var book = await GetOwnAsync(id, ownerId);
+            if (book == null)
+                return Failure<bool>(HttpStatusCode.NotFound, "Book not found.");
+
+            var loan = book.CheckedOutBy;
+            if (loan != null)
+            {
+                // Lent to a member: not possible yet; decided with friend loans in #85
+                if (loan.BorrowerName == null)
+                    return Failure<bool>(HttpStatusCode.Conflict, "Return this book before deleting it.");
+
+                // Lent to a name: the owner may delete it anyway (it came back unmarked,
+                // or it's lost or given away), so the client asks and sends confirmLent
+                if (!confirmLent)
+                    return Failure<bool>(HttpStatusCode.Conflict,
+                        $"This book is marked as lent to {loan.BorrowerName}. Delete it anyway? The loan is removed too.");
+
+                _dbContext.CheckOutItems.Remove(loan);
+            }
+
+            return await RemoveBookAsync(book, BookRemovedReason.DeletedByOwner);
         }
         public async Task<APIResponse<bool>> UpdateBookInfoAsync(int id, SlimBookDto updatedBook)
         {

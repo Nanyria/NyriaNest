@@ -13,6 +13,8 @@ namespace NyriaNest.Application.Interfaces
         /// <summary>The book's reservation queue, oldest first, with each reader's name. Read-only.</summary>
         Task<List<BookReservationDto>> GetReservationQueueAsync(int bookId);
         Task<List<LibraryBookDto>> GetLibraryListAsync(string? userId);
+        /// <summary>A user's own books, by title. Read-only.</summary>
+        Task<List<Book>> GetOwnedByAsync(string ownerId);
         Task<PagedResult<AdminBookDto>> GetAdminCatalogueAsync(AdminCatalogueQuery q);
         Task CreateBookAsync(Book book);
         Task UpdateAsync(Book book);

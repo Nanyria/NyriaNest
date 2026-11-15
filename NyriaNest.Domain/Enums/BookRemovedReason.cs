@@ -8,5 +8,8 @@
     {
         /// <summary>An admin deleted the book; its reservations were cancelled.</summary>
         DeletedByAdmin,
+
+        /// <summary>The owner deleted their own book. Nobody to tell until friends can see it (#85).</summary>
+        DeletedByOwner,
     }
 }

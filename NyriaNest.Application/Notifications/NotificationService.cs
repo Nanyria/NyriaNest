@@ -151,12 +151,14 @@ namespace NyriaNest.Application.Notifications
         private static IEnumerable<string> RecipientsOf(Book book, BookRemovedReason reason) => reason switch
         {
             BookRemovedReason.DeletedByAdmin => book.Reservations.Select(r => r.UserId),
+            BookRemovedReason.DeletedByOwner => [], // the friends who can see it come with #85
             _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
         };
 
         private static string MessageFor(string title, BookRemovedReason reason) => reason switch
         {
             BookRemovedReason.DeletedByAdmin => $"\"{title}\" was removed, so your reservation was cancelled.",
+            BookRemovedReason.DeletedByOwner => $"\"{title}\" was removed by its owner.",
             _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
         };
     }
