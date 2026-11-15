@@ -36,6 +36,7 @@ namespace NyriaNest.Application.Books
         Task<APIResponse<int>> AddOwnBookAsync(SlimBookDto bookDto, string ownerId);
         Task<APIResponse<bool>> UpdateOwnBookAsync(int id, string ownerId, SlimBookDto bookDto);
         Task<APIResponse<bool>> DeleteOwnBookAsync(int id, string ownerId, bool confirmLent);
+        Task<APIResponse<List<StatusHistoryItemDto>>> GetOwnBookHistoryAsync(int id, string ownerId);
     }
     public class BookService : IBookService
     {
@@ -440,6 +441,15 @@ namespace NyriaNest.Application.Books
                 StatusCode = HttpStatusCode.OK,
                 Result = books.Select(ToEditDto).ToList(),
             };
+        }
+
+        // The owner sees the whole history, admins' changes included (that's what their reason is for)
+        public async Task<APIResponse<List<StatusHistoryItemDto>>> GetOwnBookHistoryAsync(int id, string ownerId)
+        {
+            if (await GetOwnAsync(id, ownerId) == null)
+                return Failure<List<StatusHistoryItemDto>>(HttpStatusCode.NotFound, "Book not found.");
+
+            return await GetBookHistoryAsync(id);
         }
 
         public async Task<APIResponse<EditBookDto>> GetOwnBookAsync(int id, string ownerId)

@@ -61,6 +61,14 @@ public class MyBooksController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
+    // The whole history, admins' changes included
+    [HttpGet("{bookId:int}/history")]
+    public async Task<IActionResult> GetMyBookHistory(int bookId)
+    {
+        var response = await _bookService.GetOwnBookHistoryAsync(bookId, User.GetUserId());
+        return StatusCode((int)response.StatusCode, response);
+    }
+
     // Lent to a name for now; a member's user id is refused until friends exist (#85)
     [HttpPost("{bookId:int}/lend")]
     public async Task<IActionResult> LendMyBook(int bookId, [FromBody] LendBookRequest body)

@@ -97,8 +97,9 @@ namespace NyriaNest.Application.Loans
                 return response;
             }
 
-            // A book an admin has marked Lost or Removed can't be reserved
-            if (book.AdminStatus != null)
+            // A book an admin has marked Lost or Removed can't be reserved, and neither can a book
+            // someone owns (#83): owners lend through api/my/books until friend loans (#85)
+            if (book.AdminStatus != null || book.OwnerId != null)
             {
                 response.ErrorMessages.Add("This book isn't available.");
                 response.StatusCode = HttpStatusCode.Conflict;

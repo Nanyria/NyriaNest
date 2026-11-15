@@ -98,8 +98,9 @@ namespace NyriaNest.Application.Loans
             // Check every rule before changing anything, so a refused check-out
             // never leaves a half-made change behind.
 
-            // A book an admin has marked Lost or Removed can't be borrowed
-            if (book.AdminStatus != null)
+            // A book an admin has marked Lost or Removed can't be borrowed, and neither can a book
+            // someone owns (#83): owners lend through api/my/books until friend loans (#85)
+            if (book.AdminStatus != null || book.OwnerId != null)
             {
                 response.ErrorMessages.Add("This book isn't available.");
                 response.StatusCode = HttpStatusCode.Conflict;

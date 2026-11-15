@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
@@ -90,6 +91,32 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await ResultAsync(response)).GetProperty("title").GetString().Should().Be("Mine");
+    }
+
+    // ---- History (#83 step 4b) ----
+
+    [Fact]
+    public async Task History_OfMyBook_ReturnsItsEntries_NewestFirst_IncludingAnAdminsChanges()
+    {
+        // The owner sees what an admin did to their book: that's what the admin's reason is for
+        var (client, me) = await factory.LoginAsAsync();
+        var admin = await factory.CreateUserAsync(Roles.Admin);
+        var bookId = await AddBookAsync(me.Id, "Mine");
+        var otherBookId = await AddBookAsync(me.Id, "Also mine");
+        var start = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc);
+        await AddHistoryAsync(bookId, me.Id, BookStatusEnum.Added, start, "Added");
+        await AddHistoryAsync(bookId, admin.Id, BookStatusEnum.Available, start.AddDays(1), "Edited by an admin: Wrong or missing details");
+        await AddHistoryAsync(bookId, me.Id, BookStatusEnum.CheckedOut, start.AddDays(2), "Lent to Ruth");
+        await AddHistoryAsync(otherBookId, me.Id, BookStatusEnum.Added, start.AddDays(3), "Added");
+
+        var response = await client.GetAsync($"api/my/books/{bookId}/history", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var entries = (await ResultAsync(response)).EnumerateArray().ToList();
+        entries.Select(e => e.GetProperty("notes").GetString()).Should().Equal(
+            "Lent to Ruth", "Edited by an admin: Wrong or missing details", "Added");
+        entries[1].GetProperty("userID").GetString().Should().Be(admin.Id);
+        entries.Should().AllSatisfy(e => e.GetProperty("bookID").GetInt32().Should().Be(bookId));
     }
 
     // ---- Edit ----
@@ -187,6 +214,26 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     [Theory]
     [MemberData(nameof(NotMine))]
+    public async Task History_OfABookThatIsntMine_Returns404(bool ownedBySomeoneElse)
+    {
+        var (client, _) = await factory.LoginAsAsync();
+        var bookId = await AddNotMineAsync(ownedBySomeoneElse);
+
+        var response = await client.GetAsync($"api/my/books/{bookId}/history", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task History_WithoutLogin_Returns401()
+    {
+        var response = await factory.CreateClient().GetAsync("api/my/books/1004/history", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Theory]
+    [MemberData(nameof(NotMine))]
     public async Task Edit_ABookThatIsntMine_Returns404_AndChangesNothing(bool ownedBySomeoneElse)
     {
         var (client, _) = await factory.LoginAsAsync();
@@ -250,6 +297,20 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await db.SaveChangesAsync(Ct);
         return book.BookId;
     });
+
+    private Task AddHistoryAsync(int bookId, string userId, BookStatusEnum status, DateTime timestamp, string notes) =>
+        factory.WithDbAsync(async db =>
+        {
+            db.StatusHistoryItems.Add(new StatusHistoryItem
+            {
+                BookId = bookId,
+                UserId = userId,
+                BookStatus = status,
+                Timestamp = timestamp,
+                Notes = notes,
+            });
+            await db.SaveChangesAsync(Ct);
+        });
 
     private async Task<int> AddNotMineAsync(bool ownedBySomeoneElse)
     {
