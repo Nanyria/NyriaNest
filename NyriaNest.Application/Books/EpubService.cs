@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using NyriaNest.Application.Common;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Enums;
+using NyriaNest.Domain.Rules;
 using System.Net;
 using System.Text;
 
@@ -121,18 +122,16 @@ namespace NyriaNest.Application.Books
         public async Task<(HttpStatusCode Status, EpubDownload? Download)> GetForUserAsync(
             int bookId, string userId, bool isAdmin, CancellationToken ct = default)
         {
-            var book = await _db.Books.AsNoTracking().FirstOrDefaultAsync(b => b.BookId == bookId, ct);
+            // #83: a reader can read any e-book they can see, no loan needed. A book they
+            // can't see is a 404, so its existence is never confirmed. Admins can read every
+            // book (e.g. to check an uploaded file); revisit once owners have private e-books (#80/#87).
+            var books = _db.Books.AsNoTracking().Where(b => b.BookId == bookId);
+            if (!isAdmin)
+                books = books.Where(BookVisibility.VisibleTo(userId));
+
+            var book = await books.FirstOrDefaultAsync(ct);
             if (book?.EpubFileKey is null)
                 return (HttpStatusCode.NotFound, null);
-
-            if (!isAdmin)
-            {
-                // A CheckedOutItem exists only while the book is checked out (it's removed on return)
-                var hasCheckedOut = await _db.CheckOutItems
-                    .AnyAsync(c => c.BookId == bookId && c.UserId == userId, ct);
-                if (!hasCheckedOut)
-                    return (HttpStatusCode.Forbidden, null);
-            }
 
             var stream = await _storage.OpenReadAsync(book.EpubFileKey, ct);
             if (stream is null)
