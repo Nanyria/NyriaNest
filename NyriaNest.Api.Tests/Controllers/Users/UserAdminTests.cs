@@ -105,7 +105,7 @@ public class UserAdminTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     // ---- a user's history ----
 
-    [Fact(Skip = "Bug #121: user history is always empty")]
+    [Fact]
     public async Task GetUserHistory_ReturnsOnlyThatUsersHistory_NewestFirst()
     {
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
