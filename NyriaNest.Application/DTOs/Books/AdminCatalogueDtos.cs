@@ -54,5 +54,9 @@ namespace NyriaNest.Application.DTOs.Books
         public DateTime? ExpectedDate { get; set; }
 
         public string? AdminStatusNotes { get; set; }
+
+        // #83: whose book it is (the owner's username); both null = the shared library
+        public string? OwnerId { get; set; }
+        public string? OwnerName { get; set; }
     }
 }

@@ -93,6 +93,73 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         (await ResultAsync(response)).GetProperty("title").GetString().Should().Be("Mine");
     }
 
+    // ---- Loan details for My library (#83 step 8a) ----
+
+    [Fact]
+    public async Task List_ShowsWhoMyBookIsLentTo_AndSince()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var lent = await AddBookAsync(me.Id, "A lent");
+        var onShelf = await AddBookAsync(me.Id, "B on the shelf");
+        var lentOn = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-3));
+        (await client.PostAsJsonAsync($"api/my/books/{lent}/lend",
+            new { borrowerName = "Ruth (neighbour)", lentOn = lentOn.ToString("yyyy-MM-dd") }, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await client.GetAsync("api/my/books", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var books = (await ResultAsync(response)).EnumerateArray().ToList();
+        books.Select(b => b.GetProperty("bookId").GetInt32()).Should().Equal(lent, onShelf);
+
+        var lentOnMidnight = lentOn.ToDateTime(TimeOnly.MinValue);
+        ShouldBeLent(books[0], "Ruth (neighbour)", lentOnMidnight);
+
+        books[1].GetProperty("bookStatus").GetInt32().Should().Be((int)BookStatusEnum.Available);
+        books[1].GetProperty("lentTo").ValueKind.Should().Be(JsonValueKind.Null);
+        books[1].GetProperty("lentOn").ValueKind.Should().Be(JsonValueKind.Null);
+        books[1].GetProperty("dueDate").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Get_MyLentBook_ShowsTheLoan()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var bookId = await AddBookAsync(me.Id, "Mine");
+        var lentOn = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-5));
+        (await client.PostAsJsonAsync($"api/my/books/{bookId}/lend",
+            new { borrowerName = "Sam", lentOn = lentOn.ToString("yyyy-MM-dd") }, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await client.GetAsync($"api/my/books/{bookId}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        ShouldBeLent(await ResultAsync(response), "Sam", lentOn.ToDateTime(TimeOnly.MinValue));
+    }
+
+    [Fact]
+    public async Task List_ShowsMyBookAnAdminRemoved_WithItsAdminStatus()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var removed = await AddBookAsync(me.Id, "A removed");
+        var fine = await AddBookAsync(me.Id, "B fine");
+        await factory.WithDbAsync(async db =>
+        {
+            var book = await db.Books.SingleAsync(b => b.BookId == removed, Ct);
+            book.AdminStatus = BookStatusEnum.Removed;
+            book.AdminStatusSetAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(Ct);
+        });
+
+        var response = await client.GetAsync("api/my/books", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var books = (await ResultAsync(response)).EnumerateArray().ToList();
+        books.Select(b => b.GetProperty("bookId").GetInt32()).Should().Equal(removed, fine);
+        books[0].GetProperty("adminStatus").GetInt32().Should().Be((int)BookStatusEnum.Removed);
+        books[1].GetProperty("adminStatus").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     // ---- History (#83 step 4b) ----
 
     [Fact]
@@ -281,6 +348,15 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         if (body is not null)
             request.Content = JsonContent.Create(body);
         return client.SendAsync(request, Ct);
+    }
+
+    // A loan lent on a past date starts at midnight UTC that day and is due 14 days later
+    private static void ShouldBeLent(JsonElement book, string borrower, DateTime lentOn)
+    {
+        book.GetProperty("bookStatus").GetInt32().Should().Be((int)BookStatusEnum.CheckedOut);
+        book.GetProperty("lentTo").GetString().Should().Be(borrower);
+        book.GetProperty("lentOn").GetDateTime().Should().BeCloseTo(lentOn, TimeSpan.FromSeconds(1));
+        book.GetProperty("dueDate").GetDateTime().Should().BeCloseTo(lentOn.AddDays(14), TimeSpan.FromSeconds(1));
     }
 
     private static async Task<JsonElement> ResultAsync(HttpResponseMessage response)

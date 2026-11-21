@@ -134,6 +134,48 @@ public class BookCatalogueAndEpubTests(ApiFactory factory) : IClassFixture<ApiFa
         ((bool)item["hasEpub"]!).Should().BeFalse();
     }
 
+    // #83 step 8a: an owner lends to a name (someone without an account)
+    [Fact]
+    public async Task Catalogue_ShowsTheBorrowerName_OfALoanByName()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = await factory.CreateUserAsync();
+        var tag = Tag();
+        var book = Book($"Lent {tag}");
+        book.OwnerId = owner.Id;
+        await AddBooksAsync(book);
+        await factory.WithDbAsync(async db =>
+        {
+            db.CheckOutItems.Add(new() { BookId = book.BookId, BorrowerName = "Ruth (neighbour)", CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
+            await db.SaveChangesAsync(Ct);
+        });
+
+        var item = (await CatalogueAsync(admin, $"q={tag}"))["items"]![0]!;
+
+        ((string)item["borrowerName"]!).Should().Be("Ruth (neighbour)");
+    }
+
+    // #83 step 8a: whose book it is; no owner = the shared library
+    [Fact]
+    public async Task Catalogue_ShowsTheOwner_AndNoOwnerForSharedBooks()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = await factory.CreateUserAsync();
+        var tag = Tag();
+        var owned = Book($"A owned {tag}");
+        owned.OwnerId = owner.Id;
+        var shared = Book($"B shared {tag}", type: BookTypeEnums.EBook);
+        await AddBooksAsync(owned, shared);
+
+        var items = (await CatalogueAsync(admin, $"q={tag}"))["items"]!.AsArray();
+
+        items.Select(i => (int)i!["bookId"]!).Should().Equal(owned.BookId, shared.BookId);
+        ((string?)items[0]!["ownerId"]).Should().Be(owner.Id);
+        ((string?)items[0]!["ownerName"]).Should().Be(owner.UserName);
+        ((string?)items[1]!["ownerId"]).Should().BeNull();
+        ((string?)items[1]!["ownerName"]).Should().BeNull();
+    }
+
     [Fact]
     public async Task Catalogue_NeedsAttention_ListsOnlyEbooksWithoutAnEpub()
     {

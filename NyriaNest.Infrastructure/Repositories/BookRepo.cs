@@ -49,12 +49,18 @@ namespace NyriaNest.Infrastructure.Repositories
             .Include(b => b.Reviews)
                 .ThenInclude(r => r.RatingItem)
             .Include(b => b.CheckedOutBy)
-            .Include(b => b.Reservations);
+                .ThenInclude(c => c!.User)
+            .Include(b => b.Reservations)
+            .Include(b => b.Owner);
 
+        // With the current loan (and its borrower), for My library's "Lent to …"
         public async Task<List<Book>> GetOwnedByAsync(string ownerId)
         {
             return await _db.Books
                 .AsNoTracking()
+                .Include(b => b.Owner)
+                .Include(b => b.CheckedOutBy)
+                    .ThenInclude(c => c!.User)
                 .Where(b => b.OwnerId == ownerId)
                 .OrderBy(b => b.Title)
                 .ToListAsync();
@@ -201,11 +207,14 @@ namespace NyriaNest.Infrastructure.Repositories
                     HasEpub = b.EpubFileKey != null,
                     BookStatus = b.BookStatus,
                     IsOverdue = b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now,
-                    BorrowerName = b.CheckedOutBy != null ? b.CheckedOutBy.User!.UserName : null,
+                    // A loan has a member or a name (#83); a name loan has no user
+                    BorrowerName = b.CheckedOutBy != null ? b.CheckedOutBy.BorrowerName ?? b.CheckedOutBy.User!.UserName : null,
                     DueDate = b.CheckedOutBy != null ? b.CheckedOutBy.ReturnDate : null,
                     NextInLineName = b.Reservations.OrderBy(r => r.ReservationDate).Select(r => r.User.UserName).FirstOrDefault(),
                     ExpectedDate = b.Reservations.OrderBy(r => r.ReservationDate).Select(r => r.AvailabilityDate).FirstOrDefault(),
                     AdminStatusNotes = b.AdminStatusNotes,
+                    OwnerId = b.OwnerId,
+                    OwnerName = b.Owner != null ? b.Owner.UserName : null,
                 })
                 .ToListAsync();
 

@@ -32,8 +32,8 @@ namespace NyriaNest.Application.Books
         Task<APIResponse<bool>> ClearAdminStatusAsync(int bookId, string? adminUserId, string? notes = null);
 
         // A user's own books (#83). Someone else's book or a shared-library book looks missing (404).
-        Task<APIResponse<List<EditBookDto>>> GetOwnBooksAsync(string ownerId);
-        Task<APIResponse<EditBookDto>> GetOwnBookAsync(int id, string ownerId);
+        Task<APIResponse<List<MyBookDto>>> GetOwnBooksAsync(string ownerId);
+        Task<APIResponse<MyBookDto>> GetOwnBookAsync(int id, string ownerId);
         Task<APIResponse<int>> AddOwnBookAsync(SlimBookDto bookDto, string ownerId);
         Task<APIResponse<bool>> UpdateOwnBookAsync(int id, string ownerId, SlimBookDto bookDto);
         Task<APIResponse<bool>> DeleteOwnBookAsync(int id, string ownerId, bool confirmLent);
@@ -118,21 +118,38 @@ namespace NyriaNest.Application.Books
             return response;
         }
 
-        private static EditBookDto ToEditDto(Book book) => new()
+        private static EditBookDto ToEditDto(Book book) =>
+            WithEditFields(new EditBookDto { Title = book.Title, Author = book.Author }, book);
+
+        // My library also shows where the book is: on the shelf, lent out, or taken down by an admin
+        private static MyBookDto ToMyBookDto(Book book) => WithEditFields(new MyBookDto
         {
-            BookId = book.BookId,
             Title = book.Title,
             Author = book.Author,
-            BookDescription = book.BookDescription,
-            PublicationYear = book.PublicationYear,
-            CoverImagePath = book.CoverImagePath,
-            Genre = book.Genre,
-            BookType = book.BookType,
-            Language = book.Language,
-            HasEpub = book.HasEpub,
-            EpubFileName = book.EpubFileName,
-            EpubFileSize = book.EpubFileSize,
-        };
+            BookStatus = book.BookStatus,
+            AdminStatus = book.AdminStatus,
+            LentTo = book.CheckedOutBy == null ? null : book.CheckedOutBy.BorrowerName ?? book.CheckedOutBy.User?.UserName,
+            LentOn = book.CheckedOutBy?.CheckOutDate,
+            DueDate = book.CheckedOutBy?.ReturnDate,
+        }, book);
+
+        // Title and Author are required members, so the caller sets them in its initializer
+        private static T WithEditFields<T>(T dto, Book book) where T : EditBookDto
+        {
+            dto.BookId = book.BookId;
+            dto.BookDescription = book.BookDescription;
+            dto.PublicationYear = book.PublicationYear;
+            dto.CoverImagePath = book.CoverImagePath;
+            dto.Genre = book.Genre;
+            dto.BookType = book.BookType;
+            dto.Language = book.Language;
+            dto.HasEpub = book.HasEpub;
+            dto.EpubFileName = book.EpubFileName;
+            dto.EpubFileSize = book.EpubFileSize;
+            dto.OwnerId = book.OwnerId;
+            dto.OwnerName = book.Owner?.UserName;
+            return dto;
+        }
 
         // Returns the new book's id: the entity itself isn't sent to clients (#76)
         public Task<APIResponse<int>> AddBookAsync(SlimBookDto bookDto, string? userId = null) =>
@@ -447,14 +464,14 @@ namespace NyriaNest.Application.Books
             return book?.OwnerId == ownerId ? book : null;
         }
 
-        public async Task<APIResponse<List<EditBookDto>>> GetOwnBooksAsync(string ownerId)
+        public async Task<APIResponse<List<MyBookDto>>> GetOwnBooksAsync(string ownerId)
         {
             var books = await _bookRepo.GetOwnedByAsync(ownerId);
-            return new APIResponse<List<EditBookDto>>
+            return new APIResponse<List<MyBookDto>>
             {
                 IsSuccess = true,
                 StatusCode = HttpStatusCode.OK,
-                Result = books.Select(ToEditDto).ToList(),
+                Result = books.Select(ToMyBookDto).ToList(),
             };
         }
 
@@ -467,17 +484,17 @@ namespace NyriaNest.Application.Books
             return await GetBookHistoryAsync(id);
         }
 
-        public async Task<APIResponse<EditBookDto>> GetOwnBookAsync(int id, string ownerId)
+        public async Task<APIResponse<MyBookDto>> GetOwnBookAsync(int id, string ownerId)
         {
             var book = await GetOwnAsync(id, ownerId);
             if (book == null)
-                return Failure<EditBookDto>(HttpStatusCode.NotFound, "Book not found.");
+                return Failure<MyBookDto>(HttpStatusCode.NotFound, "Book not found.");
 
-            return new APIResponse<EditBookDto>
+            return new APIResponse<MyBookDto>
             {
                 IsSuccess = true,
                 StatusCode = HttpStatusCode.OK,
-                Result = ToEditDto(book),
+                Result = ToMyBookDto(book),
             };
         }
 

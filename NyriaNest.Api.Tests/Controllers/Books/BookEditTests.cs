@@ -7,6 +7,7 @@ using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace NyriaNest.Api.Tests.Controllers.Books;
 
@@ -125,6 +126,25 @@ public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await BookAsync(bookId)).Title.Should().Be("Renamed");
+    }
+
+    // #83 step 8a: the edit page needs to know whose book it is (a reason is asked for
+    // someone else's book). No owner = the shared library.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetForEdit_ShowsTheOwner_OrNoneForASharedBook(bool owned)
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = owned ? await factory.CreateUserAsync() : null;
+        var bookId = await AddBookAsync(b => b.OwnerId = owner?.Id);
+
+        var response = await admin.GetAsync($"api/Book/{bookId}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var result = (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("result");
+        result.GetProperty("ownerId").GetString().Should().Be(owner?.Id);
+        result.GetProperty("ownerName").GetString().Should().Be(owner?.UserName);
     }
 
     // ---- Helpers ----

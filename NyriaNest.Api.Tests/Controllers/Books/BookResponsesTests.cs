@@ -28,6 +28,8 @@ public class BookResponsesTests(ApiFactory factory) : IClassFixture<ApiFactory>
     [
         "bookId", "title", "author", "bookDescription", "publicationYear", "coverImagePath",
         "genre", "bookType", "language", "hasEpub", "epubFileName", "epubFileSize",
+        // #83: whose book it is, so the page knows when to ask an admin for a reason
+        "ownerId", "ownerName",
     ];
 
     // ---- GET api/Book/{id}: what the edit page loads ----
