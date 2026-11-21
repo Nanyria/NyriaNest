@@ -23,7 +23,7 @@ export class RegisterUserComponent {
   registrationSuccess = false;
   confirmPassword: string = '';
   showPassword = false;
-  errorMessage = '';
+  errorMessages: string[] = [];
   submitted = false;
   constructor(private userActionsService: UserActionsService) {}
 
@@ -41,7 +41,7 @@ export class RegisterUserComponent {
   }
 
   registerUser() {
-    this.errorMessage = '';
+    this.errorMessages = [];
     this.userActionsService.addUser(this.user).subscribe({
       next: (response) => {
         console.log('User registered successfully:', response);
@@ -49,7 +49,10 @@ export class RegisterUserComponent {
       },
       error: (error) => {
         console.error('Error registering user:', error);
-        this.errorMessage = 'Something went wrong. Please try again.';
+        // The API's reasons (a taken email or username, a password Identity turns
+        // down) when there are any; the generic text for no response or a 500
+        const messages: string[] = error?.error?.errorMessages ?? [];
+        this.errorMessages = messages.length ? messages : ['Something went wrong. Please try again.'];
       },
     });
   }
