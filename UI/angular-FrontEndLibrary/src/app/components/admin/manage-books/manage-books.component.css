@@ -311,27 +311,6 @@
   color: var(--nn-accent);
 }
 
-/* ---------- Pagination ---------- */
-.mb-pager {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--nn-space-3);
-  padding-top: var(--nn-space-4);
-}
-
-.mb-pager__buttons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mb-pager__gap {
-  padding: 0 4px;
-  color: var(--nn-ink-muted);
-}
-
 /* ---------- Narrower screens: fold genre/type into the book cell ---------- */
 .mb-meta-inline {
   display: none;
@@ -399,10 +378,5 @@
 
   .mb-cell-file .nn-muted {
     display: none; /* "N/A" for non-e-books adds nothing on a card */
-  }
-
-  .mb-pager {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

@@ -1,0 +1,42 @@
+<nav class="pager" aria-label="Pagination">
+  <span class="nn-muted">Showing {{ first() }}–{{ last() }} of {{ totalCount() }} {{ itemLabel() }}</span>
+  @if (totalPages() > 1) {
+    <div class="pager__buttons">
+      <button
+        type="button"
+        class="nn-btn nn-btn--outline nn-btn--icon"
+        [disabled]="page() === 1"
+        aria-label="Previous page"
+        (click)="goTo(page() - 1)"
+      >
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+      </button>
+      @for (n of pageButtons(); track $index) {
+        @if (n === null) {
+          <span class="pager__gap" aria-hidden="true">…</span>
+        } @else {
+          <button
+            type="button"
+            class="nn-btn nn-btn--icon"
+            [class.nn-btn--primary]="n === page()"
+            [class.nn-btn--outline]="n !== page()"
+            [attr.aria-current]="n === page() ? 'page' : null"
+            [attr.aria-label]="'Page ' + n"
+            (click)="goTo(n)"
+          >
+            {{ n }}
+          </button>
+        }
+      }
+      <button
+        type="button"
+        class="nn-btn nn-btn--outline nn-btn--icon"
+        [disabled]="page() === totalPages()"
+        aria-label="Next page"
+        (click)="goTo(page() + 1)"
+      >
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  }
+</nav>

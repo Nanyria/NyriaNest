@@ -22,6 +22,7 @@ import {
 import { BookService } from '../../../Services/book.services';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
+import { PagerComponent } from '../../layout/pager/pager.component';
 import {
   AdminBook,
   CatalogueQuery,
@@ -68,7 +69,7 @@ function readQuery(p: ParamMap): CatalogueQuery {
   templateUrl: './manage-books.component.html',
   styleUrls: ['./manage-books.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PagerComponent],
   host: { class: 'nn-compact' }, // the theme's tighter, lighter fields, like Add book
 })
 export class ManageBooksComponent {
@@ -112,27 +113,6 @@ export class ManageBooksComponent {
   readonly page = computed(() => {
     const s = this.state();
     return s.kind === 'ready' ? s.data : null;
-  });
-
-  readonly totalPages = computed(() => {
-    const p = this.page();
-    return p ? Math.max(1, Math.ceil(p.totalCount / p.pageSize)) : 1;
-  });
-
-  // Page buttons: first, last, and the current page with its neighbours.
-  // null marks a gap ("…").
-  readonly pageButtons = computed(() => {
-    const current = this.page()?.page ?? 1;
-    const last = this.totalPages();
-    const pages: (number | null)[] = [];
-    for (let n = 1; n <= last; n++) {
-      if (n === 1 || n === last || Math.abs(n - current) <= 1) {
-        pages.push(n);
-      } else if (pages[pages.length - 1] !== null) {
-        pages.push(null);
-      }
-    }
-    return pages;
   });
 
   readonly hasFilters = computed(() => {

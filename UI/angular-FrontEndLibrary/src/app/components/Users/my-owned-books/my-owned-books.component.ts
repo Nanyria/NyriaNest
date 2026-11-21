@@ -17,6 +17,7 @@ import {
   GenreEnums,
 } from '../../../Helpers/Enums/enum';
 import { GenreOptions } from '../../../Helpers/Helper';
+import { PagerComponent } from '../../layout/pager/pager.component';
 import { LoanDialogComponent, LoanDialogMode } from './loan-dialog.component';
 import { dateOnly, formatDay, formatMoment, todayIso } from './loan-dates';
 
@@ -44,7 +45,10 @@ interface ShelfQuery {
   genre?: GenreEnums;
   bookType?: BookTypeEnums;
   sort: ShelfSort;
+  page: number;
 }
+
+const PAGE_SIZE = 10;
 
 // As on Manage books, the URL query string holds the filters, so refresh and the
 // Back button keep them. Here they filter the loaded list instead of calling the API:
@@ -57,6 +61,7 @@ function readQuery(p: ParamMap): ShelfQuery {
     genre: num('genre'),
     bookType: num('bookType'),
     sort: sort === 'title' || sort === 'author' ? sort : 'added',
+    page: Math.max(1, Math.floor(num('page') ?? 1) || 1),
   };
 }
 
@@ -70,7 +75,7 @@ const byText = (a: string, b: string) => a.localeCompare(b, 'en', { sensitivity:
   templateUrl: './my-owned-books.component.html',
   styleUrls: ['./my-owned-books.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterLink, ReactiveFormsModule, LoanDialogComponent],
+  imports: [RouterLink, ReactiveFormsModule, LoanDialogComponent, PagerComponent],
   host: { class: 'nn-compact' },
 })
 export class MyOwnedBooksComponent {
@@ -149,6 +154,29 @@ export class MyOwnedBooksComponent {
     return rows;
   });
 
+  readonly pageSize = PAGE_SIZE;
+
+  // The page from the URL, kept inside the list: after deleting the last book
+  // on the last page, or with a typed ?page=99, the last page shows instead
+  readonly currentPage = computed(() => {
+    const lastPage = Math.max(1, Math.ceil(this.shownBooks().length / PAGE_SIZE));
+    return Math.min(this.query().page, lastPage);
+  });
+
+  // The rows on the current page
+  readonly pageBooks = computed(() => {
+    const start = (this.currentPage() - 1) * PAGE_SIZE;
+    return this.shownBooks().slice(start, start + PAGE_SIZE);
+  });
+
+  goToPage(page: number) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: page === 1 ? null : page },
+      queryParamsHandling: 'merge',
+    });
+  }
+
   constructor() {
     // Wait for a pause in typing before filtering
     this.search.valueChanges
@@ -156,11 +184,12 @@ export class MyOwnedBooksComponent {
       .subscribe((q) => this.setFilter({ q: q.trim() || null }));
   }
 
-  /** Updates the URL; null removes a param. replaceUrl: typing doesn't fill the Back history. */
+  /** Updates the URL; null removes a param. Any filter change goes back to page 1.
+   *  replaceUrl: typing doesn't fill the Back history. */
   setFilter(patch: Record<string, string | number | null>) {
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: patch,
+      queryParams: { ...patch, page: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });

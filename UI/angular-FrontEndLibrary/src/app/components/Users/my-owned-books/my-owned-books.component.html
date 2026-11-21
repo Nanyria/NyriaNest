@@ -108,7 +108,7 @@
       } @else {
       @if (hasFilters()) {
         <p class="ob-results nn-muted" role="status">
-          Showing {{ rows.length }} of {{ books.length }} books ·
+          {{ rows.length }} of your {{ books.length }} books match ·
           <button type="button" class="nn-link-button" (click)="clearFilters()">Clear filters</button>
         </p>
       }
@@ -124,7 +124,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (b of rows; track b.bookId) {
+            @for (b of pageBooks(); track b.bookId) {
               <tr class="ob-row" [class.has-history]="isHistoryOpen(b)">
                 <td>
                   <div class="ob-book">
@@ -240,6 +240,14 @@
           </tbody>
         </table>
       </div>
+
+      <app-pager
+        [page]="currentPage()"
+        [pageSize]="pageSize"
+        [totalCount]="rows.length"
+        [itemsOnPage]="pageBooks().length"
+        (pageChange)="goToPage($event)"
+      />
       }
     }
 }
