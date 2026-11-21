@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
-import { catchError, map, startWith, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, map, startWith, switchMap } from 'rxjs/operators';
 import { MyBook, StatusHistoryItem } from '../../../Models/interfaces';
 import { MyBooksService } from '../../../Services/my-books.service';
 import { ToastService } from '../../../Services/toast.service';
@@ -11,8 +12,11 @@ import {
   BookStatusDisplayNames,
   BookStatusEnum,
   BookTypeDisplayNames,
+  BookTypeEnums,
   GenreDisplayNames,
+  GenreEnums,
 } from '../../../Helpers/Enums/enum';
+import { GenreOptions } from '../../../Helpers/Helper';
 import { LoanDialogComponent, LoanDialogMode } from './loan-dialog.component';
 import { dateOnly, formatDay, formatMoment, todayIso } from './loan-dates';
 
@@ -33,6 +37,31 @@ const HISTORY_PREVIEW = 5;
 const newestFirst = (books: MyBook[]) =>
   [...books].sort((a, b) => b.dateAdded.localeCompare(a.dateAdded) || b.bookId - a.bookId);
 
+type ShelfSort = 'added' | 'title' | 'author';
+
+interface ShelfQuery {
+  q?: string;
+  genre?: GenreEnums;
+  bookType?: BookTypeEnums;
+  sort: ShelfSort;
+}
+
+// As on Manage books, the URL query string holds the filters, so refresh and the
+// Back button keep them. Here they filter the loaded list instead of calling the API:
+// a shelf is small, so every own book is loaded at once.
+function readQuery(p: ParamMap): ShelfQuery {
+  const num = (k: string) => (p.has(k) ? Number(p.get(k)) : undefined);
+  const sort = p.get('sort');
+  return {
+    q: p.get('q') ?? undefined,
+    genre: num('genre'),
+    bookType: num('bookType'),
+    sort: sort === 'title' || sort === 'author' ? sort : 'added',
+  };
+}
+
+const byText = (a: string, b: string) => a.localeCompare(b, 'en', { sensitivity: 'base' });
+
 // The books on the user's own shelf, and who has borrowed them (#83).
 // Laid out like Manage books.
 @Component({
@@ -41,10 +70,12 @@ const newestFirst = (books: MyBook[]) =>
   templateUrl: './my-owned-books.component.html',
   styleUrls: ['./my-owned-books.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterLink, LoanDialogComponent],
+  imports: [RouterLink, ReactiveFormsModule, LoanDialogComponent],
   host: { class: 'nn-compact' },
 })
 export class MyOwnedBooksComponent {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private myBooks = inject(MyBooksService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmService);
@@ -68,6 +99,77 @@ export class MyOwnedBooksComponent {
     ),
     { initialValue: { kind: 'loading' } as ViewState },
   );
+
+  // The counters above the list. A book an admin took down counts as owned,
+  // but neither on the shelf nor lent out. null while loading or after an error.
+  readonly counts = computed(() => {
+    const s = this.state();
+    if (s.kind !== 'ready' || s.books.length === 0) return null;
+    const lent = s.books.filter((b) => this.isLent(b)).length;
+    const withdrawn = s.books.filter((b) => this.isWithdrawn(b) && !this.isLent(b)).length;
+    return { total: s.books.length, onShelf: s.books.length - lent - withdrawn, lent };
+  });
+
+  // ---------- Search, filters and sorting ----------
+  // "None" and "All" are filter values, not real genres
+  readonly genreValues = GenreOptions.values.filter((g) => g !== GenreEnums.All && g !== GenreEnums.None);
+
+  readonly query = toSignal(this.route.queryParamMap.pipe(map(readQuery)), {
+    initialValue: readQuery(this.route.snapshot.queryParamMap),
+  });
+
+  readonly search = new FormControl(this.query().q ?? '', { nonNullable: true });
+
+  // Only the formats the user actually has (paperback, hardcover; e-books later)
+  readonly formatValues = computed(() => {
+    const s = this.state();
+    if (s.kind !== 'ready') return [];
+    return [...new Set(s.books.map((b) => b.bookType))].sort((a, b) => a - b);
+  });
+
+  readonly hasFilters = computed(() => {
+    const q = this.query();
+    return !!(q.q || q.genre !== undefined || q.bookType !== undefined);
+  });
+
+  // The rows to show: the loaded list (newest first) filtered and sorted by the URL
+  readonly shownBooks = computed(() => {
+    const s = this.state();
+    if (s.kind !== 'ready') return [];
+    const q = this.query();
+    const text = q.q?.trim().toLowerCase();
+    const rows = s.books.filter(
+      (b) =>
+        (!text || b.title.toLowerCase().includes(text) || b.author.toLowerCase().includes(text)) &&
+        (q.genre === undefined || b.genre === q.genre) &&
+        (q.bookType === undefined || b.bookType === q.bookType),
+    );
+    if (q.sort === 'title') return [...rows].sort((a, b) => byText(a.title, b.title));
+    if (q.sort === 'author') return [...rows].sort((a, b) => byText(a.author, b.author) || byText(a.title, b.title));
+    return rows;
+  });
+
+  constructor() {
+    // Wait for a pause in typing before filtering
+    this.search.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((q) => this.setFilter({ q: q.trim() || null }));
+  }
+
+  /** Updates the URL; null removes a param. replaceUrl: typing doesn't fill the Back history. */
+  setFilter(patch: Record<string, string | number | null>) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: patch,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  clearFilters() {
+    this.search.setValue('', { emitEvent: false });
+    this.setFilter({ q: null, genre: null, bookType: null });
+  }
 
   // Shown above the list when an action fails
   readonly actionError = signal<string | null>(null);

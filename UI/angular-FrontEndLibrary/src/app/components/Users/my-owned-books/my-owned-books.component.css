@@ -19,8 +19,75 @@
   margin: 0;
 }
 
-.ob-count {
-  font-size: 1rem;
+/* Title with the subtitle under it; the icon and rule stay centred on both lines */
+.ob-heading__title {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1.2;
+}
+
+.ob-heading__subtitle {
+  margin: 0;
+  font-family: var(--nn-font-body);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--nn-ink);
+}
+
+/* ---------- Counters ---------- */
+.ob-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--nn-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Icon on the left, number above its label */
+.ob-stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius-sm);
+  background-color: var(--nn-field);
+}
+
+.ob-stat--total {
+  background-color: var(--nn-surface-sunken);
+}
+
+.ob-stat__icon {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: var(--nn-surface-sunken);
+  color: var(--nn-gold-ink);
+  font-size: 1.1rem;
+}
+
+.ob-stat--total .ob-stat__icon {
+  background-color: var(--nn-field);
+}
+
+.ob-stat__number {
+  font-family: var(--nn-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--nn-ink-strong);
+}
+
+.ob-stat__label {
+  font-size: 0.9rem;
+  color: var(--nn-ink);
 }
 
 .ob-add {
@@ -50,6 +117,42 @@
 
 .ob-state p {
   margin: 0;
+}
+
+/* ---------- Search and filters ---------- */
+.ob-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px var(--nn-space-3);
+  align-items: flex-end;
+  padding: 14px 16px;
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius-sm);
+  background-color: var(--nn-surface-sunken);
+}
+
+.ob-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 140px;
+  margin: 0;
+}
+
+.ob-filter--search {
+  flex: 2 1 240px;
+}
+
+/* The lighter field colour, as on Manage books. background-color only, so
+   nn-select keeps its arrow image. */
+.ob-filters .nn-input,
+.ob-filters .nn-select {
+  background-color: var(--nn-field);
+}
+
+.ob-results {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 /* ---------- Table ---------- */
@@ -217,6 +320,28 @@
 @media (max-width: 640px) {
   .ob-toolbar .ob-add {
     width: 100%;
+  }
+
+  /* Three narrow counters still fit side by side: number over label, no icon */
+  .ob-stats {
+    gap: var(--nn-space-2);
+  }
+
+  .ob-stat {
+    grid-template-columns: 1fr;
+    padding: 10px 12px;
+  }
+
+  .ob-stat__icon {
+    display: none;
+  }
+
+  .ob-stat__number {
+    font-size: 1.35rem;
+  }
+
+  .ob-stat__label {
+    font-size: 0.8rem;
   }
 
   .ob-table,

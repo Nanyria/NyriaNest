@@ -1,17 +1,38 @@
 <!-- The title's rule runs up to the Add book button, like the toolbar on Manage books -->
 <div class="ob-toolbar">
-  <h1 class="nn-section-title ob-toolbar__title">
-    <i class="bi bi-bookshelf" aria-hidden="true"></i>My owned books
-    @let loaded = state();
-    @if (loaded.kind === 'ready' && loaded.books.length) {
-      <span class="nn-muted ob-count">({{ loaded.books.length }})</span>
-    }
+  <div class="nn-section-title ob-toolbar__title">
+    <i class="bi bi-bookshelf" aria-hidden="true"></i>
+    <div class="ob-heading">
+      <h1 class="ob-heading__title">My owned books</h1>
+      <p class="ob-heading__subtitle">Your own book collection</p>
+    </div>
     <span class="nn-section-title__rule" aria-hidden="true"></span>
-  </h1>
+  </div>
   <a class="nn-btn nn-btn--primary ob-add" routerLink="/my/owned-books/add">
     <i class="bi bi-plus-lg" aria-hidden="true"></i> Add book
   </a>
 </div>
+
+<!-- Counted from the list, so they're only shown once it's loaded -->
+@if (counts(); as c) {
+  <ul class="ob-stats" aria-label="Your books at a glance">
+    <li class="ob-stat ob-stat--total">
+      <i class="bi bi-book ob-stat__icon" aria-hidden="true"></i>
+      <span class="ob-stat__number">{{ c.total }}</span>
+      <span class="ob-stat__label">{{ c.total === 1 ? 'Owned book' : 'Owned books' }}</span>
+    </li>
+    <li class="ob-stat">
+      <i class="bi bi-bookshelf ob-stat__icon" aria-hidden="true"></i>
+      <span class="ob-stat__number">{{ c.onShelf }}</span>
+      <span class="ob-stat__label">On your shelves</span>
+    </li>
+    <li class="ob-stat">
+      <i class="bi bi-person ob-stat__icon" aria-hidden="true"></i>
+      <span class="ob-stat__number">{{ c.lent }}</span>
+      <span class="ob-stat__label">Lent out</span>
+    </li>
+  </ul>
+}
 
 @if (actionError(); as message) {
   <p class="ob-alert" role="alert">
@@ -37,6 +58,60 @@
         </a>
       </div>
     } @else {
+      <!-- Search and filters; they live in the URL, like on Manage books -->
+      <div class="ob-filters" role="search">
+        <label class="ob-filter ob-filter--search">
+          <span class="nn-field-label">Search</span>
+          <span class="nn-field">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input class="nn-input" type="search" [formControl]="search" placeholder="Title or author…" />
+          </span>
+        </label>
+
+        <label class="ob-filter">
+          <span class="nn-field-label">Genre</span>
+          <select class="nn-select nn-select--plain" (change)="setFilter({ genre: $any($event.target).value || null })">
+            <option value="" [selected]="query().genre === undefined">All genres</option>
+            @for (g of genreValues; track g) {
+              <option [value]="g" [selected]="query().genre === g">{{ genreNames[g] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="ob-filter">
+          <span class="nn-field-label">Format</span>
+          <select class="nn-select nn-select--plain" (change)="setFilter({ bookType: $any($event.target).value || null })">
+            <option value="" [selected]="query().bookType === undefined">All formats</option>
+            @for (t of formatValues(); track t) {
+              <option [value]="t" [selected]="query().bookType === t">{{ bookTypeNames[t] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="ob-filter">
+          <span class="nn-field-label">Sort</span>
+          <!-- The default (recently added) is left out of the URL -->
+          <select class="nn-select nn-select--plain" (change)="setFilter({ sort: $any($event.target).value === 'added' ? null : $any($event.target).value })">
+            <option value="added" [selected]="query().sort === 'added'">Recently added</option>
+            <option value="title" [selected]="query().sort === 'title'">Title A → Z</option>
+            <option value="author" [selected]="query().sort === 'author'">Author A → Z</option>
+          </select>
+        </label>
+      </div>
+
+      @let rows = shownBooks();
+      @if (rows.length === 0) {
+        <div class="ob-state">
+          <p>No books match these filters.</p>
+          <button type="button" class="nn-btn nn-btn--outline" (click)="clearFilters()">Clear filters</button>
+        </div>
+      } @else {
+      @if (hasFilters()) {
+        <p class="ob-results nn-muted" role="status">
+          Showing {{ rows.length }} of {{ books.length }} books ·
+          <button type="button" class="nn-link-button" (click)="clearFilters()">Clear filters</button>
+        </p>
+      }
       <div class="ob-table-wrap">
         <table class="ob-table">
           <thead>
@@ -49,7 +124,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (b of books; track b.bookId) {
+            @for (b of rows; track b.bookId) {
               <tr class="ob-row" [class.has-history]="isHistoryOpen(b)">
                 <td>
                   <div class="ob-book">
@@ -165,6 +240,7 @@
           </tbody>
         </table>
       </div>
+      }
     }
 }
 
