@@ -500,21 +500,26 @@ export class LibraryComponent implements AfterViewInit {
       this.user?.readList?.some((item) => +item.bookId === +book.bookId) ??
       false;
 
+    // No Borrow/Reserve: the Library holds shared e-books and my own books,
+    // neither of which is borrowed here. Asking a friend to borrow comes in #85.
     this.infoCardActions = [
-      {
-        label: book.isCheckedOutByMe ? 'Return' : 'Borrow',
-        action: () => this.toggleBorrow(book),
-        disabled: this.isBorrowDisabled(book),
-      },
-      {
-        label: book.isReservedByMe ? 'Cancel reservation' : 'Reserve',
-        action: () => this.toggleReservation(book),
-      },
       {
         label: isInReadList ? 'Remove from reading list' : 'Add to reading list',
         action: () => this.toggleReadList(book),
       },
     ];
+    if (book.isMine) {
+      this.infoCardActions.push({
+        label: 'Manage in My owned books',
+        action: () => this.manageOwnBook(book),
+      });
+    }
+  }
+
+  // Lending, history and editing live on My owned books; its search finds the book
+  manageOwnBook(book: LibraryBook) {
+    this.closeInfoCard();
+    this.router.navigate(['/my/owned-books'], { queryParams: { q: book.title } });
   }
   isBorrowDisabled(book: LibraryBook): boolean {
     const isCheckedOutBySomeoneElse =
@@ -545,6 +550,7 @@ export class LibraryComponent implements AfterViewInit {
     };
   }
 
+  // Not offered in the popup until #85 (friend loans); kept until then.
   // After borrowing, returning or (un)reserving, reload the list: the server
   // works out the new "…ByMe" flags and getAllBooks refreshes the open popup.
   // Returning asks first; borrowing is one click, like on Manage books.

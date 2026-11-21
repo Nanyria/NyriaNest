@@ -10,5 +10,6 @@ export const ACTION_ICON_MAP: { [label: string]: ActionIconStyle } = {
   'Cancel reservation': { icon: 'fa-solid fa-bookmark', styleClass: 'action-unreserve' },
   'Add to reading list': { icon: 'fa-solid fa-heart-circle-plus', styleClass: 'action-add-readlist' },
   'Remove from reading list': { icon: 'fa-solid fa-heart-circle-minus', styleClass: 'action-remove-readlist' },
+  'Manage in My owned books': { icon: 'fa-solid fa-pen-to-square', styleClass: 'action-manage' },
   // Add more as needed
 };
