@@ -1,4 +1,5 @@
-﻿using NyriaNest.Domain.Enums;
+﻿using System.ComponentModel.DataAnnotations;
+using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Application.DTOs.Friends
 {
@@ -42,6 +43,19 @@ namespace NyriaNest.Application.DTOs.Friends
         public int PhysicalLibraryLimit { get; set; }
         public int EbooksUsed { get; set; }
         public int EbooksLimit { get; set; }
+    }
+
+    /// <summary>The body of "send a friend request": who to ask, by user name.</summary>
+    public class SendFriendRequestDto
+    {
+        [Required]
+        public string UserName { get; set; } = "";
+    }
+
+    /// <summary>The body of "turn a sharing setting on or off".</summary>
+    public class SetSharingDto
+    {
+        public bool On { get; set; }
     }
 
     /// <summary>Someone found by user name, to send a request to. Only the user name, nothing personal.</summary>
