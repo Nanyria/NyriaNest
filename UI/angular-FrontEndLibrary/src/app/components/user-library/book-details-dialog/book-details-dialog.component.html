@@ -1,0 +1,115 @@
+<dialog
+  #dialog
+  class="book-dialog nn-panel--framed"
+  aria-labelledby="book-dialog-title"
+  (close)="onClose()"
+  (click)="onClick($event)"
+>
+  @if (book(); as b) {
+    <button type="button" class="book-dialog__close nn-btn nn-btn--ghost nn-btn--icon" aria-label="Close" (click)="close()">
+      <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
+
+    <div class="book-dialog__top">
+      <div class="book-dialog__side">
+        <img class="nn-cover book-dialog__cover" [src]="b.coverImagePath || fallbackCover" alt="" />
+        <!-- Icon buttons; the label shows on hover and keyboard focus -->
+        @if (actions().length) {
+          <div class="book-dialog__actions">
+            @for (a of actions(); track a.label) {
+              <button
+                type="button"
+                class="nn-btn nn-btn--outline nn-btn--icon book-dialog__action"
+                [class.is-on]="a.pressed"
+                [attr.aria-label]="a.label"
+                [attr.aria-pressed]="a.pressed ?? null"
+                [attr.data-tip]="a.label"
+                [disabled]="a.disabled"
+                (click)="a.action()"
+              >
+                <i class="bi" [class]="a.icon" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="book-dialog__details">
+        @if (b.isMine) {
+          <span class="nn-tag book-dialog__mine">Mine</span>
+        }
+        <h2 id="book-dialog-title" class="book-dialog__title">{{ b.title }}</h2>
+        <p class="book-dialog__author">{{ b.author }}</p>
+        <p class="book-dialog__meta">
+          <i class="bi" [class]="formatIcon()" aria-hidden="true"></i>
+          {{ meta().join(' · ') }}
+        </p>
+
+        <!-- Can I get it? -->
+        @if (status(); as s) {
+          <p class="book-dialog__status" [class]="'is-' + s.tone">
+            <strong>{{ s.text }}</strong>
+            @if (s.detail) {
+              <span>{{ s.detail }}</span>
+            }
+          </p>
+        }
+
+        @if (b.bookDescription?.trim()) {
+          <p class="book-dialog__description">{{ b.bookDescription }}</p>
+        }
+      </div>
+    </div>
+
+    <section class="book-dialog__reviews" aria-labelledby="book-dialog-reviews">
+      <div class="nn-divider"><span class="nn-divider__mark"></span></div>
+      <h3 id="book-dialog-reviews" class="book-dialog__reviews-title">
+        Reviews
+        @if (b.reviewCount > 0) {
+          <span class="nn-muted">
+            · {{ b.reviewCount }} {{ b.reviewCount === 1 ? 'review' : 'reviews' }}
+            @if (b.averageRating !== null) {
+              · <i class="bi bi-star-fill book-dialog__star" aria-hidden="true"></i>
+              {{ b.averageRating.toFixed(1) }}
+            }
+          </span>
+        }
+      </h3>
+
+      @if (reviews() === null) {
+        <p class="nn-muted">Loading reviews…</p>
+      } @else if (shownReviews().length === 0) {
+        <p class="nn-muted">No reviews yet.</p>
+      } @else {
+        <ul class="book-dialog__review-list">
+          @for (r of shownReviews(); track $index) {
+            <li class="book-dialog__review">
+              <div class="book-dialog__review-head">
+                <strong>{{ r.userName }}</strong>
+                <span class="nn-muted">{{ reviewDate(r) }}</span>
+                @if (r.ratingItem) {
+                  <span class="book-dialog__stars" [attr.aria-label]="r.ratingItem.rating + ' out of 5 stars'">
+                    @for (on of stars(r.ratingItem.rating); track $index) {
+                      <i class="bi" [class.bi-star-fill]="on" [class.bi-star]="!on" aria-hidden="true"></i>
+                    }
+                  </span>
+                }
+              </div>
+              @if (r.reviewHeader) {
+                <p class="book-dialog__review-header">{{ r.reviewHeader }}</p>
+              }
+              @if (r.reviewText) {
+                <p class="book-dialog__review-text">{{ r.reviewText }}</p>
+              }
+            </li>
+          }
+        </ul>
+        @if (hiddenReviewCount() > 0) {
+          <button type="button" class="nn-btn nn-btn--ghost" (click)="allReviewsShown.set(true)">
+            See all {{ reviews()!.length }} reviews
+          </button>
+        }
+      }
+    </section>
+  }
+</dialog>

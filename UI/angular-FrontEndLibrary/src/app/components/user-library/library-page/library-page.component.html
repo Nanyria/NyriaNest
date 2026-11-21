@@ -358,22 +358,11 @@
     </div>
   }
 
-  @if (showInfoCard) {
-    <div class="info-card-overlay">
-      <div class="info-card-popup">
-        <app-info-card
-          [id]="selectedBook?.bookId ?? ''"
-          [imageUrl]="
-            selectedBook?.coverImagePath ||
-            'assets/images/book-covers/BrownBook.svg'
-          "
-          [col2]="infoCardCol2"
-          [col3]="infoCardCol3"
-          [actions]="infoCardActions"
-          (close)="closeInfoCard()"
-        >
-        </app-info-card>
-      </div>
-    </div>
-  }
+  <app-book-details-dialog
+    [book]="selectedBook"
+    [actions]="bookActions"
+    [status]="bookStatusLine"
+    [reviews]="selectedBookReviews"
+    (closed)="closeBook()"
+  />
 </div>

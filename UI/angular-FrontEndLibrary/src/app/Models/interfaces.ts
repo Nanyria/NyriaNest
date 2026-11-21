@@ -115,6 +115,15 @@ export interface LibraryBook {
   myReservationAvailableDate: string | null;
 }
 
+// A review as the Library popup shows it (GET api/review/{bookId})
+export interface BookReview {
+  userName: string;
+  reviewHeader: string | null;
+  reviewText: string | null;
+  ratingItem: { rating: number } | null;
+  createdAt: string;
+}
+
 // The API wraps every result like this
 export interface ApiResponse<T> {
   isSuccess: boolean;

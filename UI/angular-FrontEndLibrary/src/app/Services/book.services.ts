@@ -53,6 +53,11 @@ export class BookService {
     return this.http.post<ApiResponse<string>>(`${this.apiUrl}/${bookID}/epub`, formData);
   }
 
+  // The EPUB as a file; through HttpClient so the login token goes along
+  downloadEpub(bookID: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${bookID}/epub`, { responseType: 'blob' });
+  }
+
   deleteEpub(bookID: string): Observable<ApiResponse<boolean>> {
     return this.http.delete<ApiResponse<boolean>>(`${this.apiUrl}/${bookID}/epub`);
   }
