@@ -24,6 +24,7 @@ import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
 import { AuthService } from '../../../Services/auth.service';
 import { PagerComponent } from '../../layout/pager/pager.component';
+import { ReasonDialogComponent, ReasonDialogOptions } from '../../layout/reason-dialog/reason-dialog.component';
 import {
   AdminBook,
   CatalogueQuery,
@@ -69,7 +70,7 @@ function readQuery(p: ParamMap): CatalogueQuery {
   templateUrl: './manage-books.component.html',
   styleUrls: ['./manage-books.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [ReactiveFormsModule, RouterLink, PagerComponent],
+  imports: [ReactiveFormsModule, RouterLink, PagerComponent, ReasonDialogComponent],
   host: { class: 'nn-compact' }, // the theme's tighter, lighter fields, like Add book
 })
 export class ManageBooksComponent {
@@ -258,12 +259,40 @@ export class ManageBooksComponent {
     this.confirmAdminStatus(b, BookStatusEnum.Removed);
   }
 
+  // Shared-library books and an admin's own books need no reason; someone else's do
+  // (the API refuses without one, and the owner is told it)
+  private isSomeoneElses(b: AdminBook): boolean {
+    return !!b.ownerId && b.ownerId !== this.myId;
+  }
+
+  // Open while an admin gives a reason; the dialog runs the action itself
+  readonly reasonDialog = signal<{ options: ReasonDialogOptions; success: { message: string; icon: string } } | null>(null);
+
+  onReasonDialogClosed(done: boolean) {
+    const open = this.reasonDialog();
+    this.reasonDialog.set(null);
+    if (!done || !open) return;
+    this.toast.success(open.success.message, open.success.icon);
+    this.refresh$.next();
+  }
+
+  // Restore on a shared or own book needs no question: marking it again undoes it
   restore(b: AdminBook) {
-    this.run(
-      this.bookService.clearAdminStatus(b.bookId),
-      { message: `"${b.title}" was restored.`, icon: 'arrow-counterclockwise' },
-      `Couldn't restore "${b.title}".`,
-    );
+    const success = { message: `"${b.title}" was restored.`, icon: 'arrow-counterclockwise' };
+    const fallbackError = `Couldn't restore "${b.title}".`;
+    if (this.isSomeoneElses(b)) {
+      this.askReason({
+        kind: 'restore',
+        title: `Restore "${b.title}"?`,
+        message: `${b.ownerName ?? 'The owner'} is told why.`,
+        confirmLabel: 'Restore',
+        icon: success.icon,
+        action: (reason) => this.bookService.clearAdminStatus(b.bookId, reason),
+        fallbackError,
+      }, success);
+      return;
+    }
+    this.run(this.bookService.clearAdminStatus(b.bookId), success, fallbackError);
   }
 
   // A book lent to a name can be deleted anyway (the loan goes too), so the
@@ -271,39 +300,65 @@ export class ManageBooksComponent {
   // shown as the API's message.
   async delete(b: AdminBook) {
     const lent = b.borrowerName ? `It's marked as lent to ${b.borrowerName}; the loan is removed too. ` : '';
+    const message = b.hasEpub ? `${lent}This can't be undone. Its EPUB file will be deleted too.` : `${lent}This can't be undone.`;
+    const title = `Delete "${b.title}"?`;
+    const success = { message: `"${b.title}" was deleted.`, icon: 'trash3' };
+    const fallbackError = `Couldn't delete "${b.title}".`;
+    const confirmLent = !!b.borrowerName;
+
+    if (this.isSomeoneElses(b)) {
+      this.askReason({
+        kind: 'delete',
+        title,
+        message: `${message} ${b.ownerName ?? 'The owner'} is told why.`,
+        confirmLabel: 'Delete',
+        icon: success.icon,
+        danger: true,
+        action: (reason) => this.bookService.deleteBook(String(b.bookId), { reason, confirmLent }),
+        fallbackError,
+      }, success);
+      return;
+    }
+
     const confirmed = await this.confirmDialog.confirm({
-      title: `Delete "${b.title}"?`,
-      message: b.hasEpub ? `${lent}This can't be undone. Its EPUB file will be deleted too.` : `${lent}This can't be undone.`,
-      confirmLabel: 'Delete',
-      danger: true,
-      icon: 'trash3',
+      title, message, confirmLabel: 'Delete', danger: true, icon: success.icon,
     });
     if (!confirmed) return;
-    this.run(
-      this.bookService.deleteBook(String(b.bookId), { confirmLent: !!b.borrowerName }),
-      { message: `"${b.title}" was deleted.`, icon: 'trash3' },
-      `Couldn't delete "${b.title}".`,
-    );
+    this.run(this.bookService.deleteBook(String(b.bookId), { confirmLent }), success, fallbackError);
   }
 
   // Not shown as dangerous: Restore undoes it
   private async confirmAdminStatus(b: AdminBook, status: BookStatusEnum.Lost | BookStatusEnum.Removed) {
     const label = status === BookStatusEnum.Lost ? 'lost' : 'removed';
     const icon = status === BookStatusEnum.Lost ? 'question-circle' : 'archive';
-    const confirmed = await this.confirmDialog.confirm({
-      title: `Mark "${b.title}" as ${label}?`,
-      message: b.borrowerName
-        ? `Readers won't see it until you restore it. It stays marked as lent to ${b.borrowerName}.`
-        : "Readers won't see it until you restore it.",
-      confirmLabel: `Mark as ${label}`,
-      icon,
-    });
+    const title = `Mark "${b.title}" as ${label}?`;
+    const message = b.borrowerName
+      ? `Readers won't see it until you restore it. It stays marked as lent to ${b.borrowerName}.`
+      : "Readers won't see it until you restore it.";
+    const success = { message: `"${b.title}" was marked as ${label}.`, icon };
+    const fallbackError = `Couldn't mark "${b.title}" as ${label}.`;
+
+    if (this.isSomeoneElses(b)) {
+      this.askReason({
+        kind: status === BookStatusEnum.Lost ? 'lost' : 'removed',
+        title,
+        message: `${message} ${b.ownerName ?? 'The owner'} is told why.`,
+        confirmLabel: `Mark as ${label}`,
+        icon,
+        action: (reason) => this.bookService.setAdminStatus(b.bookId, status, reason),
+        fallbackError,
+      }, success);
+      return;
+    }
+
+    const confirmed = await this.confirmDialog.confirm({ title, message, confirmLabel: `Mark as ${label}`, icon });
     if (!confirmed) return;
-    this.run(
-      this.bookService.setAdminStatus(b.bookId, status),
-      { message: `"${b.title}" was marked as ${label}.`, icon },
-      `Couldn't mark "${b.title}" as ${label}.`,
-    );
+    this.run(this.bookService.setAdminStatus(b.bookId, status), success, fallbackError);
+  }
+
+  private askReason(options: ReasonDialogOptions, success: { message: string; icon: string }) {
+    this.actionError.set(null);
+    this.reasonDialog.set({ options, success });
   }
 
   // Runs an action, reloads the list and shows a toast. On failure, shows the

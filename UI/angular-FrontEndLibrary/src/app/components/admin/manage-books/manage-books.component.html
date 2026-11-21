@@ -249,3 +249,8 @@
     }
   }
 </section>
+
+<!-- Someone else's book: the admin gives a reason, and the owner is told it -->
+@if (reasonDialog(); as d) {
+  <app-reason-dialog [options]="d.options" (closed)="onReasonDialogClosed($event)" />
+}
