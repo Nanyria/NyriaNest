@@ -63,7 +63,7 @@ public class AdminOwnedBookTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
         var bookId = await AddBookAsync(ownerId: null, "Shared book");
 
-        var response = await admin.PutAsJsonAsync($"api/Book/{bookId}", EditBody("Renamed shared book", reason: null), Ct);
+        var response = await admin.PutAsJsonAsync($"api/Book/{bookId}", EditBody("Renamed shared book", reason: null, BookTypeEnums.EBook), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await BookAsync(bookId)).Title.Should().Be("Renamed shared book");
@@ -153,7 +153,7 @@ public class AdminOwnedBookTests(ApiFactory factory) : IClassFixture<ApiFactory>
     // ---- Helpers ----
 
     /// <summary>What the admin edit page sends: every field, plus the reason.</summary>
-    private static object EditBody(string title, string? reason) => new
+    private static object EditBody(string title, string? reason, BookTypeEnums bookType = BookTypeEnums.Paperback) => new
     {
         title,
         author = "Test Author",
@@ -161,7 +161,7 @@ public class AdminOwnedBookTests(ApiFactory factory) : IClassFixture<ApiFactory>
         publicationYear = 2020,
         coverImagePath = (string?)null,
         genre = GenreEnums.Fiction,
-        bookType = BookTypeEnums.Paperback,
+        bookType,
         language = LanguageEnums.English,
         reason,
     };
@@ -178,7 +178,8 @@ public class AdminOwnedBookTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private Task<int> AddBookAsync(string? ownerId, string title, BookStatusEnum status = BookStatusEnum.Available) =>
         factory.WithDbAsync(async db =>
         {
-            var book = TestData.Book(title, status: status);
+            // Shared-library books are e-books, own books physical
+            var book = TestData.Book(title, ownerId == null ? BookTypeEnums.EBook : BookTypeEnums.Paperback, status);
             book.OwnerId = ownerId;
             db.Books.Add(book);
             await db.SaveChangesAsync(Ct);

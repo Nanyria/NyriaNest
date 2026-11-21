@@ -124,7 +124,7 @@ public class BookResponsesTests(ApiFactory factory) : IClassFixture<ApiFactory>
             author = "Test Author",
             publicationYear = 2020,
             genre = GenreEnums.Fiction,
-            bookType = BookTypeEnums.Paperback,
+            bookType = BookTypeEnums.EBook, // the shared library has e-books only (#83)
             language = LanguageEnums.English,
         }, Ct);
 

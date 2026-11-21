@@ -153,6 +153,12 @@ namespace NyriaNest.Application.Books
                 return response;
             }
 
+            if (TypeProblem(ownerId, bookDto.BookType) is { } typeProblem)
+            {
+                response.ErrorMessages.Add(typeProblem);
+                return response;
+            }
+
             try
             {
                 var book = new Book
@@ -425,6 +431,14 @@ namespace NyriaNest.Application.Books
             type is BookTypeEnums.Paperback or BookTypeEnums.Hardcover;
 
         private const string OwnTypeMessage = "Your own books can be paperbacks or hardcovers.";
+        private const string SharedLibraryTypeMessage = "The shared library has e-books only.";
+
+        // Which types a book may have depends on the book, not on who adds or edits it:
+        // the shared library has e-books only (ADR 0004), an owned book what owners can have.
+        // Null when the type is fine.
+        private static string? TypeProblem(string? ownerId, BookTypeEnums type) => ownerId == null
+            ? (type == BookTypeEnums.EBook ? null : SharedLibraryTypeMessage)
+            : (OwnersCanHave(type) ? null : OwnTypeMessage);
 
         // Someone else's book and a shared-library book both look missing
         private async Task<Book?> GetOwnAsync(int id, string ownerId)
@@ -467,21 +481,15 @@ namespace NyriaNest.Application.Books
             };
         }
 
-        public Task<APIResponse<int>> AddOwnBookAsync(SlimBookDto bookDto, string ownerId)
-        {
-            if (!OwnersCanHave(bookDto.BookType))
-                return Task.FromResult(Failure<int>(HttpStatusCode.BadRequest, OwnTypeMessage));
-
+        // The type is checked in CreateBookAsync / UpdateBookInfoAsync (TypeProblem)
+        public Task<APIResponse<int>> AddOwnBookAsync(SlimBookDto bookDto, string ownerId) =>
             // The owner is also the one who added it, in the history
-            return CreateBookAsync(bookDto, userId: ownerId, ownerId: ownerId);
-        }
+            CreateBookAsync(bookDto, userId: ownerId, ownerId: ownerId);
 
         public async Task<APIResponse<bool>> UpdateOwnBookAsync(int id, string ownerId, SlimBookDto bookDto)
         {
             if (await GetOwnAsync(id, ownerId) == null)
                 return Failure<bool>(HttpStatusCode.NotFound, "Book not found.");
-            if (!OwnersCanHave(bookDto.BookType))
-                return Failure<bool>(HttpStatusCode.BadRequest, OwnTypeMessage);
 
             return await UpdateBookInfoAsync(id, bookDto, actorId: ownerId);
         }
@@ -507,6 +515,12 @@ namespace NyriaNest.Application.Books
                 var existingBook = await _bookRepo.GetByIdAsync(id);
                 if (existingBook != null)
                 {
+                    if (TypeProblem(existingBook.OwnerId, updatedBook.BookType) is { } typeProblem)
+                    {
+                        response.ErrorMessages.Add(typeProblem);
+                        return response;
+                    }
+
                     var someoneElses = IsSomeoneElses(existingBook, actorId);
                     if (someoneElses && string.IsNullOrWhiteSpace(reason))
                     {
