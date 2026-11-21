@@ -138,9 +138,9 @@
         <i class="bi bi-exclamation-circle"></i>The passwords don't match.
       </p>
     }
-    @if (errorMessage) {
+    @for (message of errorMessages; track message) {
       <p class="auth-form__error" role="alert">
-        <i class="bi bi-exclamation-circle"></i>{{ errorMessage }}
+        <i class="bi bi-exclamation-circle"></i>{{ message }}
       </p>
     }
 
