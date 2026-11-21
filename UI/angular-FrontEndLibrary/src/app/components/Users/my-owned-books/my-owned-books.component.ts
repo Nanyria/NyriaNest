@@ -7,7 +7,12 @@ import { MyBook, StatusHistoryItem } from '../../../Models/interfaces';
 import { MyBooksService } from '../../../Services/my-books.service';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
-import { BookStatusDisplayNames, BookStatusEnum, BookTypeDisplayNames } from '../../../Helpers/Enums/enum';
+import {
+  BookStatusDisplayNames,
+  BookStatusEnum,
+  BookTypeDisplayNames,
+  GenreDisplayNames,
+} from '../../../Helpers/Enums/enum';
 import { LoanDialogComponent, LoanDialogMode } from './loan-dialog.component';
 import { dateOnly, formatDay, formatMoment, todayIso } from './loan-dates';
 
@@ -23,6 +28,10 @@ type HistoryState =
   | { bookId: number; kind: 'ready'; items: StatusHistoryItem[]; showAll: boolean };
 
 const HISTORY_PREVIEW = 5;
+
+// A book just added lands at the top. ISO dates sort correctly as text.
+const newestFirst = (books: MyBook[]) =>
+  [...books].sort((a, b) => b.dateAdded.localeCompare(a.dateAdded) || b.bookId - a.bookId);
 
 // The books on the user's own shelf, and who has borrowed them (#83).
 // Laid out like Manage books.
@@ -42,6 +51,7 @@ export class MyOwnedBooksComponent {
   private refresh$ = new BehaviorSubject<void>(undefined);
 
   readonly bookTypeNames = BookTypeDisplayNames;
+  readonly genreNames = GenreDisplayNames;
   readonly historyPreview = HISTORY_PREVIEW;
   readonly fallbackCover = 'assets/images/book-covers/BrownBook.svg';
   readonly formatMoment = formatMoment;
@@ -50,7 +60,7 @@ export class MyOwnedBooksComponent {
     this.refresh$.pipe(
       switchMap(() =>
         this.myBooks.getAll().pipe(
-          map((res): ViewState => (res.isSuccess ? { kind: 'ready', books: res.result } : { kind: 'error' })),
+          map((res): ViewState => (res.isSuccess ? { kind: 'ready', books: newestFirst(res.result) } : { kind: 'error' })),
           catchError(() => of<ViewState>({ kind: 'error' })),
           startWith<ViewState>({ kind: 'loading' }),
         ),
@@ -81,15 +91,16 @@ export class MyOwnedBooksComponent {
     return !!b.dueDate && dateOnly(b.dueDate) < todayIso();
   }
 
-  statusLabel(b: MyBook): string | null {
+  statusLabel(b: MyBook): string {
     if (b.adminStatus === BookStatusEnum.Lost) return 'Lost';
     if (b.adminStatus === BookStatusEnum.Removed) return 'Removed by an admin';
     if (this.isLent(b)) return `Lent to ${b.lentTo}`;
-    return null; // on the shelf: no tag
+    return 'On your shelf';
   }
 
   statusClass(b: MyBook): string {
     if (this.isWithdrawn(b)) return 'nn-tag--withdrawn';
+    if (!this.isLent(b)) return 'nn-tag--available';
     return this.isOverdue(b) ? 'nn-tag--overdue' : 'nn-tag--checked-out';
   }
 

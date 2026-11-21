@@ -42,8 +42,9 @@
           <thead>
             <tr>
               <th scope="col">Book</th>
-              <th scope="col" class="ob-col-meta">Type / Year</th>
               <th scope="col">Status</th>
+              <!-- Placeholder: the reader's own reading state comes later -->
+              <th scope="col" class="ob-col-reading">Reading <span class="ob-soon">Soon</span></th>
               <th scope="col"><span class="visually-hidden">Actions</span></th>
             </tr>
           </thead>
@@ -56,23 +57,17 @@
                     <div>
                       <div class="ob-title">{{ b.title }}</div>
                       <div class="ob-author">{{ b.author }}</div>
-                      <!-- Shown instead of the meta column on narrower screens -->
-                      <div class="ob-meta-inline nn-muted">{{ bookTypeNames[b.bookType] }} · {{ b.publicationYear }}</div>
+                      <div class="ob-meta nn-muted">{{ bookTypeNames[b.bookType] }} · {{ genreNames[b.genre] }}</div>
                     </div>
                   </div>
                 </td>
-                <td class="ob-col-meta">
-                  {{ bookTypeNames[b.bookType] }}
-                  <div class="nn-muted">{{ b.publicationYear }}</div>
-                </td>
                 <td class="ob-cell-status">
-                  @if (statusLabel(b); as label) {
-                    <span class="nn-tag" [class]="statusClass(b)">{{ label }}</span>
-                  }
+                  <span class="nn-tag" [class]="statusClass(b)">{{ statusLabel(b) }}</span>
                   @if (loanDetail(b); as detail) {
                     <div class="ob-detail" [class.is-overdue]="isOverdue(b)">{{ detail }}</div>
                   }
                 </td>
+                <td class="ob-col-reading"><span class="nn-muted" aria-label="Not available yet">—</span></td>
                 <td class="ob-cell-actions">
                   <div class="ob-actions">
                     @if (!isWithdrawn(b)) {

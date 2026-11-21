@@ -86,6 +86,7 @@ export interface MyBook extends Omit<EditBookDto, 'bookId'> {
   lentTo: string | null;
   lentOn: string | null;
   dueDate: string | null;
+  dateAdded: string;
 }
 
 export interface LibraryBook {

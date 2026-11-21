@@ -131,6 +131,7 @@ namespace NyriaNest.Application.Books
             LentTo = book.CheckedOutBy == null ? null : book.CheckedOutBy.BorrowerName ?? book.CheckedOutBy.User?.UserName,
             LentOn = book.CheckedOutBy?.CheckOutDate,
             DueDate = book.CheckedOutBy?.ReturnDate,
+            DateAdded = book.DateAdded,
         }, book);
 
         // Title and Author are required members, so the caller sets them in its initializer

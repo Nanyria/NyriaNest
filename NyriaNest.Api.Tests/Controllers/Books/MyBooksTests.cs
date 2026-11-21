@@ -81,16 +81,26 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         ids.Should().Equal(mine);
     }
 
+    // Including when it was added (the "Added" column on My owned books)
     [Fact]
     public async Task Get_MyBook_ReturnsIt()
     {
         var (client, me) = await factory.LoginAsAsync();
         var bookId = await AddBookAsync(me.Id, "Mine");
+        var added = new DateTime(2026, 3, 14, 9, 30, 0, DateTimeKind.Utc);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Books.SingleAsync(b => b.BookId == bookId, Ct)).DateAdded = added;
+            await db.SaveChangesAsync(Ct);
+        });
 
         var response = await client.GetAsync($"api/my/books/{bookId}", Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await ResultAsync(response)).GetProperty("title").GetString().Should().Be("Mine");
+        var book = await ResultAsync(response);
+        book.GetProperty("title").GetString().Should().Be("Mine");
+        book.TryGetProperty("dateAdded", out var dateAdded).Should().BeTrue("the API should send dateAdded");
+        dateAdded.GetDateTime().Should().BeCloseTo(added, TimeSpan.FromSeconds(1));
     }
 
     // ---- Loan details for My library (#83 step 8a) ----

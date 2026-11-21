@@ -195,20 +195,22 @@
   white-space: nowrap;
 }
 
-/* ---------- Narrower screens: fold type/year into the book cell ---------- */
-.ob-meta-inline {
-  display: none;
+/* Type · genre under the author */
+.ob-meta {
   font-size: 0.85rem;
 }
 
-@media (max-width: 900px) {
-  .ob-col-meta {
-    display: none;
-  }
-
-  .ob-meta-inline {
-    display: block;
-  }
+/* Placeholder column; same badge as Add book's "Soon" */
+.ob-soon {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background-color: var(--nn-surface);
+  color: var(--nn-ink-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* ---------- Phones: each row becomes a small card ---------- */
@@ -245,7 +247,8 @@
     border: none;
   }
 
-  .ob-table td.ob-col-meta {
+  /* A dash says nothing on a card */
+  .ob-table td.ob-col-reading {
     display: none;
   }
 
