@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Net.Http.Json;
@@ -285,6 +286,34 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
             (await db.FavoriteItems.AnyAsync(f => f.BookId == ownBookId, Ct)).Should().BeFalse();
             (await db.Books.AnyAsync(b => b.BookId == othersBookId, Ct)).Should().BeTrue();
             (await db.Books.AnyAsync(b => b.BookId == sharedBookId, Ct)).Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public async Task DeleteUser_DeletesTheirFriendships_InBothDirections_AndLeavesOthersAlone()
+    {
+        // #84: the user FKs on Friendships are Restrict, so the delete must remove them on purpose.
+        // #78 lists "their friendships" among what goes when an account goes.
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+        var anna = await factory.CreateUserAsync(Roles.User);
+        var erik = await factory.CreateUserAsync(Roles.User);
+        await factory.WithDbAsync(async db =>
+        {
+            db.Friendships.AddRange(
+                new Friendship { RequesterId = target.Id, AddresseeId = anna.Id, Status = FriendshipStatus.Accepted },
+                new Friendship { RequesterId = erik.Id, AddresseeId = target.Id, Status = FriendshipStatus.Pending },
+                new Friendship { RequesterId = anna.Id, AddresseeId = erik.Id, Status = FriendshipStatus.Accepted });
+            await db.SaveChangesAsync(Ct);
+        });
+
+        var response = await admin.DeleteAsync($"api/User/{target.Id}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Friendships.AnyAsync(f => f.RequesterId == target.Id || f.AddresseeId == target.Id, Ct)).Should().BeFalse();
+            (await db.Friendships.AnyAsync(f => f.RequesterId == anna.Id && f.AddresseeId == erik.Id, Ct)).Should().BeTrue();
         });
     }
 

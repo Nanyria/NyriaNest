@@ -21,6 +21,7 @@ namespace NyriaNest.Application.Interfaces
         DbSet<CheckedOutItem> CheckOutItems { get; }
         DbSet<ReservationItem> ReservationItems { get; }
         DbSet<NotificationItem> NotificationItems { get; }
+        DbSet<Friendship> Friendships { get; }
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
