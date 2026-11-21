@@ -117,9 +117,10 @@ namespace NyriaNest.Infrastructure.Data
         ];
 
         /// <summary>
-        /// Fills a development database with demo users who own physical books (one lent to a name)
-        /// and a few shared-library e-books. Startup runs it only when SeedDemoData:Enabled is true.
-        /// Safe to run again: users and shared e-books that already exist are skipped.
+        /// Fills a development database with demo users who own physical books (one lent to a name),
+        /// a friendship and a friend request between them (#84), and a few shared-library e-books.
+        /// Startup runs it only when SeedDemoData:Enabled is true.
+        /// Safe to run again: users, friendships and shared e-books that already exist are skipped.
         /// </summary>
         public static async Task SeedDemoDataAsync(IServiceProvider serviceProvider)
         {
@@ -164,6 +165,8 @@ namespace NyriaNest.Infrastructure.Data
                 logger.LogInformation("Seeded demo user {UserName} with {Count} books.", demoUser.UserName, demoUser.Books.Length);
             }
 
+            await SeedFriendshipsAsync(db, logger);
+
             foreach (var demoBook in SharedEbooks)
             {
                 if (await db.Books.AnyAsync(b => b.OwnerId == null && b.Title == demoBook.Title))
@@ -175,6 +178,55 @@ namespace NyriaNest.Infrastructure.Data
             }
             await db.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// #84: alma and boris are friends, and alma shares her physical library with boris but not
+        /// the other way round (sharing is per direction). cleo has asked alma and is waiting.
+        /// A pair that already has a row is skipped, so running again adds nothing.
+        /// </summary>
+        private static async Task SeedFriendshipsAsync(AppDbContext db, ILogger logger)
+        {
+            var ids = await db.Users
+                .Where(u => u.UserName == "alma.reads" || u.UserName == "boris.books" || u.UserName == "cleo.shelf")
+                .ToDictionaryAsync(u => u.UserName!, u => u.Id);
+            if (ids.Count < 3)
+                return;
+
+            var alma = ids["alma.reads"];
+            var boris = ids["boris.books"];
+            var cleo = ids["cleo.shelf"];
+
+            if (!await HasRowAsync(db, alma, boris))
+            {
+                db.Friendships.Add(new Friendship
+                {
+                    RequesterId = alma,
+                    AddresseeId = boris,
+                    Status = FriendshipStatus.Accepted,
+                    RequestedAt = DateTime.UtcNow.AddDays(-14),
+                    AcceptedAt = DateTime.UtcNow.AddDays(-13),
+                    RequesterSharesPhysicalLibrary = true,
+                });
+                logger.LogInformation("Seeded the friendship alma.reads - boris.books.");
+            }
+
+            if (!await HasRowAsync(db, cleo, alma))
+            {
+                db.Friendships.Add(new Friendship
+                {
+                    RequesterId = cleo,
+                    AddresseeId = alma,
+                    Status = FriendshipStatus.Pending,
+                    RequestedAt = DateTime.UtcNow.AddDays(-1),
+                });
+                logger.LogInformation("Seeded a friend request from cleo.shelf to alma.reads.");
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        private static Task<bool> HasRowAsync(AppDbContext db, string a, string b) =>
+            db.Friendships.AnyAsync(f => (f.RequesterId == a && f.AddresseeId == b) || (f.RequesterId == b && f.AddresseeId == a));
 
         private static void AddOwnBook(AppDbContext db, User owner, DemoBook demoBook)
         {
