@@ -22,6 +22,7 @@ import {
 import { BookService } from '../../../Services/book.services';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
+import { AuthService } from '../../../Services/auth.service';
 import { PagerComponent } from '../../layout/pager/pager.component';
 import {
   AdminBook,
@@ -78,6 +79,7 @@ export class ManageBooksComponent {
   private bookService = inject(BookService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmService);
+  private myId = inject(AuthService).getUserId();
   private refresh$ = new BehaviorSubject<void>(undefined);
 
   // "All" means no filter, which the empty option already covers
@@ -160,7 +162,8 @@ export class ManageBooksComponent {
   // Status badge text. Overdue isn't a stored status: it's a checked-out book past its due date.
   statusLabel(b: AdminBook): string {
     switch (b.bookStatus) {
-      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'Overdue' : 'Checked out';
+      // Someone's own book is lent by its owner, as on the Library page
+      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'Overdue' : b.ownerId ? 'Lent out' : 'Checked out';
       case BookStatusEnum.Reserved: return 'Reserved';
       case BookStatusEnum.Lost: return 'Lost';
       case BookStatusEnum.Removed: return 'Removed';
@@ -207,6 +210,13 @@ export class ManageBooksComponent {
     return b.bookStatus === BookStatusEnum.Lost || b.bookStatus === BookStatusEnum.Removed;
   }
 
+  // The pill under the author: whose book it is, or the shared library.
+  // Not a link until the admin user page (#135) gives it somewhere to go.
+  ownerTag(b: AdminBook): { text: string; icon: string; shared: boolean } {
+    if (!b.ownerId) return { text: 'Shared', icon: 'collection', shared: true };
+    return { text: b.ownerName ?? 'Unknown owner', icon: 'person', shared: false };
+  }
+
   // The ⋯ menu is a popover: it opens in the browser's top layer, so the
   // table's scroll area can't clip it or make the page scroll. Place it under
   // its button, or above it when the button is near the bottom of the window.
@@ -248,17 +258,21 @@ export class ManageBooksComponent {
     );
   }
 
+  // A book lent to a name can be deleted anyway (the loan goes too), so the
+  // dialog says so and the request confirms it. A member's loan still gets a 409,
+  // shown as the API's message.
   async delete(b: AdminBook) {
+    const lent = b.borrowerName ? `It's marked as lent to ${b.borrowerName}; the loan is removed too. ` : '';
     const confirmed = await this.confirmDialog.confirm({
       title: `Delete "${b.title}"?`,
-      message: b.hasEpub ? "This can't be undone. Its EPUB file will be deleted too." : "This can't be undone.",
+      message: b.hasEpub ? `${lent}This can't be undone. Its EPUB file will be deleted too.` : `${lent}This can't be undone.`,
       confirmLabel: 'Delete',
       danger: true,
       icon: 'trash3',
     });
     if (!confirmed) return;
     this.run(
-      this.bookService.deleteBook(String(b.bookId)),
+      this.bookService.deleteBook(String(b.bookId), { confirmLent: !!b.borrowerName }),
       { message: `"${b.title}" was deleted.`, icon: 'trash3' },
       `Couldn't delete "${b.title}".`,
     );
@@ -270,7 +284,9 @@ export class ManageBooksComponent {
     const icon = status === BookStatusEnum.Lost ? 'question-circle' : 'archive';
     const confirmed = await this.confirmDialog.confirm({
       title: `Mark "${b.title}" as ${label}?`,
-      message: "It can't be borrowed or reserved until you restore it.",
+      message: b.borrowerName
+        ? `Readers won't see it until you restore it. It stays marked as lent to ${b.borrowerName}.`
+        : "Readers won't see it until you restore it.",
       confirmLabel: `Mark as ${label}`,
       icon,
     });

@@ -158,6 +158,8 @@ export interface AdminBook {
   nextInLineName?: string | null;
   expectedDate?: string | null; // when the book is expected to reach them (an estimate, not a hold)
   adminStatusNotes?: string | null;
+  ownerId?: string | null; // null = the shared library
+  ownerName?: string | null; // the owner's username
 }
 
 // Must match the backend's CatalogueSort names. The API matches names in any case.

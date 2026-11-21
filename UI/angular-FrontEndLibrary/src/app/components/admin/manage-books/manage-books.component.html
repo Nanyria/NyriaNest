@@ -161,6 +161,18 @@
                       <div>
                         <div class="mb-title">{{ b.title }}</div>
                         <div class="mb-author">{{ b.author }}</div>
+                        @let owner = ownerTag(b);
+                        <span
+                          class="nn-tag mb-owner"
+                          [class.mb-owner--shared]="owner.shared"
+                          [title]="owner.shared ? 'Shared library' : 'Owner'"
+                        >
+                          <i class="bi" [class]="'bi-' + owner.icon" aria-hidden="true"></i>
+                          @if (!owner.shared) {
+                            <span class="visually-hidden">Owner:</span>
+                          }
+                          {{ owner.text }}
+                        </span>
                         <!-- Shown instead of the meta columns on narrower screens -->
                         <div class="mb-meta-inline nn-muted">
                           {{ genreNames[b.genre] }} · {{ languageNames[b.language] }} ·
@@ -194,15 +206,6 @@
                   </td>
                   <td class="mb-cell-actions">
                     <div class="mb-actions">
-                      <a
-                        class="nn-btn nn-btn--outline nn-btn--icon"
-                        [routerLink]="['/admin/manage-books', b.bookId, 'edit']"
-                        title="Edit"
-                        [attr.aria-label]="'Edit ' + b.title"
-                      >
-                        <i class="bi bi-pencil" aria-hidden="true"></i>
-                      </a>
-
                       <button
                         #menuButton
                         type="button"
@@ -220,26 +223,25 @@
                         (beforetoggle)="placeMenu($event, menuButton)"
                         (click)="closeMenu($event)"
                       >
+                          <a [routerLink]="['/admin/manage-books', b.bookId, 'edit']">
+                            <i class="bi bi-pencil" aria-hidden="true"></i> Edit
+                          </a>
                           @if (isWithdrawn(b)) {
                             <button type="button" (click)="restore(b)">
                               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore
                             </button>
-                          } @else if (!b.borrowerName) {
-                            <button type="button" (click)="markLost(b)">
-                              <i class="bi bi-question-circle" aria-hidden="true"></i> Mark as lost
-                            </button>
+                          } @else {
+                            <!-- E-books can't be lost; the API refuses too -->
+                            @if (!isEbook(b)) {
+                              <button type="button" (click)="markLost(b)">
+                                <i class="bi bi-question-circle" aria-hidden="true"></i> Mark as lost
+                              </button>
+                            }
                             <button type="button" (click)="markRemoved(b)">
                               <i class="bi bi-archive" aria-hidden="true"></i> Mark as removed
                             </button>
                           }
-                          <!-- A checked-out book can't be deleted; the API refuses too -->
-                          <button
-                            type="button"
-                            class="is-danger"
-                            [disabled]="!!b.borrowerName"
-                            [title]="b.borrowerName ? 'Return this book before deleting it' : ''"
-                            (click)="delete(b)"
-                          >
+                          <button type="button" class="is-danger" (click)="delete(b)">
                             <i class="bi bi-trash3" aria-hidden="true"></i> Delete
                           </button>
                       </div>

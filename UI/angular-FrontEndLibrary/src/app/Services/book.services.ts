@@ -42,8 +42,9 @@ export class BookService {
     return this.http.post<any>(`${this.apiUrl}/ebook`, formData);
   }
 
-  updateBook(bookID: string, updatedBook: SlimBookDto): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/${bookID}`, updatedBook);
+  // reason: required by the API when the book is someone else's (BookEditRequest)
+  updateBook(bookID: string, updatedBook: SlimBookDto, reason?: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${bookID}`, { ...updatedBook, reason });
   }
 
   // Adds an EPUB to an existing e-book, or replaces the one it has
@@ -83,12 +84,17 @@ export class BookService {
     return this.http.put<ApiResponse<unknown>>(`${this.apiUrl}/${bookId}/admin-status`, { status, notes });
   }
 
-  clearAdminStatus(bookId: number): Observable<ApiResponse<unknown>> {
-    return this.http.delete<ApiResponse<unknown>>(`${this.apiUrl}/${bookId}/admin-status`);
+  // notes: the reason, required by the API when the book is someone else's
+  clearAdminStatus(bookId: number, notes?: string): Observable<ApiResponse<unknown>> {
+    return this.http.delete<ApiResponse<unknown>>(`${this.apiUrl}/${bookId}/admin-status`, {
+      body: { notes },
+    });
   }
 
-  deleteBook(bookID: string): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/${bookID}`);
+  // reason: required when the book is someone else's.
+  // confirmLent: delete a book marked as lent to a name anyway (the loan goes too).
+  deleteBook(bookID: string, options: { reason?: string; confirmLent?: boolean } = {}): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${bookID}`, { body: options });
   }
 
   getBookHistory(bookID: string): Observable<{ isSuccess: boolean; result: StatusHistoryItem[] }> {

@@ -240,6 +240,22 @@
   color: var(--nn-ink);
 }
 
+/* Whose book it is: blue for an owner, plum for the shared library, so
+   neither is mistaken for a status colour */
+.mb-owner {
+  margin-top: 4px;
+  padding: 1px 10px;
+  background-color: #dfe7f0;
+  border-color: #b4c4d6;
+  color: #2f4a66;
+}
+
+.mb-owner--shared {
+  background-color: #ebe1f0;
+  border-color: #cbb6d8;
+  color: #5a3d72;
+}
+
 .mb-detail {
   font-size: 0.85rem;
   color: var(--nn-ink-muted);
@@ -284,7 +300,9 @@
   display: flex;
 }
 
-.mb-menu__list button {
+/* Edit is a link (it opens a page), the rest are buttons; they look the same */
+.mb-menu__list button,
+.mb-menu__list a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -298,6 +316,11 @@
   cursor: pointer;
 }
 
+.mb-menu__list a {
+  text-decoration: none;
+}
+
+.mb-menu__list a:hover,
 .mb-menu__list button:hover:not(:disabled) {
   background-color: var(--nn-surface-hover);
 }
