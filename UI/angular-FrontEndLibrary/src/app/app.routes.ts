@@ -8,6 +8,7 @@ import { UserReservationsComponent } from './components/Users/user-reservations/
 // import { UserMessagesComponent } from './components/Users/user-messages/user-messages.component';
 import { UserReadlistComponent } from './components/Users/user-readlist/user-readlist-component';
 import { UserCheckoutsComponent } from './components/Users/user-checkouts/user-checkouts-component';
+import { MyOwnedBooksComponent } from './components/Users/my-owned-books/my-owned-books.component';
 import { AdminPageComponent } from './components/admin/admin-page/admin-page.component';
 import { ManageBooksComponent } from './components/admin/manage-books/manage-books.component';
 import { ManageUsersComponent } from './components/admin/manage-users/manage-users.component';
@@ -32,19 +33,27 @@ export const routes: Routes = [
       { path: 'more', component: MorePageComponent },
       // Every notification, read and unread; the topbar's bell links here (#91)
       { path: 'notifications', component: NotificationsPageComponent },
-      { path: 'add-book', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
-      // Same page in edit mode. Kept outside the admin wrapper so it lays out
-      // exactly like Add book; listed before 'admin' so that route doesn't claim it.
-      { path: 'admin/manage-books/:id/edit', component: AddBookComponent, canDeactivate: [unsavedChangesGuard] },
+      // The add/edit book page. Where it's opened from decides where the book goes
+      // (data.area, #83): 'my' = the user's own books, 'admin' = Manage books, where
+      // adding puts an e-book in the shared library. Kept outside the 'my' and 'admin'
+      // wrappers so all four lay out the same; listed first so those routes don't claim them.
+      { path: 'my/owned-books/add', component: AddBookComponent, data: { area: 'my' }, canDeactivate: [unsavedChangesGuard] },
+      { path: 'my/owned-books/:id/edit', component: AddBookComponent, data: { area: 'my' }, canDeactivate: [unsavedChangesGuard] },
+      { path: 'admin/manage-books/add', component: AddBookComponent, data: { area: 'admin' }, canDeactivate: [unsavedChangesGuard] },
+      { path: 'admin/manage-books/:id/edit', component: AddBookComponent, data: { area: 'admin' }, canDeactivate: [unsavedChangesGuard] },
+      // Old URL, so links and bookmarks still work: adding your own book is open to everyone
+      { path: 'add-book', redirectTo: '/my/owned-books/add', pathMatch: 'full' },
       // The reader's own pages (the topbar's My books menu), framed by UserPageComponent
       {
         path: 'my',
         component: UserPageComponent,
         children: [
+          // The books on the user's own shelf and who has borrowed them (#83)
+          { path: 'owned-books', component: MyOwnedBooksComponent },
           { path: 'reading-list', component: UserReadlistComponent },
           { path: 'loans', component: UserCheckoutsComponent },
           { path: 'reservations', component: UserReservationsComponent },
-          { path: '', redirectTo: 'reading-list', pathMatch: 'full' }
+          { path: '', redirectTo: 'owned-books', pathMatch: 'full' }
         ]
       },
       // Settings: /settings/profile and /settings/security. One route with a parameter, so

@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using NyriaNest.Api.Auth;
 using NyriaNest.Api.Controllers;
 using NyriaNest.Application.Books;
 using NyriaNest.Application.DTOs.Books;
+using NyriaNest.Application.Loans;
 using NyriaNest.Domain.Constants;
 using NyriaNest.Domain.Enums;
 using System.Security.Claims;
@@ -15,9 +18,11 @@ namespace NyriaNest.Api.Controllers.Books;
 public class BookController : ControllerBase
 {
     private readonly IBookService _bookService;
-    public BookController(IBookService bookService)
+    private readonly ILendingService _lendingService;
+    public BookController(IBookService bookService, ILendingService lendingService)
     {
         _bookService = bookService;
+        _lendingService = lendingService;
     }
 
     /// <summary>Admin catalogue with search, filters, sorting and paging.</summary>
@@ -53,17 +58,36 @@ public class BookController : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
+    // Someone else's book needs { reason }; a book lent to a name needs { confirmLent: true } (#83)
     [HttpDelete("{bookId:int}")]
-    public async Task<IActionResult> DeleteBook(int bookId)
+    public async Task<IActionResult> DeleteBook(int bookId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] BookDeleteRequest? body)
     {
-        var response = await _bookService.DeleteBookAsync(bookId);
+        var response = await _bookService.DeleteBookAsync(bookId, User.GetUserId(), body?.Reason, body?.ConfirmLent ?? false);
         return StatusCode((int)response.StatusCode, response);
     }
 
+    // Someone else's book needs a reason, which goes into its history (#83)
     [HttpPut("{bookId:int}")]
-    public async Task<IActionResult> UpdateBookInfo(int bookId, [FromBody] SlimBookDto bookInfo)
+    public async Task<IActionResult> UpdateBookInfo(int bookId, [FromBody] BookEditRequest bookInfo)
     {
-        var response = await _bookService.UpdateBookInfoAsync(bookId, bookInfo);
+        var response = await _bookService.UpdateBookInfoAsync(bookId, bookInfo, User.GetUserId(), bookInfo.Reason);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // Putting right a loan on someone's book (#83): needs a reason, which goes into the
+    // history and a notification to the owner. Shared-library books aren't lent by name.
+    [HttpPost("{bookId:int}/lend")]
+    public async Task<IActionResult> LendBook(int bookId, [FromBody] AdminLendBookRequest body)
+    {
+        var response = await _lendingService.LendAsAdminAsync(bookId, User.GetUserId(), body);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    [HttpPost("{bookId:int}/return")]
+    public async Task<IActionResult> ReturnBook(int bookId, [FromBody] AdminReturnBookRequest body)
+    {
+        var response = await _lendingService.ReturnAsAdminAsync(bookId, User.GetUserId(), body);
         return StatusCode((int)response.StatusCode, response);
     }
 
@@ -76,10 +100,11 @@ public class BookController : ControllerBase
     }
 
     [HttpDelete("{bookId:int}/admin-status")]
-    public async Task<IActionResult> ClearAdminStatus(int bookId)
+    public async Task<IActionResult> ClearAdminStatus(int bookId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] AdminStatusClearRequest? body)
     {
         var adminId = User.FindFirstValue("userId");
-        var response = await _bookService.ClearAdminStatusAsync(bookId, adminId);
+        var response = await _bookService.ClearAdminStatusAsync(bookId, adminId, body?.Notes);
         return StatusCode((int)response.StatusCode, response);
     }
     [HttpGet("history/{bookId:int}")]
@@ -90,6 +115,9 @@ public class BookController : ControllerBase
     }
 
     public record AdminStatusRequest(BookStatusEnum Status, string? Notes);
+
+    // Notes are the reason, required when the book is someone else's (#83)
+    public record AdminStatusClearRequest(string? Notes);
 
 
 }

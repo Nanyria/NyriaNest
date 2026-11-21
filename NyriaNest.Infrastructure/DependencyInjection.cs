@@ -31,7 +31,7 @@ namespace NyriaNest.Infrastructure
             return services;
         }
 
-        /// <summary>Brings the database up to date and seeds the roles and the admin account.</summary>
+        /// <summary>Brings the database up to date and seeds the roles, the admin account and (when enabled) the demo data.</summary>
         public static async Task InitialiseDatabaseAsync(this IServiceProvider services)
         {
             using var scope = services.CreateScope();
@@ -46,6 +46,11 @@ namespace NyriaNest.Infrastructure
 
             await DatabaseSeeder.SeedRolesAndAdminAsync(scope.ServiceProvider);
             await DatabaseSeeder.AssignUserRoleToUsersWithoutRoleAsync(scope.ServiceProvider);
+
+            // #83: demo users, own books and shared e-books, for development only
+            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            if (bool.TryParse(config["SeedDemoData:Enabled"], out var seedDemoData) && seedDemoData)
+                await DatabaseSeeder.SeedDemoDataAsync(scope.ServiceProvider);
         }
     }
 }

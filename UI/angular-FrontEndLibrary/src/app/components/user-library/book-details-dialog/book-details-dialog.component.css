@@ -1,0 +1,247 @@
+/* The Library's book popup: a framed card like the confirm dialog, wider */
+.book-dialog {
+  width: min(820px, calc(100vw - 2 * var(--nn-space-4)));
+  max-height: calc(100vh - 2 * var(--nn-space-4));
+  padding: 40px 40px 34px;
+  box-shadow: var(--nn-shadow-raised);
+  color: var(--nn-ink);
+  font-family: var(--nn-font-body);
+  overflow-y: auto;
+}
+
+.book-dialog[open] {
+  animation: book-dialog-in 180ms ease-out;
+}
+
+.book-dialog::backdrop {
+  background-color: rgba(42, 22, 14, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.book-dialog__close {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  z-index: 1;
+}
+
+/* ---------- Cover and details ---------- */
+.book-dialog__top {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--nn-space-5);
+  align-items: start;
+}
+
+.book-dialog__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+}
+
+.book-dialog__cover {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  box-shadow: 3px 5px 12px rgba(42, 22, 14, 0.35);
+}
+
+.book-dialog__details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nn-space-2);
+  min-width: 0;
+  padding-right: var(--nn-space-5); /* room for the × */
+}
+
+.book-dialog__mine {
+  border-color: var(--nn-primary);
+  background-color: var(--nn-primary);
+  color: var(--nn-on-primary);
+}
+
+.book-dialog__title {
+  margin: 0;
+  font-family: var(--nn-font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--nn-ink-strong);
+}
+
+.book-dialog__author {
+  margin: 0;
+  font-size: 1.15rem;
+  font-style: italic;
+}
+
+.book-dialog__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  margin: 0;
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- Actions under the cover ---------- */
+.book-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--nn-space-2);
+}
+
+.book-dialog__action {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  background-color: var(--nn-field);
+  font-size: 1.1rem;
+}
+
+/* On: e.g. in the reading list */
+.book-dialog__action.is-on {
+  border-color: var(--nn-accent);
+  color: var(--nn-accent);
+}
+
+/* The label as a small tooltip above the button, on hover and keyboard focus */
+.book-dialog__action::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 2;
+  padding: 3px 10px;
+  border-radius: var(--nn-radius-pill);
+  background-color: var(--nn-ink-strong);
+  color: var(--nn-surface);
+  font-family: var(--nn-font-body);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 2px);
+  transition: opacity 0.12s, transform 0.12s;
+}
+
+.book-dialog__action:hover::after,
+.book-dialog__action:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- Status ---------- */
+.book-dialog__status {
+  display: flex;
+  flex-direction: column;
+  margin: var(--nn-space-1) 0;
+  padding: var(--nn-space-2) var(--nn-space-4);
+  border-left: 3px solid var(--nn-gold);
+  background-color: var(--nn-surface);
+}
+
+.book-dialog__status.is-ok strong { color: #2e5d3f; }
+.book-dialog__status.is-out strong { color: #8a3b22; }
+.book-dialog__status.is-muted strong { color: var(--nn-ink-muted); }
+
+.book-dialog__status span {
+  color: var(--nn-ink-muted);
+  font-size: 0.95rem;
+}
+
+.book-dialog__description {
+  margin: 0;
+  white-space: pre-line;
+}
+
+/* ---------- Reviews ---------- */
+.book-dialog__reviews {
+  margin-top: var(--nn-space-4);
+}
+
+.book-dialog__reviews-title {
+  margin: var(--nn-space-3) 0 var(--nn-space-2);
+  font-family: var(--nn-font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.book-dialog__reviews-title .nn-muted {
+  font-family: var(--nn-font-body);
+  font-size: 1rem;
+  font-weight: normal;
+}
+
+.book-dialog__star,
+.book-dialog__stars {
+  color: var(--nn-gold);
+}
+
+.book-dialog__review-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  margin: 0 0 var(--nn-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.book-dialog__review {
+  padding-bottom: var(--nn-space-3);
+  border-bottom: 1px solid var(--nn-border);
+}
+
+.book-dialog__review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--nn-space-2);
+}
+
+.book-dialog__review-header {
+  margin: var(--nn-space-1) 0 0;
+  font-weight: 600;
+}
+
+.book-dialog__review-text {
+  margin: var(--nn-space-1) 0 0;
+  white-space: pre-line;
+}
+
+@keyframes book-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-dialog[open] {
+    animation: none;
+  }
+}
+
+/* One column on a phone: cover on top, smaller */
+@media (max-width: 600px) {
+  .book-dialog {
+    padding: 36px 20px 26px;
+  }
+
+  .book-dialog__top {
+    grid-template-columns: 1fr;
+  }
+
+  .book-dialog__side {
+    align-items: center;
+  }
+
+  .book-dialog__cover {
+    width: 140px;
+  }
+
+  .book-dialog__title {
+    font-size: 1.6rem;
+  }
+}

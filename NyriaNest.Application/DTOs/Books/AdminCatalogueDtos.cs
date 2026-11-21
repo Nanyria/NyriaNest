@@ -11,11 +11,11 @@ namespace NyriaNest.Application.DTOs.Books
         public BookTypeEnums? BookType { get; set; }
 
         // Worked out from loans, reservations and the admin status, not read from the
-        // stored BookStatus (Overdue, for example, comes from the due date).
+        // stored BookStatus (Overdue, for example, comes from the due date). Available is
+        // for physical books; an e-book is Ready or NoFile, from its EPUB file (#83).
         // Returned and Added aren't states a book stays in, so they're rejected.
         public BookStatusEnum? Status { get; set; }
 
-        public bool NeedsAttention { get; set; }    // e-books with no EPUB file
         public CatalogueSort Sort { get; set; } = CatalogueSort.TitleAsc;
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 10;
@@ -54,5 +54,9 @@ namespace NyriaNest.Application.DTOs.Books
         public DateTime? ExpectedDate { get; set; }
 
         public string? AdminStatusNotes { get; set; }
+
+        // #83: whose book it is (the owner's username); both null = the shared library
+        public string? OwnerId { get; set; }
+        public string? OwnerName { get; set; }
     }
 }

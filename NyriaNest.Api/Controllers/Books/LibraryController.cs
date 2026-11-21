@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Api.Auth;
 using NyriaNest.Application.Books;
-using System.Security.Claims;
 
 namespace NyriaNest.Api.Controllers.Books;
 
@@ -17,8 +17,7 @@ public class LibraryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllBooks()
     {
-        var userId = User.FindFirstValue("userId"); // null when not logged in
-        var response = await _bookService.GetLibraryAsync(userId);
+        var response = await _bookService.GetLibraryAsync(User.FindUserId()); // null when not logged in
         return StatusCode((int)response.StatusCode, response);
     }
 

@@ -28,7 +28,7 @@ namespace NyriaNest.Api.Controllers.Books
             return StatusCode((int)response.StatusCode, response);
         }
 
-        /// <summary>Download the EPUB. Users must have the book checked out; admins can always download.</summary>
+        /// <summary>Download the EPUB. Users can download e-books they can see (404 otherwise); admins can download any.</summary>
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> Download(int bookId, CancellationToken ct)

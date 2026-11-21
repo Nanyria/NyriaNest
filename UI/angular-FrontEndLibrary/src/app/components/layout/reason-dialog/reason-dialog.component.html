@@ -1,0 +1,76 @@
+<!-- Same card as the confirm dialog (its CSS is shared), with a reason -->
+@let o = options();
+<dialog
+  #dialog
+  class="confirm nn-panel--framed nn-compact"
+  aria-labelledby="reason-title"
+  (close)="onNativeClose()"
+  (click)="onClick($event)"
+>
+  <form class="confirm__body" novalidate [formGroup]="form" (ngSubmit)="save()">
+    <span class="confirm__seal" [class.is-danger]="o.danger" aria-hidden="true">
+      <i class="bi" [class]="'bi-' + o.icon"></i>
+    </span>
+    <h2 id="reason-title" class="confirm__title">{{ o.title }}</h2>
+    <div class="nn-divider confirm__divider" aria-hidden="true"><span class="nn-divider__mark"></span></div>
+    @if (o.message) {
+      <p class="confirm__message">{{ o.message }}</p>
+    }
+
+    <div class="reason__fields">
+      <label class="reason__field">
+        <span class="nn-field-label">Reason (the owner sees it)</span>
+        <select
+          class="nn-select nn-select--plain"
+          [formControl]="preset"
+          [attr.aria-invalid]="submitted() && preset.invalid"
+          autofocus
+        >
+          <option value="" disabled>Pick a reason…</option>
+          @for (p of presets(); track p) {
+            <option [value]="p">{{ p }}</option>
+          }
+          <option [value]="other">{{ other }}</option>
+        </select>
+        @if (submitted() && preset.invalid) {
+          <span class="reason__hint is-error">Pick a reason.</span>
+        }
+      </label>
+
+      @if (isOther()) {
+        <label class="reason__field">
+          <span class="nn-field-label">Your reason</span>
+          <textarea
+            class="nn-input"
+            rows="2"
+            [maxlength]="maxLength"
+            [formControl]="otherText"
+            [attr.aria-invalid]="submitted() && otherMissing()"
+          ></textarea>
+          @if (submitted() && otherMissing()) {
+            <span class="reason__hint is-error">Write a reason.</span>
+          }
+        </label>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p class="reason__alert" role="alert">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+      </p>
+    }
+
+    <div class="confirm__actions">
+      <button type="button" class="nn-btn nn-btn--outline" [disabled]="saving()" (click)="close(false)">Cancel</button>
+      <button
+        type="submit"
+        class="nn-btn nn-btn--ornate"
+        [class.nn-btn--danger]="o.danger"
+        [class.nn-btn--primary]="!o.danger"
+        [disabled]="saving()"
+      >
+        {{ o.confirmLabel }}
+      </button>
+    </div>
+  </form>
+</dialog>

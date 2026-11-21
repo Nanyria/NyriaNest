@@ -7,12 +7,14 @@ using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
 /// #39 part C: PUT api/Book/{bookId}, which the edit book page uses. It always
-/// sends every field, so what it sends is what gets saved.
+/// sends every field, so what it sends is what gets saved. The books here are
+/// shared-library e-books, except where an owner's e-book changes type.
 /// </summary>
 public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
@@ -35,30 +37,33 @@ public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task GenreLanguageAndType_AreSavedAsSent_IncludingTheDefaultValues()
+    public async Task GenreAndLanguage_AreSavedAsSent_IncludingTheDefaultValues()
     {
-        // 0 is None / Undefined, and used to be ignored as "not sent"
+        // 0 is None, and used to be ignored as "not sent". The type can't be 0 any more:
+        // the shared library has e-books only (#83, SharedLibraryTypeTests)
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
-        var bookId = await AddBookAsync(b => { b.Genre = GenreEnums.Fiction; b.Language = LanguageEnums.English; b.BookType = BookTypeEnums.Paperback; });
+        var bookId = await AddBookAsync(b => { b.Genre = GenreEnums.Fiction; b.Language = LanguageEnums.English; });
 
         var response = await admin.PutAsJsonAsync($"api/Book/{bookId}",
-            Body(genre: default(GenreEnums), language: default(LanguageEnums), bookType: default(BookTypeEnums)), Ct);
+            Body(genre: default(GenreEnums), language: default(LanguageEnums)), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         var book = await BookAsync(bookId);
         book.Genre.Should().Be(default(GenreEnums));
         book.Language.Should().Be(default(LanguageEnums));
-        book.BookType.Should().Be(default(BookTypeEnums));
     }
+
+    // A shared-library book stays an e-book, so a type change that drops the EPUB happens on
+    // an owner's e-book. Owners can't add e-books yet (#83), so the tests set one up directly.
 
     [Fact]
     public async Task ChangingAnEbookToAnotherType_DropsItsEpub_AndDeletesTheFile()
     {
-        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var (owner, me) = await factory.LoginAsAsync();
         var key = $"{Guid.NewGuid():N}/file.epub";
-        var bookId = await AddEbookWithEpubAsync(key);
+        var bookId = await AddEbookWithEpubAsync(key, ownerId: me.Id);
 
-        var response = await admin.PutAsJsonAsync($"api/Book/{bookId}", Body(bookType: BookTypeEnums.Paperback), Ct);
+        var response = await owner.PutAsJsonAsync($"api/my/books/{bookId}", Body(bookType: BookTypeEnums.Paperback), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         var book = await BookAsync(bookId);
@@ -72,14 +77,14 @@ public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task IfDeletingTheDroppedFileFails_TheUpdateStillSucceeds()
     {
         // The book no longer points at the file, so a leftover file is harmless (it's logged)
-        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var (owner, me) = await factory.LoginAsAsync();
         var key = $"{Guid.NewGuid():N}/broken.epub";
         factory.FileStorage
             .Setup(s => s.DeleteAsync(key, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("Disk said no"));
-        var bookId = await AddEbookWithEpubAsync(key);
+        var bookId = await AddEbookWithEpubAsync(key, ownerId: me.Id);
 
-        var response = await admin.PutAsJsonAsync($"api/Book/{bookId}", Body(bookType: BookTypeEnums.Hardcover), Ct);
+        var response = await owner.PutAsJsonAsync($"api/my/books/{bookId}", Body(bookType: BookTypeEnums.Hardcover), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         var book = await BookAsync(bookId);
@@ -123,6 +128,25 @@ public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
         (await BookAsync(bookId)).Title.Should().Be("Renamed");
     }
 
+    // #83 step 8a: the edit page needs to know whose book it is (a reason is asked for
+    // someone else's book). No owner = the shared library.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetForEdit_ShowsTheOwner_OrNoneForASharedBook(bool owned)
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = owned ? await factory.CreateUserAsync() : null;
+        var bookId = await AddBookAsync(b => b.OwnerId = owner?.Id);
+
+        var response = await admin.GetAsync($"api/Book/{bookId}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var result = (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("result");
+        result.GetProperty("ownerId").GetString().Should().Be(owner?.Id);
+        result.GetProperty("ownerName").GetString().Should().Be(owner?.UserName);
+    }
+
     // ---- Helpers ----
 
     /// <summary>What the edit page sends: every field.</summary>
@@ -132,7 +156,7 @@ public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
         string? coverImagePath = "cover.jpg",
         GenreEnums genre = GenreEnums.Fiction,
         LanguageEnums language = LanguageEnums.English,
-        BookTypeEnums bookType = BookTypeEnums.Paperback) => new
+        BookTypeEnums bookType = BookTypeEnums.EBook) => new
     {
         title,
         author = "Test Author",
@@ -146,16 +170,17 @@ public class BookEditTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private Task<int> AddBookAsync(Action<Book>? setup = null) => factory.WithDbAsync(async db =>
     {
-        var book = TestData.Book();
+        // A shared-library book, so an e-book
+        var book = TestData.Ebook("Test book");
         setup?.Invoke(book);
         db.Books.Add(book);
         await db.SaveChangesAsync(Ct);
         return book.BookId;
     });
 
-    private Task<int> AddEbookWithEpubAsync(string key) => AddBookAsync(b =>
+    private Task<int> AddEbookWithEpubAsync(string key, string? ownerId = null) => AddBookAsync(b =>
     {
-        b.BookType = BookTypeEnums.EBook;
+        b.OwnerId = ownerId;
         b.EpubFileKey = key;
         b.EpubFileName = "file.epub";
         b.EpubFileSize = 1234;

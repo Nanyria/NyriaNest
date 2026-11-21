@@ -72,6 +72,21 @@ export interface EditBookDto {
   hasEpub: boolean;
   epubFileName?: string | null;
   epubFileSize?: number | null;
+  // Whose book it is (#83): the owner's id and username; null = the shared library
+  ownerId?: string | null;
+  ownerName?: string | null;
+}
+
+// A book on My owned books (GET api/my/books, #83). The loan fields are null
+// when it's on the owner's shelf. Dates come without "Z": they're UTC.
+export interface MyBook extends Omit<EditBookDto, 'bookId'> {
+  bookId: number;
+  bookStatus: BookStatusEnum;
+  adminStatus: BookStatusEnum.Lost | BookStatusEnum.Removed | null; // set by an admin
+  lentTo: string | null;
+  lentOn: string | null;
+  dueDate: string | null;
+  dateAdded: string;
 }
 
 export interface LibraryBook {
@@ -93,9 +108,20 @@ export interface LibraryBook {
   averageRating: number | null;
   reservationCount: number;
 
+  // My own book (false for shared books and for visitors)
+  isMine: boolean;
   isCheckedOutByMe: boolean;
   isReservedByMe: boolean;
   myReservationAvailableDate: string | null;
+}
+
+// A review as the Library popup shows it (GET api/review/{bookId})
+export interface BookReview {
+  userName: string;
+  reviewHeader: string | null;
+  reviewText: string | null;
+  ratingItem: { rating: number } | null;
+  createdAt: string;
 }
 
 // The API wraps every result like this
@@ -132,21 +158,22 @@ export interface AdminBook {
   nextInLineName?: string | null;
   expectedDate?: string | null; // when the book is expected to reach them (an estimate, not a hold)
   adminStatusNotes?: string | null;
+  ownerId?: string | null; // null = the shared library
+  ownerName?: string | null; // the owner's username
 }
 
 // Must match the backend's CatalogueSort names. The API matches names in any case.
 export type CatalogueSort = 'titleAsc' | 'titleDesc' | 'authorAsc' | 'yearDesc' | 'yearAsc';
 
-// The statuses you can filter by: BookStatusEnum names, minus Returned and Added
-// (the API rejects those). Sent as names, so the URL stays readable.
-export type CatalogueStatus = 'available' | 'checkedOut' | 'overdue' | 'reserved' | 'lost' | 'removed';
+// The statuses Manage books filters by: BookStatusEnum names. Available is for
+// physical books, Ready / NoFile for e-books. Sent as names, so the URL stays readable.
+export type CatalogueStatus = 'available' | 'checkedOut' | 'overdue' | 'ready' | 'noFile' | 'lost' | 'removed';
 
 export interface CatalogueQuery {
   q?: string;
   genre?: GenreEnums;
   bookType?: BookTypeEnums;
   status?: CatalogueStatus;
-  needsAttention?: boolean;
   sort?: CatalogueSort;
   page?: number;
   pageSize?: number;

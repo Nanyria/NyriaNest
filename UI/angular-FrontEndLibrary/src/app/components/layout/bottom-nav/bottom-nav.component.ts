@@ -57,7 +57,7 @@ export class BottomNavComponent {
       label: 'More',
       icon: 'bi-three-dots',
       route: '/more',
-      activeFor: ['/admin', '/add-book', SETTINGS_NAV.route!],
+      activeFor: ['/admin', SETTINGS_NAV.route!],
     },
   ];
 

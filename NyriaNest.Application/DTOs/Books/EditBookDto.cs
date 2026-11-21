@@ -1,3 +1,5 @@
+using NyriaNest.Domain.Enums;
+
 namespace NyriaNest.Application.DTOs.Books
 {
     /// <summary>
@@ -11,5 +13,26 @@ namespace NyriaNest.Application.DTOs.Books
         public bool HasEpub { get; set; }
         public string? EpubFileName { get; set; }
         public long? EpubFileSize { get; set; }
+
+        // #83: whose book it is (the owner's username); both null = the shared library.
+        // The admin edit page asks for a reason when the book is someone else's.
+        public string? OwnerId { get; set; }
+        public string? OwnerName { get; set; }
+    }
+
+    /// <summary>
+    /// A book on My library (GET api/my/books): the edit fields plus where the book is.
+    /// The loan fields are null when it's on the owner's shelf (#83).
+    /// </summary>
+    public class MyBookDto : EditBookDto
+    {
+        public BookStatusEnum BookStatus { get; set; }
+        // Lost/Removed by an admin: hidden everywhere else, but the owner still sees it here
+        public BookStatusEnum? AdminStatus { get; set; }
+        public string? LentTo { get; set; }
+        public DateTime? LentOn { get; set; }
+        public DateTime? DueDate { get; set; }
+        // The "Added" column on My owned books
+        public DateTime DateAdded { get; set; }
     }
 }

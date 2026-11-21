@@ -5,6 +5,7 @@ using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
+using NyriaNest.Domain.Rules;
 using NyriaNest.Infrastructure.Data;
 
 namespace NyriaNest.Infrastructure.Repositories
@@ -33,14 +34,36 @@ namespace NyriaNest.Infrastructure.Repositories
 
         public async Task<Book?> GetByIdAsync(int id)
         {
-            return await _db.Books
-                .Include(b => b.Reviews)
-                    .ThenInclude(r => r.User)
-                .Include(b => b.Reviews)
-                    .ThenInclude(r => r.RatingItem)
-                .Include(b => b.CheckedOutBy)
-                .Include(b => b.Reservations)
+            return await WithDetails(_db.Books).FirstOrDefaultAsync(b => b.BookId == id);
+        }
+
+        public async Task<Book?> GetVisibleByIdAsync(int id, string? userId)
+        {
+            return await WithDetails(_db.Books.Where(BookVisibility.VisibleTo(userId)))
                 .FirstOrDefaultAsync(b => b.BookId == id);
+        }
+
+        private static IQueryable<Book> WithDetails(IQueryable<Book> books) => books
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.User)
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.RatingItem)
+            .Include(b => b.CheckedOutBy)
+                .ThenInclude(c => c!.User)
+            .Include(b => b.Reservations)
+            .Include(b => b.Owner);
+
+        // With the current loan (and its borrower), for My library's "Lent to …"
+        public async Task<List<Book>> GetOwnedByAsync(string ownerId)
+        {
+            return await _db.Books
+                .AsNoTracking()
+                .Include(b => b.Owner)
+                .Include(b => b.CheckedOutBy)
+                    .ThenInclude(c => c!.User)
+                .Where(b => b.OwnerId == ownerId)
+                .OrderBy(b => b.Title)
+                .ToListAsync();
         }
 
         // Queried directly: GetByIdAsync doesn't load StatusHistory (#32), and the
@@ -81,8 +104,8 @@ namespace NyriaNest.Infrastructure.Repositories
         {
             return await _db.Books
                 .AsNoTracking()
-                // Books an admin has marked Lost or Removed aren't part of the public catalogue
-                .Where(b => b.AdminStatus == null)
+                // The shared library and my own books, none marked Lost or Removed
+                .Where(BookVisibility.VisibleTo(userId))
                 .OrderBy(b => b.Title)
                 .Select(b => new LibraryBookDto
                 {
@@ -99,6 +122,7 @@ namespace NyriaNest.Infrastructure.Repositories
                     BookType = b.BookType,
                     AvailabilityDate = b.AvailabilityDate,
                     DateAdded = b.DateAdded,
+                    IsMine = userId != null && b.OwnerId == userId,
 
                     ReviewCount = b.Reviews.Count,
                     AverageRating = b.Reviews
@@ -136,14 +160,16 @@ namespace NyriaNest.Infrastructure.Repositories
             }
             if (q.Genre.HasValue) books = books.Where(b => b.Genre == q.Genre.Value);
             if (q.BookType.HasValue) books = books.Where(b => b.BookType == q.BookType.Value);
-            if (q.NeedsAttention) books = books.Where(b => b.BookType == BookTypeEnums.EBook && b.EpubFileKey == null);
 
             // Status is worked out from loans, reservations and the admin status,
             // the same way GetBookStatus does, rather than trusting the stored BookStatus
             // (Returned and Added are rejected by the service before we get here)
             books = q.Status switch
             {
-                BookStatusEnum.Available => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
+                // Available is for physical books; an e-book is Ready or NoFile instead (#83)
+                BookStatusEnum.Available => books.Where(b => b.BookType != BookTypeEnums.EBook && b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
+                BookStatusEnum.Ready => books.Where(b => b.BookType == BookTypeEnums.EBook && b.AdminStatus == null && b.EpubFileKey != null),
+                BookStatusEnum.NoFile => books.Where(b => b.BookType == BookTypeEnums.EBook && b.AdminStatus == null && b.EpubFileKey == null),
                 BookStatusEnum.CheckedOut => books.Where(b => b.CheckedOutBy != null),
                 BookStatusEnum.Overdue => books.Where(b => b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now),
                 BookStatusEnum.Reserved => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && b.Reservations.Any()),
@@ -183,11 +209,14 @@ namespace NyriaNest.Infrastructure.Repositories
                     HasEpub = b.EpubFileKey != null,
                     BookStatus = b.BookStatus,
                     IsOverdue = b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now,
-                    BorrowerName = b.CheckedOutBy != null ? b.CheckedOutBy.User!.UserName : null,
+                    // A loan has a member or a name (#83); a name loan has no user
+                    BorrowerName = b.CheckedOutBy != null ? b.CheckedOutBy.BorrowerName ?? b.CheckedOutBy.User!.UserName : null,
                     DueDate = b.CheckedOutBy != null ? b.CheckedOutBy.ReturnDate : null,
                     NextInLineName = b.Reservations.OrderBy(r => r.ReservationDate).Select(r => r.User.UserName).FirstOrDefault(),
                     ExpectedDate = b.Reservations.OrderBy(r => r.ReservationDate).Select(r => r.AvailabilityDate).FirstOrDefault(),
                     AdminStatusNotes = b.AdminStatusNotes,
+                    OwnerId = b.OwnerId,
+                    OwnerName = b.Owner != null ? b.Owner.UserName : null,
                 })
                 .ToListAsync();
 

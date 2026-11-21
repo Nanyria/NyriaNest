@@ -3,7 +3,8 @@
     /// <summary>
     /// What a notification is about, so the UI can pick an icon and a link.
     /// Saved as a number: never change or reuse a number, only add new types at the end.
-    /// Only BookRemoved is sent today; the rest are reserved for the issues named on each.
+    /// BookRemoved, BookLoanChangedByAdmin and BookStatusChangedByAdmin are sent today;
+    /// the rest are reserved for the issues named on each.
     /// </summary>
     public enum NotificationType
     {
@@ -42,5 +43,11 @@
 
         /// <summary>A friend added a new book; will be possible to turn off (#82/#84).</summary>
         FriendAddedBook = 11,
+
+        /// <summary>An admin lent or returned the user's own book, with a reason (#83).</summary>
+        BookLoanChangedByAdmin = 12,
+
+        /// <summary>An admin marked the user's own book as lost or removed, or restored it, with a reason (#83).</summary>
+        BookStatusChangedByAdmin = 13,
     }
 }

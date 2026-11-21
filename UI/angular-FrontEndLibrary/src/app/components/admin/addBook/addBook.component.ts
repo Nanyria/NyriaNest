@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener, inject } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -14,6 +14,9 @@ import { BookService } from '../../../Services/book.services';
 import { HasUnsavedChanges } from '../../../Services/unsaved-changes.guard';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
+import { MyBooksService } from '../../../Services/my-books.service';
+import { AuthService } from '../../../Services/auth.service';
+import { OTHER_REASON, REASON_MAX_LENGTH, REASON_PRESETS } from '../../layout/reason-dialog/reason-dialog.component';
 import { EditBookDto, SlimBookDto } from '../../../Models/interfaces';
 import {
   GenreEnums,
@@ -26,6 +29,20 @@ import {
 
 type BookFormat = 'physical' | 'digital';
 type LoadState = 'loading' | 'error' | 'ready';
+
+// Where the page was opened from decides where the book goes (route data "area"):
+// 'my'    = the user's own books (api/my/books), from My owned books, for everyone;
+// 'admin' = Manage books: adding puts an e-book in the shared library, editing
+//           works on any book through api/Book.
+type BookArea = 'my' | 'admin';
+
+// Owners can't have e-books yet (#80). Turning this on shows Physical/Digital on
+// /my/owned-books/add; the backend needs an owner e-book endpoint first.
+const OWNER_EBOOKS = false;
+
+// The formats a book can have, by whose it is. One format means no Physical/Digital choice.
+const OWNED_FORMATS: BookFormat[] = OWNER_EBOOKS ? ['physical', 'digital'] : ['physical'];
+const SHARED_FORMATS: BookFormat[] = ['digital']; // the shared library has e-books only
 
 const MAX_EPUB_SIZE = 100 * 1024 * 1024; // same limit as EpubService.MaxFileSize
 
@@ -62,9 +79,13 @@ const FIELDS: FieldRef[] = [
   { controls: ['genre'], focus: '#genre' },
   { controls: ['language'], focus: '#language' },
   { controls: ['epubFile'], focus: '.add-book__files .add-book__file-input' },
+  // Only required when an admin edits someone else's book
+  { controls: ['reasonPreset'], focus: '#reasonPreset' },
+  { controls: ['reasonOther'], focus: '#reasonOther' },
 ];
 
-// One page for both /add-book and /admin/manage-books/:id/edit; the route decides the mode
+// One page for adding and editing, for own books and admins alike; the route decides:
+// /my/owned-books/add, /my/owned-books/:id/edit, /admin/manage-books/add, /admin/manage-books/:id/edit
 @Component({
   selector: 'app-addbook',
   standalone: true,
@@ -78,7 +99,12 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   // Set when editing, null when adding
   bookId: string | null = null;
+  area: BookArea = 'admin';
   loadState: LoadState = 'ready';
+
+  // The formats this book may have. Adding: by area ('my' = own book, 'admin' =
+  // shared library). Editing: by whose book it is, set once it's loaded.
+  private formats: BookFormat[] = SHARED_FORMATS;
 
   readonly BookTypeEnums = BookTypeEnums;
   readonly GenreDisplayNames = GenreDisplayNames;
@@ -110,9 +136,18 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   coverPreviewFailed = false;
 
+  // An admin editing someone else's book gives a reason; the owner is told it (#83)
+  needsReason = false;
+  ownerName: string | null = null;
+  readonly reasonPresets = REASON_PRESETS.edit;
+  readonly otherReason = OTHER_REASON;
+  readonly reasonMaxLength = REASON_MAX_LENGTH;
+  private myId = inject(AuthService).getUserId();
+
   constructor(
     private fb: FormBuilder,
     private bookService: BookService,
+    private myBooks: MyBooksService,
     private router: Router,
     private route: ActivatedRoute,
     private toast: ToastService,
@@ -122,11 +157,16 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   ngOnInit(): void {
     this.bookId = this.route.snapshot.paramMap.get('id');
+    this.area = this.route.snapshot.data['area'] === 'my' ? 'my' : 'admin';
+
+    // Adding with only one possible format: pick it and its first type up front
+    this.formats = this.area === 'my' ? OWNED_FORMATS : SHARED_FORMATS;
+    const onlyFormat = !this.isEdit && this.formats.length === 1 ? this.formats[0] : null;
 
     this.addBookForm = this.fb.group({
       // UI only: decides which book types are offered, never sent to the API
-      format: [null as BookFormat | null, Validators.required],
-      bookType: [null as BookTypeEnums | null, Validators.required],
+      format: [onlyFormat as BookFormat | null, Validators.required],
+      bookType: [onlyFormat ? this.firstType(onlyFormat) : (null as BookTypeEnums | null), Validators.required],
       title: ['', [Validators.required, Validators.maxLength(100)]],
       author: ['', [Validators.required, Validators.maxLength(75)]],
       publicationYear: ['', [Validators.required, Validators.pattern('^[0-9]{4}$')]],
@@ -137,21 +177,26 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
       epubFile: [null as File | null],
       // Edit mode: the admin removed the stored EPUB; it's deleted on save
       removeStoredEpub: [false],
+      // Someone else's book: a preset, or "Other" and their own words. No
+      // validators until the book is loaded and turns out to need a reason.
+      reasonPreset: [''],
+      reasonOther: ['', Validators.maxLength(REASON_MAX_LENGTH)],
     });
 
-    // The EPUB is required for new e-books only; any other type drops the file.
-    // When editing, the details can be saved without one (the catalogue flags it).
-    this.addBookForm.get('bookType')!.valueChanges.subscribe((type) => {
-      const epub = this.addBookForm.get('epubFile')!;
-      if (type === BookTypeEnums.EBook) {
-        epub.setValidators(this.isEdit ? [epubFileValidator] : [Validators.required, epubFileValidator]);
-      } else {
-        epub.clearValidators();
-        epub.setValue(null);
-        this.clearEpubError();
-      }
-      epub.updateValueAndValidity();
+    // "Other" needs words of its own; whitespace doesn't count
+    this.addBookForm.get('reasonPreset')!.valueChanges.subscribe((preset) => {
+      const other = this.addBookForm.get('reasonOther')!;
+      other.setValidators(
+        preset === OTHER_REASON
+          ? [Validators.maxLength(REASON_MAX_LENGTH), (c) => (c.value?.trim() ? null : { required: true })]
+          : Validators.maxLength(REASON_MAX_LENGTH),
+      );
+      other.updateValueAndValidity({ emitEvent: false });
     });
+
+    this.addBookForm.get('bookType')!.valueChanges.subscribe((type) => this.applyEpubRule(type));
+    // A type picked up front (one format) needs the rule too
+    if (onlyFormat) this.applyEpubRule(this.bookType);
 
     this.addBookForm.get('coverImagePath')!.valueChanges.subscribe(() => {
       this.coverPreviewFailed = false;
@@ -162,13 +207,61 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     }
   }
 
+  // The EPUB is required for new e-books only; any other type drops the file.
+  // When editing, the details can be saved without one (the catalogue flags it).
+  private applyEpubRule(type: BookTypeEnums | null): void {
+    const epub = this.addBookForm.get('epubFile')!;
+    if (type === BookTypeEnums.EBook) {
+      epub.setValidators(this.isEdit ? [epubFileValidator] : [Validators.required, epubFileValidator]);
+    } else {
+      epub.clearValidators();
+      epub.setValue(null);
+      this.clearEpubError();
+    }
+    epub.updateValueAndValidity();
+  }
+
   get isEdit(): boolean {
     return this.bookId !== null;
   }
 
+  // ---------- Where the page belongs ----------
+
+  /** The list this page came from and returns to */
+  get backLink(): string {
+    return this.area === 'my' ? '/my/owned-books' : '/admin/manage-books';
+  }
+
+  get backLabel(): string {
+    return this.area === 'my' ? 'Back to My owned books' : 'Back to Manage books';
+  }
+
+  get heading(): string {
+    if (this.isEdit) return 'Edit book';
+    return this.area === 'my' ? 'Add a book to your shelf' : 'Add a shared e-book';
+  }
+
+  get formatHelp(): string {
+    if (this.isEdit) return 'Select what type of book this is.';
+    return this.area === 'my'
+      ? 'It goes on My owned books, where you can keep track of who has borrowed it.'
+      : 'It goes in the shared library, where every reader can read it.';
+  }
+
+  /** Physical/Digital is a choice only when both are possible */
+  get showFormatChoice(): boolean {
+    return this.formats.length > 1;
+  }
+
+  private firstType(format: BookFormat): BookTypeEnums {
+    return format === 'physical' ? BookTypeEnums.Hardcover : BookTypeEnums.EBook;
+  }
+
   private loadBook(id: string): void {
     this.loadState = 'loading';
-    this.bookService.getBookById(id).subscribe({
+    const request: Observable<{ isSuccess: boolean; result: Omit<EditBookDto, 'bookId'> }> =
+      this.area === 'my' ? this.myBooks.get(Number(id)) : this.bookService.getBookById(id);
+    request.subscribe({
       next: (res) => (res.isSuccess ? this.fillForm(res.result) : (this.loadState = 'error')),
       error: () => (this.loadState = 'error'),
     });
@@ -176,11 +269,17 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   // reset() instead of patchValue() so the loaded values count as unchanged.
   // Old books may lack a genre, language or type; those start empty so the admin picks one.
-  private fillForm(book: EditBookDto): void {
+  private fillForm(book: Omit<EditBookDto, 'bookId'>): void {
     const type = book.bookType === BookTypeEnums.Undefined ? null : book.bookType;
     const digital = type === BookTypeEnums.EBook || type === BookTypeEnums.Audiobook;
+    // The API's type rules go by whose book it is, not by who's editing:
+    // an admin editing someone's own book gets the owner's formats
+    this.formats = this.area === 'my' || book.ownerId ? OWNED_FORMATS : SHARED_FORMATS;
+    // An old book without a type, where only one format is possible, starts on that format
+    const format: BookFormat | null =
+      type === null ? (this.formats.length === 1 ? this.formats[0] : null) : digital ? 'digital' : 'physical';
     this.addBookForm.reset({
-      format: type === null ? null : digital ? 'digital' : 'physical',
+      format,
       bookType: type,
       title: book.title,
       author: book.author,
@@ -191,7 +290,19 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
       coverImagePath: book.coverImagePath ?? '',
       epubFile: null,
       removeStoredEpub: false,
+      reasonPreset: '',
+      reasonOther: '',
     });
+
+    // Same rule as the API: an admin on someone else's book (not a shared one, not their own)
+    this.needsReason = this.area === 'admin' && !!book.ownerId && book.ownerId !== this.myId;
+    this.ownerName = book.ownerName ?? null;
+    if (this.needsReason) {
+      const preset = this.addBookForm.get('reasonPreset')!;
+      preset.setValidators(Validators.required);
+      preset.updateValueAndValidity();
+    }
+
     this.hasStoredEpub = book.hasEpub;
     this.storedEpubName = book.epubFileName ?? null;
     this.storedEpubSize = book.epubFileSize ?? null;
@@ -237,6 +348,25 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     return this.hasStoredEpub && this.bookType !== null && !this.isEbook;
   }
 
+  // Something about the book itself changed (details or EPUB). The reason only
+  // explains a change, so picking one alone leaves nothing to save: otherwise the
+  // owner would be told about an edit that changed nothing.
+  get detailsChanged(): boolean {
+    return Object.entries(this.addBookForm.controls).some(
+      ([name, control]) => name !== 'reasonPreset' && name !== 'reasonOther' && control.dirty,
+    );
+  }
+
+  get isOtherReason(): boolean {
+    return this.addBookForm.get('reasonPreset')!.value === OTHER_REASON;
+  }
+
+  // What's sent as the reason: the preset, or the admin's own words for "Other"
+  get reason(): string {
+    const value = this.addBookForm.value;
+    return this.isOtherReason ? (value.reasonOther ?? '').trim() : value.reasonPreset;
+  }
+
   get coverUrl(): string {
     return (this.addBookForm.get('coverImagePath')!.value ?? '').trim();
   }
@@ -261,27 +391,28 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // Next to the save button. The button stays clickable (except when nothing
   // changed in edit mode), so this only sums up what a save attempt found.
   get saveHint(): string {
-    if (this.isEdit && this.addBookForm.pristine) return 'No changes to save yet.';
+    if (this.isEdit && !this.detailsChanged) return 'No changes to save yet.';
     if (!this.hasBlockingErrors) return '';
     const count = this.invalidFields.length;
     return count === 1 ? '1 field needs attention.' : `${count} fields need attention.`;
   }
 
   // Picking a format preselects its first type.
-  // patchValue() doesn't mark the form as changed, so these do it themselves.
+  // patchValue() doesn't mark anything as changed, so these do it themselves.
+  // They mark the control (which marks the form too), so detailsChanged sees it.
   setFormat(format: BookFormat): void {
     if (this.format === format) return;
     this.addBookForm.patchValue({
       format,
-      bookType: format === 'physical' ? BookTypeEnums.Hardcover : BookTypeEnums.EBook,
+      bookType: this.firstType(format),
     });
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('bookType')!.markAsDirty();
   }
 
   setBookType(type: BookTypeEnums): void {
     if (this.bookType === type) return;
     this.addBookForm.patchValue({ bookType: type });
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('bookType')!.markAsDirty();
   }
 
   showError(name: string): boolean {
@@ -332,7 +463,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // Edit mode: nothing is deleted until the admin saves
   setRemoveStoredEpub(remove: boolean): void {
     this.addBookForm.patchValue({ removeStoredEpub: remove });
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('removeStoredEpub')!.markAsDirty();
   }
 
   private takeEpub(file: File | null): void {
@@ -346,7 +477,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     }
     this.clearEpubError();
     this.addBookForm.get('epubFile')!.setValue(file);
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('epubFile')!.markAsDirty();
   }
 
   private clearEpubError(): void {
@@ -402,9 +533,9 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
       return;
     }
 
-    const request = this.isEbook
-      ? this.bookService.addEbook(book, this.epubFile!)
-      : this.bookService.addBook(book);
+    // Own books are physical (OWNER_EBOOKS); the admin side adds shared e-books
+    const request: Observable<unknown> =
+      this.area === 'my' ? this.myBooks.add(book) : this.bookService.addEbook(book, this.epubFile!);
 
     request.subscribe({
       next: () => this.finish(`"${book.title}" was added.`),
@@ -427,7 +558,11 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // The details and the file are separate requests: details first, then the
   // file. If only the file fails, the details stay saved and the page says so.
   private saveChanges(id: string, book: SlimBookDto): void {
-    this.bookService.updateBook(id, book).subscribe({
+    const request: Observable<unknown> =
+      this.area === 'my'
+        ? this.myBooks.update(Number(id), book)
+        : this.bookService.updateBook(id, book, this.needsReason ? this.reason : undefined);
+    request.subscribe({
       next: () => {
         // The API drops the file when an e-book becomes another type
         this.storedBookType = book.bookType ?? null;
@@ -448,20 +583,21 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     });
   }
 
-  // A new file replaces the stored one; otherwise a removed file is deleted
+  // A new file replaces the stored one; otherwise a removed file is deleted.
+  // Only shared e-books have files (own books are physical).
   private epubRequest(id: string): Observable<unknown> | null {
-    if (!this.isEbook) return null;
+    if (!this.isEbook || this.area === 'my') return null;
     if (this.epubFile) return this.bookService.uploadEpub(id, this.epubFile);
     if (this.hasStoredEpub && this.removeStoredEpub) return this.bookService.deleteEpub(id);
     return null;
   }
 
-  // Back to the list, with a toast saying what happened
+  // Back to the list the page came from, with a toast saying what happened
   private finish(message: string): void {
     this.isSaving = false;
     this.saved = true;
     this.toast.success(message);
-    this.router.navigate(['/admin/manage-books']);
+    this.router.navigate([this.backLink]);
   }
 
   private showServerErrors(err: any, title: string): void {

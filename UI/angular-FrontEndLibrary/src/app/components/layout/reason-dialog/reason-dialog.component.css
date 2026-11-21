@@ -1,0 +1,48 @@
+/* The card itself comes from confirm-dialog.component.css; these are the fields,
+   styled like the loan dialog's */
+.reason__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  width: 100%;
+  text-align: left;
+}
+
+.reason__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.reason__field .nn-input,
+.reason__field .nn-select {
+  background-color: var(--nn-field);
+}
+
+.reason__field textarea {
+  resize: vertical;
+}
+
+.reason__hint {
+  font-size: 0.85rem;
+}
+
+.reason__hint.is-error {
+  color: var(--nn-accent);
+}
+
+/* Same look as the alert on Manage books */
+.reason__alert {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #d99a93;
+  border-radius: var(--nn-radius-sm);
+  background-color: #f8e4e1;
+  color: var(--nn-accent);
+  text-align: left;
+}

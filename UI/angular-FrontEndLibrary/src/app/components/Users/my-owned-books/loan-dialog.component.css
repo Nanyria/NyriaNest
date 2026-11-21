@@ -1,0 +1,47 @@
+/* The card itself comes from confirm-dialog.component.css; these are the fields */
+.loan__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  width: 100%;
+  text-align: left;
+}
+
+.loan__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.loan__field .nn-input {
+  background-color: var(--nn-field);
+}
+
+.loan__context {
+  margin: 0;
+  color: var(--nn-ink);
+}
+
+.loan__hint {
+  font-size: 0.85rem;
+}
+
+.loan__hint.is-error {
+  color: var(--nn-accent);
+}
+
+/* Same look as the alert on Manage books */
+.loan__alert {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  width: 100%;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #d99a93;
+  border-radius: var(--nn-radius-sm);
+  background-color: #f8e4e1;
+  color: var(--nn-accent);
+  text-align: left;
+}

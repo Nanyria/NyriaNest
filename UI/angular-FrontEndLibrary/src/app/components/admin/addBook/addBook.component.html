@@ -11,9 +11,9 @@
     <span class="nn-admin-header__compass" aria-hidden="true"></span>
     <div class="nn-admin-header__heading">
       <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">
-        <a routerLink="/admin/manage-books">Admin / Books</a> / {{ isEdit ? 'Edit book' : 'Add book' }}
+        <a [routerLink]="backLink">{{ area === 'my' ? 'My books / My owned books' : 'Admin / Books' }}</a> / {{ isEdit ? 'Edit book' : 'Add book' }}
       </nav>
-      <h1 class="nn-admin-header__title">{{ isEdit ? 'Edit book' : 'Add a new book' }}</h1>
+      <h1 class="nn-admin-header__title">{{ heading }}</h1>
     </div>
     <span class="nn-admin-header__divider" aria-hidden="true"></span>
   </header>
@@ -24,30 +24,36 @@
   } @else if (loadState === 'error') {
     <div class="nn-panel nn-panel--framed add-book__panel add-book__state" role="alert">
       <p>Couldn't load this book. It may have been deleted.</p>
-      <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Back to Manage books</a>
+      <a class="nn-btn nn-btn--outline" [routerLink]="backLink">{{ backLabel }}</a>
     </div>
   } @else {
-    <!-- Format: physical/digital first, then the matching types -->
+    <!-- Format: physical/digital first (only when both are possible), then the matching types.
+         Where the page was opened from decides the format: own books are physical,
+         the shared library has e-books, and an existing book keeps its format. -->
     <section class="nn-panel nn-panel--framed nn-panel--titled add-book__panel add-book__format" [class.add-book__panel--invalid]="showFormatError" aria-labelledby="format-label">
       <div class="add-book__format-head">
         <h2 id="format-label" class="add-book__format-title">
-          <i class="bi bi-layers" aria-hidden="true"></i><span>Format<span class="nn-required" aria-hidden="true">*</span></span>
+          <i class="bi bi-layers" aria-hidden="true"></i><span>{{ showFormatChoice ? 'Format' : 'Type' }}<span class="nn-required" aria-hidden="true">*</span></span>
         </h2>
-        <p class="add-book__help">Select what type of book this is. Additional fields will appear based on your selection.</p>
+        <p class="add-book__help">{{ formatHelp }}</p>
       </div>
 
       <div class="add-book__format-options">
-        <div class="add-book__options" role="group" aria-label="Physical or digital">
-          <button type="button" class="add-book__option" [class.is-active]="format === 'physical'" [attr.aria-pressed]="format === 'physical'" (click)="setFormat('physical')">
-            <i class="bi bi-book" aria-hidden="true"></i>Physical
-          </button>
-          <button type="button" class="add-book__option" [class.is-active]="format === 'digital'" [attr.aria-pressed]="format === 'digital'" (click)="setFormat('digital')">
-            <i class="bi bi-laptop" aria-hidden="true"></i>Digital
-          </button>
-        </div>
+        @if (showFormatChoice) {
+          <div class="add-book__options" role="group" aria-label="Physical or digital">
+            <button type="button" class="add-book__option" [class.is-active]="format === 'physical'" [attr.aria-pressed]="format === 'physical'" (click)="setFormat('physical')">
+              <i class="bi bi-book" aria-hidden="true"></i>Physical
+            </button>
+            <button type="button" class="add-book__option" [class.is-active]="format === 'digital'" [attr.aria-pressed]="format === 'digital'" (click)="setFormat('digital')">
+              <i class="bi bi-laptop" aria-hidden="true"></i>Digital
+            </button>
+          </div>
+        }
 
         @if (format === 'physical') {
-          <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
+          @if (showFormatChoice) {
+            <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
+          }
           <div class="add-book__options" role="group" aria-label="Physical type">
             <button type="button" class="add-book__option" [class.is-active]="bookType === BookTypeEnums.Hardcover" [attr.aria-pressed]="bookType === BookTypeEnums.Hardcover" (click)="setBookType(BookTypeEnums.Hardcover)">
               <i class="bi bi-journal" aria-hidden="true"></i>Hardcover
@@ -57,7 +63,9 @@
             </button>
           </div>
         } @else if (format === 'digital') {
-          <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
+          @if (showFormatChoice) {
+            <i class="bi bi-chevron-right add-book__format-arrow" aria-hidden="true"></i>
+          }
           <div class="add-book__options" role="group" aria-label="Digital type">
             <button type="button" class="add-book__option" [class.is-active]="isEbook" [attr.aria-pressed]="isEbook" (click)="setBookType(BookTypeEnums.EBook)">
               <i class="bi bi-file-earmark-text" aria-hidden="true"></i>E-book
@@ -292,6 +300,43 @@
       </section>
     </div>
 
+    <!-- An admin editing someone else's book says why; the owner is told it (#83) -->
+    @if (needsReason) {
+      <section class="nn-panel nn-panel--framed nn-panel--titled add-book__panel add-book__reason" aria-labelledby="reason-title">
+        <h2 id="reason-title" class="nn-section-title">
+          <i class="bi bi-chat-left-text" aria-hidden="true"></i>Reason for the change
+          <span class="nn-section-title__rule" aria-hidden="true"></span>
+        </h2>
+        <p class="add-book__reason-note">
+          This book belongs to {{ ownerName ?? 'someone else' }}. They're told what you changed and why.
+        </p>
+        <div class="add-book__row">
+          <div class="add-book__field add-book__field--select">
+            <label class="nn-field-label" for="reasonPreset">Reason<span class="nn-required" aria-hidden="true">*</span></label>
+            <select id="reasonPreset" class="nn-select nn-select--plain add-book__select" formControlName="reasonPreset" required>
+              <option value="" disabled>Pick a reason</option>
+              @for (preset of reasonPresets; track preset) {
+                <option [value]="preset">{{ preset }}</option>
+              }
+              <option [value]="otherReason">{{ otherReason }}</option>
+            </select>
+            @if (showError('reasonPreset') || (submitAttempted && addBookForm.get('reasonPreset')!.invalid)) {
+              <span class="add-book__error">Pick a reason.</span>
+            }
+          </div>
+          @if (isOtherReason) {
+            <div class="add-book__field add-book__field--grow">
+              <label class="nn-field-label" for="reasonOther">Your reason<span class="nn-required" aria-hidden="true">*</span></label>
+              <input id="reasonOther" class="nn-input" formControlName="reasonOther" [maxlength]="reasonMaxLength" required />
+              @if (showError('reasonOther') || (submitAttempted && addBookForm.get('reasonOther')!.invalid)) {
+                <span class="add-book__error">Write a reason.</span>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
     @if (serverErrors.length) {
       <div class="add-book__banner" role="alert">
         <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
@@ -316,10 +361,10 @@
           }
         </span>
         <!-- Leaving with unsaved changes asks first (unsavedChangesGuard) -->
-        <a class="nn-btn nn-btn--outline" routerLink="/admin/manage-books">Cancel</a>
+        <a class="nn-btn nn-btn--outline" [routerLink]="backLink">Cancel</a>
         <!-- Clickable even with gaps: a click shows what's missing and jumps to it.
              Only an unchanged edit has nothing to save. -->
-        <button type="submit" class="nn-btn nn-btn--primary add-book__submit" [disabled]="isSaving || (isEdit && addBookForm.pristine)">
+        <button type="submit" class="nn-btn nn-btn--primary add-book__submit" [disabled]="isSaving || (isEdit && !detailsChanged)">
           <i class="bi" [class.bi-plus-lg]="!isSaving && !isEdit" [class.bi-check-lg]="!isSaving && isEdit" [class.bi-hourglass-split]="isSaving" aria-hidden="true"></i>
           {{ isSaving ? 'Saving…' : isEdit ? 'Save changes' : 'Add book' }}
         </button>

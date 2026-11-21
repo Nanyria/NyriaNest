@@ -14,6 +14,10 @@
           [alt]="''"
           loading="lazy"
         />
+        <!-- Shelves have no tags, so my own books get a badge on the cover -->
+        @if (shelf && book.isMine) {
+          <span class="book__mine-badge">Mine</span>
+        }
         <button
           type="button"
           class="book__ribbon"
@@ -34,6 +38,9 @@
         <!-- Shelves show just cover, title and author, like a book on display -->
         @if (!shelf) {
           <div class="book__tags">
+            @if (book.isMine) {
+              <span class="nn-tag book__mine-tag">Mine</span>
+            }
             <span class="nn-tag">{{ genreOptions.displayNames[book.genre] }}</span>
             @if (statusBadge(book); as status) {
               <span class="nn-tag" [class]="statusClass(book)">{{ status }}</span>

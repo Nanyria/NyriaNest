@@ -12,8 +12,8 @@
     <h1 class="nn-admin-header__title">Manage books</h1>
   </div>
   <span class="nn-admin-header__divider" aria-hidden="true"></span>
-  <a class="nn-btn nn-btn--primary mb-add" routerLink="/add-book">
-    <i class="bi bi-plus-lg" aria-hidden="true"></i> Add new book
+  <a class="nn-btn nn-btn--primary mb-add" routerLink="/admin/manage-books/add">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i> Add e-book
   </a>
 </header>
 
@@ -62,24 +62,14 @@
       <select class="nn-select nn-select--plain" (change)="setFilter({ status: $any($event.target).value || null })">
         <option value="" [selected]="!query().status">All statuses</option>
         <option value="available" [selected]="query().status === 'available'">Available</option>
-        <option value="checkedOut" [selected]="query().status === 'checkedOut'">Checked out</option>
+        <option value="checkedOut" [selected]="query().status === 'checkedOut'">Lent out</option>
         <option value="overdue" [selected]="query().status === 'overdue'">Overdue</option>
-        <option value="reserved" [selected]="query().status === 'reserved'">Reserved</option>
+        <option value="ready" [selected]="query().status === 'ready'">Ready (e-book)</option>
+        <option value="noFile" [selected]="query().status === 'noFile'">No file (e-book)</option>
         <option value="lost" [selected]="query().status === 'lost'">Lost</option>
         <option value="removed" [selected]="query().status === 'removed'">Removed</option>
       </select>
     </label>
-
-    <!-- E-books with no EPUB file attached -->
-    <button
-      type="button"
-      class="nn-chip mb-attention"
-      [class.is-active]="query().needsAttention"
-      [attr.aria-pressed]="!!query().needsAttention"
-      (click)="setFilter({ needsAttention: query().needsAttention ? null : true })"
-    >
-      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs attention
-    </button>
   </div>
 
   @if (hasFilters()) {
@@ -148,7 +138,6 @@
                 <th scope="col" class="mb-col-meta">Genre / Language</th>
                 <th scope="col" class="mb-col-meta">Type / Year</th>
                 <th scope="col">Status</th>
-                <th scope="col">File</th>
                 <th scope="col"><span class="visually-hidden">Actions</span></th>
               </tr>
             </thead>
@@ -161,6 +150,18 @@
                       <div>
                         <div class="mb-title">{{ b.title }}</div>
                         <div class="mb-author">{{ b.author }}</div>
+                        @let owner = ownerTag(b);
+                        <span
+                          class="nn-tag mb-owner"
+                          [class.mb-owner--shared]="owner.shared"
+                          [title]="owner.shared ? 'Shared library' : 'Owner'"
+                        >
+                          <i class="bi" [class]="'bi-' + owner.icon" aria-hidden="true"></i>
+                          @if (!owner.shared) {
+                            <span class="visually-hidden">Owner:</span>
+                          }
+                          {{ owner.text }}
+                        </span>
                         <!-- Shown instead of the meta columns on narrower screens -->
                         <div class="mb-meta-inline nn-muted">
                           {{ genreNames[b.genre] }} · {{ languageNames[b.language] }} ·
@@ -178,31 +179,18 @@
                     <div class="nn-muted">{{ b.publicationYear }}</div>
                   </td>
                   <td class="mb-cell-status">
-                    <span class="nn-tag" [class]="statusClass(b)">{{ statusLabel(b) }}</span>
+                    <span class="nn-tag" [class]="statusClass(b)">
+                      @if (displayStatus(b) === Status.NoFile) {
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                      }
+                      {{ statusLabel(b) }}
+                    </span>
                     @if (statusDetail(b); as detail) {
-                      <div class="mb-detail" [class.is-overdue]="b.isOverdue">{{ detail }}</div>
-                    }
-                  </td>
-                  <td class="mb-cell-file">
-                    @if (!isEbook(b)) {
-                      <span class="nn-muted">N/A</span>
-                    } @else if (b.hasEpub) {
-                      <span class="mb-file-ok"><i class="bi bi-check2" aria-hidden="true"></i> EPUB attached</span>
-                    } @else {
-                      <span class="mb-file-missing"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> No EPUB file</span>
+                      <div class="mb-detail" [class.is-overdue]="displayStatus(b) === Status.Overdue">{{ detail }}</div>
                     }
                   </td>
                   <td class="mb-cell-actions">
                     <div class="mb-actions">
-                      <a
-                        class="nn-btn nn-btn--outline nn-btn--icon"
-                        [routerLink]="['/admin/manage-books', b.bookId, 'edit']"
-                        title="Edit"
-                        [attr.aria-label]="'Edit ' + b.title"
-                      >
-                        <i class="bi bi-pencil" aria-hidden="true"></i>
-                      </a>
-
                       <button
                         #menuButton
                         type="button"
@@ -220,26 +208,25 @@
                         (beforetoggle)="placeMenu($event, menuButton)"
                         (click)="closeMenu($event)"
                       >
+                          <a [routerLink]="['/admin/manage-books', b.bookId, 'edit']">
+                            <i class="bi bi-pencil" aria-hidden="true"></i> Edit
+                          </a>
                           @if (isWithdrawn(b)) {
                             <button type="button" (click)="restore(b)">
                               <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore
                             </button>
-                          } @else if (!b.borrowerName) {
-                            <button type="button" (click)="markLost(b)">
-                              <i class="bi bi-question-circle" aria-hidden="true"></i> Mark as lost
-                            </button>
+                          } @else {
+                            <!-- E-books can't be lost; the API refuses too -->
+                            @if (!isEbook(b)) {
+                              <button type="button" (click)="markLost(b)">
+                                <i class="bi bi-question-circle" aria-hidden="true"></i> Mark as lost
+                              </button>
+                            }
                             <button type="button" (click)="markRemoved(b)">
                               <i class="bi bi-archive" aria-hidden="true"></i> Mark as removed
                             </button>
                           }
-                          <!-- A checked-out book can't be deleted; the API refuses too -->
-                          <button
-                            type="button"
-                            class="is-danger"
-                            [disabled]="!!b.borrowerName"
-                            [title]="b.borrowerName ? 'Return this book before deleting it' : ''"
-                            (click)="delete(b)"
-                          >
+                          <button type="button" class="is-danger" (click)="delete(b)">
                             <i class="bi bi-trash3" aria-hidden="true"></i> Delete
                           </button>
                       </div>
@@ -251,52 +238,19 @@
           </table>
         </div>
 
-        <nav class="mb-pager" aria-label="Pagination">
-          <span class="nn-muted">
-            Showing {{ (p.page - 1) * p.pageSize + 1 }}–{{ (p.page - 1) * p.pageSize + p.items.length }}
-            of {{ p.totalCount }} books
-          </span>
-          @if (totalPages() > 1) {
-            <div class="mb-pager__buttons">
-              <button
-                type="button"
-                class="nn-btn nn-btn--outline nn-btn--icon"
-                [disabled]="p.page === 1"
-                aria-label="Previous page"
-                (click)="goToPage(p.page - 1)"
-              >
-                <i class="bi bi-chevron-left" aria-hidden="true"></i>
-              </button>
-              @for (n of pageButtons(); track $index) {
-                @if (n === null) {
-                  <span class="mb-pager__gap" aria-hidden="true">…</span>
-                } @else {
-                  <button
-                    type="button"
-                    class="nn-btn nn-btn--icon"
-                    [class.nn-btn--primary]="n === p.page"
-                    [class.nn-btn--outline]="n !== p.page"
-                    [attr.aria-current]="n === p.page ? 'page' : null"
-                    [attr.aria-label]="'Page ' + n"
-                    (click)="goToPage(n)"
-                  >
-                    {{ n }}
-                  </button>
-                }
-              }
-              <button
-                type="button"
-                class="nn-btn nn-btn--outline nn-btn--icon"
-                [disabled]="p.page === totalPages()"
-                aria-label="Next page"
-                (click)="goToPage(p.page + 1)"
-              >
-                <i class="bi bi-chevron-right" aria-hidden="true"></i>
-              </button>
-            </div>
-          }
-        </nav>
+        <app-pager
+          [page]="p.page"
+          [pageSize]="p.pageSize"
+          [totalCount]="p.totalCount"
+          [itemsOnPage]="p.items.length"
+          (pageChange)="goToPage($event)"
+        />
       }
     }
   }
 </section>
+
+<!-- Someone else's book: the admin gives a reason, and the owner is told it -->
+@if (reasonDialog(); as d) {
+  <app-reason-dialog [options]="d.options" (closed)="onReasonDialogClosed($event)" />
+}

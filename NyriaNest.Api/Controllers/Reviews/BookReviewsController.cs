@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using NyriaNest.Api.Auth;
 using NyriaNest.Application.Reviews;
 
 namespace NyriaNest.Api.Controllers.Reviews
@@ -18,7 +19,7 @@ namespace NyriaNest.Api.Controllers.Reviews
         [HttpGet("review/{bookId:int}")]
         public async Task<IActionResult> GetBookReview(int bookId)
         {
-            var response = await _reviews.GetBookReviewsAsync(bookId);
+            var response = await _reviews.GetBookReviewsAsync(bookId, User.FindUserId());
             return StatusCode((int)response.StatusCode, response);
         }
     }

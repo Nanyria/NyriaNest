@@ -134,18 +134,71 @@ public class BookCatalogueAndEpubTests(ApiFactory factory) : IClassFixture<ApiFa
         ((bool)item["hasEpub"]!).Should().BeFalse();
     }
 
+    // #83 step 8a: an owner lends to a name (someone without an account)
     [Fact]
-    public async Task Catalogue_NeedsAttention_ListsOnlyEbooksWithoutAnEpub()
+    public async Task Catalogue_ShowsTheBorrowerName_OfALoanByName()
     {
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = await factory.CreateUserAsync();
         var tag = Tag();
+        var book = Book($"Lent {tag}");
+        book.OwnerId = owner.Id;
+        await AddBooksAsync(book);
+        await factory.WithDbAsync(async db =>
+        {
+            db.CheckOutItems.Add(new() { BookId = book.BookId, BorrowerName = "Ruth (neighbour)", CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
+            await db.SaveChangesAsync(Ct);
+        });
+
+        var item = (await CatalogueAsync(admin, $"q={tag}"))["items"]![0]!;
+
+        ((string)item["borrowerName"]!).Should().Be("Ruth (neighbour)");
+    }
+
+    // #83 step 8a: whose book it is; no owner = the shared library
+    [Fact]
+    public async Task Catalogue_ShowsTheOwner_AndNoOwnerForSharedBooks()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = await factory.CreateUserAsync();
+        var tag = Tag();
+        var owned = Book($"A owned {tag}");
+        owned.OwnerId = owner.Id;
+        var shared = Book($"B shared {tag}", type: BookTypeEnums.EBook);
+        await AddBooksAsync(owned, shared);
+
+        var items = (await CatalogueAsync(admin, $"q={tag}"))["items"]!.AsArray();
+
+        items.Select(i => (int)i!["bookId"]!).Should().Equal(owned.BookId, shared.BookId);
+        ((string?)items[0]!["ownerId"]).Should().Be(owner.Id);
+        ((string?)items[0]!["ownerName"]).Should().Be(owner.UserName);
+        ((string?)items[1]!["ownerId"]).Should().BeNull();
+        ((string?)items[1]!["ownerName"]).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Catalogue_StatusFilter_TellsBooksOnTheShelfFromEbooksWithAndWithoutAFile()
+    {
+        // #83: Available is for physical books; an e-book is Ready (has an EPUB) or
+        // NoFile. Like Overdue, neither is stored. A taken-down book is in none of them.
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var tag = Tag();
+        var lent = Book($"Lent {tag}");
         var withFile = Book($"With file {tag}", type: BookTypeEnums.EBook);
         withFile.EpubFileKey = $"{tag}/book.epub";
-        await AddBooksAsync(withFile, Book($"Without file {tag}", type: BookTypeEnums.EBook), Book($"Paper {tag}"));
+        var removed = Book($"Removed {tag}", type: BookTypeEnums.EBook);
+        removed.EpubFileKey = $"{tag}/removed.epub";
+        removed.AdminStatus = BookStatusEnum.Removed;
+        await AddBooksAsync(Book($"Paper {tag}"), lent, withFile, Book($"Without file {tag}", type: BookTypeEnums.EBook), removed);
+        await factory.WithDbAsync(async db =>
+        {
+            db.CheckOutItems.Add(new() { BookId = lent.BookId, BorrowerName = "Ruth (neighbour)", CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
+            await db.SaveChangesAsync(Ct);
+        });
 
-        var result = await CatalogueAsync(admin, $"q={tag}&needsAttention=true");
-
-        Titles(result).Should().Equal($"Without file {tag}");
+        Titles(await CatalogueAsync(admin, $"q={tag}&status=available")).Should().Equal($"Paper {tag}");
+        Titles(await CatalogueAsync(admin, $"q={tag}&status=ready")).Should().Equal($"With file {tag}");
+        Titles(await CatalogueAsync(admin, $"q={tag}&status=noFile")).Should().Equal($"Without file {tag}");
     }
 
     [Theory]
@@ -163,22 +216,20 @@ public class BookCatalogueAndEpubTests(ApiFactory factory) : IClassFixture<ApiFa
 
     // ---- GET api/Book/{bookId}/epub ----
 
+    // #83: a logged-in reader can read any e-book they can see (BookVisibility), no loan needed.
+    // A book they can't see is a 404, so its existence is never confirmed.
+
     [Fact]
-    public async Task Download_ByAReaderWhoHasItCheckedOut_ReturnsTheFile_NamedAfterTheTitle()
+    public async Task Download_ByAReader_OfASharedEbook_ReturnsTheFile_NamedAfterTheTitle()
     {
-        var (reader, user) = await factory.LoginAsAsync(Roles.User);
+        var (reader, _) = await factory.LoginAsAsync(Roles.User);
         var tag = Tag();
         var book = await AddEbookWithFileAsync($"{tag}/Part");
-        await factory.WithDbAsync(async db =>
-        {
-            db.CheckOutItems.Add(new() { BookId = book.BookId, UserId = user.Id, CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
-            await db.SaveChangesAsync(Ct);
-        });
         var content = StoreFile(book.EpubFileKey!);
 
         var response = await reader.GetAsync($"api/Book/{book.BookId}/epub", Ct);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "no loan is needed to read a shared-library e-book");
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/epub+zip");
         response.Content.Headers.ContentDisposition!.FileName!.Trim('"').Should().Be($"{tag}_Part.epub",
             "characters that aren't allowed in file names become _");
@@ -186,15 +237,57 @@ public class BookCatalogueAndEpubTests(ApiFactory factory) : IClassFixture<ApiFa
     }
 
     [Fact]
-    public async Task Download_ByAReaderWithoutTheBookCheckedOut_Returns403()
+    public async Task Download_ByAReader_OfTheirOwnEbook_ReturnsTheFile()
+    {
+        // Owners can't add e-books through the API yet, so the book is arranged in the DB
+        var (reader, user) = await factory.LoginAsAsync(Roles.User);
+        var book = await AddEbookWithFileAsync(Tag(), b => b.OwnerId = user.Id);
+        var content = StoreFile(book.EpubFileKey!);
+
+        var response = await reader.GetAsync($"api/Book/{book.BookId}/epub", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadAsByteArrayAsync(Ct)).Should().Equal(content);
+    }
+
+    [Fact]
+    public async Task Download_ByAReader_OfSomeoneElsesEbook_Returns404()
     {
         var (reader, _) = await factory.LoginAsAsync(Roles.User);
-        var book = await AddEbookWithFileAsync(Tag());
+        var owner = await factory.CreateUserAsync();
+        var book = await AddEbookWithFileAsync(Tag(), b => b.OwnerId = owner.Id);
         StoreFile(book.EpubFileKey!);
 
         var response = await reader.GetAsync($"api/Book/{book.BookId}/epub", Ct);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Theory]
+    [InlineData(BookStatusEnum.Lost)]
+    [InlineData(BookStatusEnum.Removed)]
+    public async Task Download_ByAReader_OfAHiddenSharedEbook_Returns404(BookStatusEnum adminStatus)
+    {
+        var (reader, _) = await factory.LoginAsAsync(Roles.User);
+        var book = await AddEbookWithFileAsync(Tag(), b => b.AdminStatus = adminStatus);
+        StoreFile(book.EpubFileKey!);
+
+        var response = await reader.GetAsync($"api/Book/{book.BookId}/epub", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Download_ByAnAdmin_OfARemovedEbook_ReturnsTheFile()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var book = await AddEbookWithFileAsync(Tag(), b => b.AdminStatus = BookStatusEnum.Removed);
+        var content = StoreFile(book.EpubFileKey!);
+
+        var response = await admin.GetAsync($"api/Book/{book.BookId}/epub", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "admins can read every book, e.g. to check an uploaded file");
+        (await response.Content.ReadAsByteArrayAsync(Ct)).Should().Equal(content);
     }
 
     [Fact]
@@ -313,12 +406,13 @@ public class BookCatalogueAndEpubTests(ApiFactory factory) : IClassFixture<ApiFa
         await db.SaveChangesAsync(Ct);
     });
 
-    private async Task<Book> AddEbookWithFileAsync(string title)
+    private async Task<Book> AddEbookWithFileAsync(string title, Action<Book>? arrange = null)
     {
         var book = Book(title, type: BookTypeEnums.EBook);
         book.EpubFileKey = $"{Guid.NewGuid():N}/book.epub";
         book.EpubFileName = "book.epub";
         book.EpubFileSize = 3;
+        arrange?.Invoke(book);
         await AddBooksAsync(book);
         return book;
     }

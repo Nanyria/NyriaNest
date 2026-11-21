@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Api.Tests.TestSupport;
 
@@ -9,13 +10,16 @@ public class SqliteDbTests : IDisposable
     private readonly SqliteDb _db = new();
 
     [Fact]
-    public async Task CreateContext_HasTheSeededBooks()
+    public async Task CreateContext_HasOnlyTheSeededSharedLibraryEbook()
     {
+        // #83: the seeded physical books are gone; the shared library holds e-books only (ADR 0004)
         await using var context = _db.CreateContext();
 
-        var count = await context.Books.CountAsync(TestContext.Current.CancellationToken);
+        var books = await context.Books.ToListAsync(TestContext.Current.CancellationToken);
 
-        count.Should().Be(4);
+        books.Should().ContainSingle();
+        books[0].BookType.Should().Be(BookTypeEnums.EBook);
+        books[0].OwnerId.Should().BeNull();
     }
 
     [Fact]

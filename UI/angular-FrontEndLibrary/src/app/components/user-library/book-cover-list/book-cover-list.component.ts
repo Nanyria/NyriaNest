@@ -35,6 +35,10 @@ export class BookCoverListComponent {
 
   // Only flag books that can't be borrowed right now; "Available" is the norm
   statusBadge(book: LibraryBook): string | null {
+    // I lend my own books out rather than someone checking them out
+    if (book.isMine && book.bookStatus === BookStatusEnum.CheckedOut) {
+      return 'Lent out';
+    }
     switch (book.bookStatus) {
       case BookStatusEnum.Reserved:
       case BookStatusEnum.CheckedOut:

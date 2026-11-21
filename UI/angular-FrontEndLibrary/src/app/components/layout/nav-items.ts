@@ -36,6 +36,7 @@ export const MAIN_NAV: NavEntry[] = [
     label: 'My books',
     icon: 'nn-icon-mybooks',
     items: [
+      { label: 'My owned books', icon: 'bi-bookshelf', route: '/my/owned-books' },
       { label: 'Reading list', icon: 'bi-heart', route: '/my/reading-list' },
       { label: 'Borrowed books', icon: 'bi-book-half', route: '/my/loans' },
       { label: 'Reservations', icon: 'bi-bookmark', route: '/my/reservations' },
@@ -50,7 +51,7 @@ export const ADMIN_NAV: NavGroup = {
   items: [
     { label: 'Dashboard', icon: 'bi-speedometer2' },
     { label: 'Manage books', icon: 'bi-journals', route: '/admin/manage-books' },
-    { label: 'Add book', icon: 'bi-journal-plus', route: '/add-book' },
+    { label: 'Add e-book', icon: 'bi-journal-plus', route: '/admin/manage-books/add' },
     { label: 'Manage users', icon: 'bi-people', route: '/admin/manage-users' },
   ],
 };

@@ -7,7 +7,7 @@ namespace NyriaNest.Api.Tests.TestSupport;
 /// <summary>
 /// Small builders with sensible defaults. Set only what a test cares about,
 /// e.g. <c>TestData.Book(type: BookTypeEnums.EBook)</c>.
-/// Note: the database already holds the four seeded books (IDs 1001–1004).
+/// Note: the database already holds one seeded book, the shared library's e-book (ID 1004).
 /// </summary>
 public static class TestData
 {

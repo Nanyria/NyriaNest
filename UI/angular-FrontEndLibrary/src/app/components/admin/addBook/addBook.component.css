@@ -597,6 +597,11 @@
 }
 
 /* ---------- Server errors and actions ---------- */
+.add-book__reason-note {
+  margin: 0;
+  color: var(--nn-ink-muted);
+}
+
 .add-book__banner {
   display: flex;
   align-items: center;

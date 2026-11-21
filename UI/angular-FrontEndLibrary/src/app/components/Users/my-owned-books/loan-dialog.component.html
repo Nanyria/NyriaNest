@@ -1,0 +1,83 @@
+<!-- Same card as the confirm dialog (its CSS is shared), with fields -->
+<dialog
+  #dialog
+  class="confirm nn-panel--framed nn-compact"
+  aria-labelledby="loan-title"
+  (close)="onNativeClose()"
+  (click)="onClick($event)"
+>
+  <form class="confirm__body" novalidate [formGroup]="form" (ngSubmit)="save()">
+    <span class="confirm__seal" aria-hidden="true">
+      <i class="bi" [class]="mode() === 'lend' ? 'bi-box-arrow-up-right' : 'bi-box-arrow-in-down-left'"></i>
+    </span>
+    <h2 id="loan-title" class="confirm__title">
+      {{ mode() === 'lend' ? 'Lend' : 'Mark as returned' }}: "{{ book().title }}"
+    </h2>
+    <div class="nn-divider confirm__divider" aria-hidden="true"><span class="nn-divider__mark"></span></div>
+
+    <div class="loan__fields">
+      @if (mode() === 'lend') {
+        <label class="loan__field">
+          <span class="nn-field-label">Lent to</span>
+          <input
+            class="nn-input"
+            type="text"
+            maxlength="100"
+            autocomplete="off"
+            placeholder="Their name"
+            [formControl]="borrowerName"
+            [attr.aria-invalid]="submitted() && borrowerName.invalid"
+            autofocus
+          />
+          @if (submitted() && borrowerName.invalid) {
+            <span class="loan__hint is-error">Write who you lent it to.</span>
+          }
+        </label>
+
+        <label class="loan__field">
+          <span class="nn-field-label">Lent on</span>
+          <input
+            class="nn-input"
+            type="date"
+            [max]="today"
+            [formControl]="lentOn"
+            [attr.aria-invalid]="submitted() && lentOn.invalid"
+          />
+          @if (submitted() && lentOn.invalid) {
+            <span class="loan__hint is-error">Pick today or a day before.</span>
+          }
+        </label>
+      } @else {
+        <p class="loan__context">Lent to {{ book().lentTo }} since {{ lentOnText() }}.</p>
+        <label class="loan__field">
+          <span class="nn-field-label">Returned on</span>
+          <input
+            class="nn-input"
+            type="date"
+            [min]="lentOnDay()"
+            [max]="today"
+            [formControl]="returnedOn"
+            [attr.aria-invalid]="submitted() && returnedOn.invalid"
+            autofocus
+          />
+          @if (submitted() && returnedOn.invalid) {
+            <span class="loan__hint is-error">Pick a day between {{ lentOnText() }} and today.</span>
+          }
+        </label>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p class="loan__alert" role="alert">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+      </p>
+    }
+
+    <div class="confirm__actions">
+      <button type="button" class="nn-btn nn-btn--outline" [disabled]="saving()" (click)="close(false)">Cancel</button>
+      <button type="submit" class="nn-btn nn-btn--ornate nn-btn--primary" [disabled]="saving()">
+        {{ mode() === 'lend' ? 'Lend' : 'Mark as returned' }}
+      </button>
+    </div>
+  </form>
+</dialog>

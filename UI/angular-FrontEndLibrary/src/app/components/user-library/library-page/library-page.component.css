@@ -353,28 +353,6 @@
   pointer-events: none;
 }
 
-/* Book detail popup (info-card gets its own redesign later) */
-.info-card-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(42, 22, 14, 0.4);
-  z-index: 1000;
-}
-
-.info-card-popup {
-  background: var(--nn-surface);
-  border: 1px solid var(--nn-gold);
-  border-radius: var(--nn-radius-lg);
-  box-shadow: var(--nn-shadow-raised);
-  max-width: 90%;
-  max-height: 90%;
-  overflow: auto;
-  padding: var(--nn-space-5);
-}
-
 @media (max-width: 600px) {
   .library__section {
     --panel-padding: 20px;

@@ -10,7 +10,7 @@ namespace NyriaNest.Application.Reviews
 {
     public interface IReviewService
     {
-        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId);
+        Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId, string? userId);
         Task<APIResponse<List<ReviewItemDto>>> GetUserReviewsAsync(string userId);
         Task<APIResponse<CreateReviewItemDto>> CreateReviewAsync(CreateReviewItemDto reviewItemDto);
         // userId = who is asking. Only the review's author may change or delete it,
@@ -42,7 +42,8 @@ namespace NyriaNest.Application.Reviews
             _mapper = mapper;
         }
 
-        public async Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId)
+        // userId null = a visitor
+        public async Task<APIResponse<List<BookReviewDto>>> GetBookReviewsAsync(int bookId, string? userId)
         {
             var response = new APIResponse<List<BookReviewDto>>
             {
@@ -50,7 +51,8 @@ namespace NyriaNest.Application.Reviews
                 StatusCode = HttpStatusCode.BadRequest
             };
 
-            var book = await _bookRepo.GetByIdAsync(bookId);
+            // A book you can't see looks missing (#83)
+            var book = await _bookRepo.GetVisibleByIdAsync(bookId, userId);
             if (book != null)
             {
                 // Use AutoMapper to map ReviewItem to BookReviewDto
@@ -108,7 +110,8 @@ namespace NyriaNest.Application.Reviews
                 StatusCode = HttpStatusCode.BadRequest
             };
             var user = await _userRepo.GetByIdAsync<User>(reviewItemDto.UserId);
-            var book = await _bookRepo.GetByIdAsync(reviewItemDto.BookId);
+            // A book you can't see looks missing (#83)
+            var book = await _bookRepo.GetVisibleByIdAsync(reviewItemDto.BookId, reviewItemDto.UserId);
             // Without these checks an unknown book crashed with a 500 (#117)
             if (user == null || book == null)
             {

@@ -133,11 +133,6 @@
   margin: 0;
 }
 
-.mb-attention {
-  gap: 8px;
-  flex-shrink: 0;
-}
-
 .mb-clear {
   align-self: flex-start;
 }
@@ -240,6 +235,22 @@
   color: var(--nn-ink);
 }
 
+/* Whose book it is: blue for an owner, plum for the shared library, so
+   neither is mistaken for a status colour */
+.mb-owner {
+  margin-top: 4px;
+  padding: 1px 10px;
+  background-color: #dfe7f0;
+  border-color: #b4c4d6;
+  color: #2f4a66;
+}
+
+.mb-owner--shared {
+  background-color: #ebe1f0;
+  border-color: #cbb6d8;
+  color: #5a3d72;
+}
+
 .mb-detail {
   font-size: 0.85rem;
   color: var(--nn-ink-muted);
@@ -248,17 +259,6 @@
 
 .mb-detail.is-overdue {
   color: var(--nn-accent);
-}
-
-.mb-file-ok {
-  color: #2e5d3f;
-  white-space: nowrap;
-}
-
-.mb-file-missing {
-  color: var(--nn-accent);
-  font-weight: 500;
-  white-space: nowrap;
 }
 
 .mb-actions {
@@ -284,7 +284,9 @@
   display: flex;
 }
 
-.mb-menu__list button {
+/* Edit is a link (it opens a page), the rest are buttons; they look the same */
+.mb-menu__list button,
+.mb-menu__list a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -298,6 +300,11 @@
   cursor: pointer;
 }
 
+.mb-menu__list a {
+  text-decoration: none;
+}
+
+.mb-menu__list a:hover,
 .mb-menu__list button:hover:not(:disabled) {
   background-color: var(--nn-surface-hover);
 }
@@ -309,27 +316,6 @@
 
 .mb-menu__list .is-danger:not(:disabled) {
   color: var(--nn-accent);
-}
-
-/* ---------- Pagination ---------- */
-.mb-pager {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--nn-space-3);
-  padding-top: var(--nn-space-4);
-}
-
-.mb-pager__buttons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mb-pager__gap {
-  padding: 0 4px;
-  color: var(--nn-ink-muted);
 }
 
 /* ---------- Narrower screens: fold genre/type into the book cell ---------- */
@@ -349,7 +335,7 @@
 }
 
 /* ---------- Phones: each row becomes a small card ----------
-   Book on top; status and file below it; actions on the right */
+   Book on top; status below it, actions on the right */
 @media (max-width: 640px) {
   .mb-table,
   .mb-table tbody,
@@ -389,20 +375,10 @@
   }
 
   .mb-cell-status { grid-column: 1; grid-row: 2; }
-  .mb-cell-file   { grid-column: 1; grid-row: 3; }
 
   .mb-cell-actions {
     grid-column: 2;
-    grid-row: 2 / span 2;
+    grid-row: 2;
     align-self: center;
-  }
-
-  .mb-cell-file .nn-muted {
-    display: none; /* "N/A" for non-e-books adds nothing on a card */
-  }
-
-  .mb-pager {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

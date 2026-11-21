@@ -22,6 +22,9 @@ import {
 import { BookService } from '../../../Services/book.services';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
+import { AuthService } from '../../../Services/auth.service';
+import { PagerComponent } from '../../layout/pager/pager.component';
+import { ReasonDialogComponent, ReasonDialogOptions } from '../../layout/reason-dialog/reason-dialog.component';
 import {
   AdminBook,
   CatalogueQuery,
@@ -55,7 +58,6 @@ function readQuery(p: ParamMap): CatalogueQuery {
     genre: num('genre'),
     bookType: num('bookType'),
     status: (p.get('status') as CatalogueStatus | null) ?? undefined,
-    needsAttention: p.get('needsAttention') === 'true' || undefined,
     sort: (p.get('sort') as CatalogueSort | null) ?? 'titleAsc',
     page: num('page') ?? 1,
     pageSize: PAGE_SIZE,
@@ -68,7 +70,7 @@ function readQuery(p: ParamMap): CatalogueQuery {
   templateUrl: './manage-books.component.html',
   styleUrls: ['./manage-books.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PagerComponent, ReasonDialogComponent],
   host: { class: 'nn-compact' }, // the theme's tighter, lighter fields, like Add book
 })
 export class ManageBooksComponent {
@@ -77,6 +79,7 @@ export class ManageBooksComponent {
   private bookService = inject(BookService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmService);
+  private myId = inject(AuthService).getUserId();
   private refresh$ = new BehaviorSubject<void>(undefined);
 
   // "All" means no filter, which the empty option already covers
@@ -114,30 +117,9 @@ export class ManageBooksComponent {
     return s.kind === 'ready' ? s.data : null;
   });
 
-  readonly totalPages = computed(() => {
-    const p = this.page();
-    return p ? Math.max(1, Math.ceil(p.totalCount / p.pageSize)) : 1;
-  });
-
-  // Page buttons: first, last, and the current page with its neighbours.
-  // null marks a gap ("…").
-  readonly pageButtons = computed(() => {
-    const current = this.page()?.page ?? 1;
-    const last = this.totalPages();
-    const pages: (number | null)[] = [];
-    for (let n = 1; n <= last; n++) {
-      if (n === 1 || n === last || Math.abs(n - current) <= 1) {
-        pages.push(n);
-      } else if (pages[pages.length - 1] !== null) {
-        pages.push(null);
-      }
-    }
-    return pages;
-  });
-
   readonly hasFilters = computed(() => {
     const q = this.query();
-    return !!(q.q || q.genre !== undefined || q.bookType !== undefined || q.status || q.needsAttention);
+    return !!(q.q || q.genre !== undefined || q.bookType !== undefined || q.status);
   });
 
   // Shown above the list when an action (mark lost, delete, …) fails
@@ -177,11 +159,23 @@ export class ManageBooksComponent {
   retry() {
     this.refresh$.next();
   }
-  // Status badge text. Overdue isn't a stored status: it's a checked-out book past its due date.
+  // The status shown in the pill, matching the Status filter. A taken-down book
+  // is Lost/Removed whatever else is true; an e-book is Ready or NoFile (it isn't
+  // lent); a physical book is Available, Lent out or Overdue. Reservations aren't
+  // shown: owned books can't be reserved any more.
+  displayStatus(b: AdminBook): BookStatusEnum {
+    if (this.isWithdrawn(b)) return b.bookStatus;
+    if (this.isEbook(b)) return b.hasEpub ? BookStatusEnum.Ready : BookStatusEnum.NoFile;
+    if (b.borrowerName) return b.isOverdue ? BookStatusEnum.Overdue : BookStatusEnum.CheckedOut;
+    return BookStatusEnum.Available;
+  }
+
   statusLabel(b: AdminBook): string {
-    switch (b.bookStatus) {
-      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'Overdue' : 'Checked out';
-      case BookStatusEnum.Reserved: return 'Reserved';
+    switch (this.displayStatus(b)) {
+      case BookStatusEnum.CheckedOut: return 'Lent out';
+      case BookStatusEnum.Overdue: return 'Overdue';
+      case BookStatusEnum.Ready: return 'Ready';
+      case BookStatusEnum.NoFile: return 'No file';
       case BookStatusEnum.Lost: return 'Lost';
       case BookStatusEnum.Removed: return 'Removed';
       default: return 'Available';
@@ -189,34 +183,32 @@ export class ManageBooksComponent {
   }
 
   statusClass(b: AdminBook): string {
-    switch (b.bookStatus) {
-      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'nn-tag--overdue' : 'nn-tag--checked-out';
-      case BookStatusEnum.Reserved: return 'nn-tag--reserved';
+    switch (this.displayStatus(b)) {
+      case BookStatusEnum.CheckedOut: return 'nn-tag--checked-out';
+      case BookStatusEnum.Overdue: return 'nn-tag--overdue';
+      case BookStatusEnum.NoFile: return 'nn-tag--reserved'; // amber: needs an admin
       case BookStatusEnum.Lost:
       case BookStatusEnum.Removed: return 'nn-tag--withdrawn';
-      default: return 'nn-tag--available';
+      default: return 'nn-tag--available'; // Available and Ready
     }
   }
 
-  // The small line under the badge: who has it, who's next, or the admin's note
+  // The small line under the pill: the admin's note, who has it, or the file
   statusDetail(b: AdminBook): string {
-    const date = (s?: string | null) =>
-      s ? new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-
-    if (b.borrowerName) {
-      if (b.isOverdue && b.dueDate) {
-        const days = Math.ceil((Date.now() - new Date(b.dueDate).getTime()) / 86_400_000);
-        return `${b.borrowerName} · ${days} day${days === 1 ? '' : 's'} overdue`;
-      }
-      return `${b.borrowerName} · due ${date(b.dueDate)}`;
+    if (this.isWithdrawn(b)) {
+      const lent = b.borrowerName ? `Still lent to ${b.borrowerName}` : '';
+      return [b.adminStatusNotes, lent].filter(Boolean).join(' · ');
     }
-    // The date is an estimate of when the book reaches them, not a hold expiry
-    if (b.nextInLineName) {
-      return b.expectedDate
-        ? `Next in line: ${b.nextInLineName} · expected ${date(b.expectedDate)}`
-        : `Next in line: ${b.nextInLineName}`;
+    if (this.isEbook(b)) return b.hasEpub ? 'EPUB attached' : 'Upload an EPUB';
+    if (!b.borrowerName) return '';
+    if (b.isOverdue && b.dueDate) {
+      const days = Math.ceil((Date.now() - new Date(b.dueDate).getTime()) / 86_400_000);
+      return `${b.borrowerName} · ${days} day${days === 1 ? '' : 's'} overdue`;
     }
-    return b.adminStatusNotes ?? '';
+    const due = b.dueDate
+      ? new Date(b.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      : '';
+    return due ? `${b.borrowerName} · due ${due}` : b.borrowerName;
   }
 
   isEbook(b: AdminBook) {
@@ -225,6 +217,13 @@ export class ManageBooksComponent {
 
   isWithdrawn(b: AdminBook) {
     return b.bookStatus === BookStatusEnum.Lost || b.bookStatus === BookStatusEnum.Removed;
+  }
+
+  // The pill under the author: whose book it is, or the shared library.
+  // Not a link until the admin user page (#135) gives it somewhere to go.
+  ownerTag(b: AdminBook): { text: string; icon: string; shared: boolean } {
+    if (!b.ownerId) return { text: 'Shared', icon: 'collection', shared: true };
+    return { text: b.ownerName ?? 'Unknown owner', icon: 'person', shared: false };
   }
 
   // The ⋯ menu is a popover: it opens in the browser's top layer, so the
@@ -260,46 +259,106 @@ export class ManageBooksComponent {
     this.confirmAdminStatus(b, BookStatusEnum.Removed);
   }
 
-  restore(b: AdminBook) {
-    this.run(
-      this.bookService.clearAdminStatus(b.bookId),
-      { message: `"${b.title}" was restored.`, icon: 'arrow-counterclockwise' },
-      `Couldn't restore "${b.title}".`,
-    );
+  // Shared-library books and an admin's own books need no reason; someone else's do
+  // (the API refuses without one, and the owner is told it)
+  private isSomeoneElses(b: AdminBook): boolean {
+    return !!b.ownerId && b.ownerId !== this.myId;
   }
 
+  // Open while an admin gives a reason; the dialog runs the action itself
+  readonly reasonDialog = signal<{ options: ReasonDialogOptions; success: { message: string; icon: string } } | null>(null);
+
+  onReasonDialogClosed(done: boolean) {
+    const open = this.reasonDialog();
+    this.reasonDialog.set(null);
+    if (!done || !open) return;
+    this.toast.success(open.success.message, open.success.icon);
+    this.refresh$.next();
+  }
+
+  // Restore on a shared or own book needs no question: marking it again undoes it
+  restore(b: AdminBook) {
+    const success = { message: `"${b.title}" was restored.`, icon: 'arrow-counterclockwise' };
+    const fallbackError = `Couldn't restore "${b.title}".`;
+    if (this.isSomeoneElses(b)) {
+      this.askReason({
+        kind: 'restore',
+        title: `Restore "${b.title}"?`,
+        message: `${b.ownerName ?? 'The owner'} is told why.`,
+        confirmLabel: 'Restore',
+        icon: success.icon,
+        action: (reason) => this.bookService.clearAdminStatus(b.bookId, reason),
+        fallbackError,
+      }, success);
+      return;
+    }
+    this.run(this.bookService.clearAdminStatus(b.bookId), success, fallbackError);
+  }
+
+  // A book lent to a name can be deleted anyway (the loan goes too), so the
+  // dialog says so and the request confirms it. A member's loan still gets a 409,
+  // shown as the API's message.
   async delete(b: AdminBook) {
+    const lent = b.borrowerName ? `It's marked as lent to ${b.borrowerName}; the loan is removed too. ` : '';
+    const message = b.hasEpub ? `${lent}This can't be undone. Its EPUB file will be deleted too.` : `${lent}This can't be undone.`;
+    const title = `Delete "${b.title}"?`;
+    const success = { message: `"${b.title}" was deleted.`, icon: 'trash3' };
+    const fallbackError = `Couldn't delete "${b.title}".`;
+    const confirmLent = !!b.borrowerName;
+
+    if (this.isSomeoneElses(b)) {
+      this.askReason({
+        kind: 'delete',
+        title,
+        message: `${message} ${b.ownerName ?? 'The owner'} is told why.`,
+        confirmLabel: 'Delete',
+        icon: success.icon,
+        danger: true,
+        action: (reason) => this.bookService.deleteBook(String(b.bookId), { reason, confirmLent }),
+        fallbackError,
+      }, success);
+      return;
+    }
+
     const confirmed = await this.confirmDialog.confirm({
-      title: `Delete "${b.title}"?`,
-      message: b.hasEpub ? "This can't be undone. Its EPUB file will be deleted too." : "This can't be undone.",
-      confirmLabel: 'Delete',
-      danger: true,
-      icon: 'trash3',
+      title, message, confirmLabel: 'Delete', danger: true, icon: success.icon,
     });
     if (!confirmed) return;
-    this.run(
-      this.bookService.deleteBook(String(b.bookId)),
-      { message: `"${b.title}" was deleted.`, icon: 'trash3' },
-      `Couldn't delete "${b.title}".`,
-    );
+    this.run(this.bookService.deleteBook(String(b.bookId), { confirmLent }), success, fallbackError);
   }
 
   // Not shown as dangerous: Restore undoes it
   private async confirmAdminStatus(b: AdminBook, status: BookStatusEnum.Lost | BookStatusEnum.Removed) {
     const label = status === BookStatusEnum.Lost ? 'lost' : 'removed';
     const icon = status === BookStatusEnum.Lost ? 'question-circle' : 'archive';
-    const confirmed = await this.confirmDialog.confirm({
-      title: `Mark "${b.title}" as ${label}?`,
-      message: "It can't be borrowed or reserved until you restore it.",
-      confirmLabel: `Mark as ${label}`,
-      icon,
-    });
+    const title = `Mark "${b.title}" as ${label}?`;
+    const message = b.borrowerName
+      ? `Readers won't see it until you restore it. It stays marked as lent to ${b.borrowerName}.`
+      : "Readers won't see it until you restore it.";
+    const success = { message: `"${b.title}" was marked as ${label}.`, icon };
+    const fallbackError = `Couldn't mark "${b.title}" as ${label}.`;
+
+    if (this.isSomeoneElses(b)) {
+      this.askReason({
+        kind: status === BookStatusEnum.Lost ? 'lost' : 'removed',
+        title,
+        message: `${message} ${b.ownerName ?? 'The owner'} is told why.`,
+        confirmLabel: `Mark as ${label}`,
+        icon,
+        action: (reason) => this.bookService.setAdminStatus(b.bookId, status, reason),
+        fallbackError,
+      }, success);
+      return;
+    }
+
+    const confirmed = await this.confirmDialog.confirm({ title, message, confirmLabel: `Mark as ${label}`, icon });
     if (!confirmed) return;
-    this.run(
-      this.bookService.setAdminStatus(b.bookId, status),
-      { message: `"${b.title}" was marked as ${label}.`, icon },
-      `Couldn't mark "${b.title}" as ${label}.`,
-    );
+    this.run(this.bookService.setAdminStatus(b.bookId, status), success, fallbackError);
+  }
+
+  private askReason(options: ReasonDialogOptions, success: { message: string; icon: string }) {
+    this.actionError.set(null);
+    this.reasonDialog.set({ options, success });
   }
 
   // Runs an action, reloads the list and shows a toast. On failure, shows the

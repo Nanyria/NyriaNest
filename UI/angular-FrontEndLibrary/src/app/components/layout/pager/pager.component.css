@@ -1,0 +1,27 @@
+/* Moved from Manage books, so every paged list looks the same */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nn-space-3);
+  padding-top: var(--nn-space-4);
+}
+
+.pager__buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pager__gap {
+  padding: 0 4px;
+  color: var(--nn-ink-muted);
+}
+
+@media (max-width: 640px) {
+  .pager {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

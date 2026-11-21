@@ -59,5 +59,11 @@ namespace NyriaNest.Domain.Entities
         [MaxLength(500)]
         public string? AdminStatusNotes { get; set; }
 
+        // #83: who owns this book. Null = the shared library (e-books only, ADR 0004);
+        // physical books always have an owner.
+        public string? OwnerId { get; set; }
+        [JsonIgnore]
+        public User? Owner { get; set; }
+
     }
 }

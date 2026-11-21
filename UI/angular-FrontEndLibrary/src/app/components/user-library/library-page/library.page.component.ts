@@ -12,6 +12,7 @@ import { NgTemplateOutlet } from '@angular/common';
 
 import { LibraryBook, ILoggedInUser } from '../../../Models/interfaces';
 import { LibraryService } from '../../../Services/library.services';
+import { BookService } from '../../../Services/book.services';
 import { UserActionsService } from '../../../Services/user-actions.service';
 import { AuthService } from '../../../Services/auth.service';
 import { LibraryUiService } from '../../../Services/library-ui.service';
@@ -23,15 +24,16 @@ import { BookCoverListComponent } from '../book-cover-list/book-cover-list.compo
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
-  InfoCardColumn2,
-  InfoCardColumn3,
-  InfoCardDisplayRow,
-} from '../../../Models/interfaces/site-interfaces';
-import { InfoCardComponent } from '../../card-components/info-card/info-card.component';
+  BookAction,
+  BookDetailsDialogComponent,
+  BookStatusLine,
+} from '../book-details-dialog/book-details-dialog.component';
+import { BookReview, MyBook } from '../../../Models/interfaces';
+import { MyBooksService } from '../../../Services/my-books.service';
+import { formatDay } from '../../../Helpers/loan-dates';
 import { ScrollStripComponent } from '../../layout/scroll-strip/scroll-strip.component';
 import {
   BookTypeOptions,
-  BookStatusOptions,
   GenreOptions,
 } from '../../../Helpers/Helper';
 import {
@@ -40,6 +42,7 @@ import {
 } from '../../../Helpers/genre-styles/genre-cards';
 
 type StatusFilter = 'all' | 'available' | 'reserved' | 'checkedOut';
+type LibraryFilter = 'all' | 'mine' | 'shared';
 type SortOption = 'title' | 'author' | 'added' | 'newest' | 'popular';
 type BookFormatFilter = 'physical' | 'ebook' | 'audiobook' | 'all';
 
@@ -60,7 +63,7 @@ const byMostReviewed = (a: LibraryBook, b: LibraryBook) => b.reviewCount - a.rev
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     BookCoverListComponent,
-    InfoCardComponent,
+    BookDetailsDialogComponent,
     ScrollStripComponent,
     FormsModule,
     NgTemplateOutlet,
@@ -79,6 +82,7 @@ export class LibraryComponent implements AfterViewInit {
   searchTerm = '';
   selectedGenre: GenreEnums = GenreEnums.All;
   selectedStatus: StatusFilter = 'all';
+  selectedLibrary: LibraryFilter = 'all';
   selectedBookFormat: BookFormatFilter = 'all';
   selectedMinimumRating = 0;
   sortBy: SortOption = 'title';
@@ -92,10 +96,17 @@ export class LibraryComponent implements AfterViewInit {
   draft = {
     genre: GenreEnums.All,
     status: 'all' as StatusFilter,
+    library: 'all' as LibraryFilter,
     format: 'all' as BookFormatFilter,
     minimumRating: 0,
   };
 
+  // Shared = not mine for now; friends' books get their own choice in #85
+  libraryFilters: { value: LibraryFilter; label: string }[] = [
+    { value: 'all', label: 'All libraries' },
+    { value: 'mine', label: 'Mine' },
+    { value: 'shared', label: 'Shared library' },
+  ];
   statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'available', label: 'Available' },
@@ -128,14 +139,13 @@ export class LibraryComponent implements AfterViewInit {
   readonly allGenres = GenreEnums.All;
 
   @ViewChild('genreStrip') genreStrip?: ScrollStripComponent;
-  showInfoCard = false;
+  // The book popup is open while a book is selected
   selectedBook: LibraryBook | null = null;
-  selectedBookReviews: any[] = [];
-  infoCardActions: { label: string; action: () => void; disabled?: boolean }[] =
-    [];
+  selectedBookReviews: BookReview[] | null = null; // null while loading
+  ownBookLoan: MyBook | null = null; // my own selected book, with its loan
+  bookActions: BookAction[] = [];
   isSuperAdmin: boolean = false;
   bookTypeOptions = BookTypeOptions;
-  bookStatusOptions = BookStatusOptions;
   genreOptions = GenreOptions;
   constructor(
     private libraryService: LibraryService,
@@ -146,8 +156,9 @@ export class LibraryComponent implements AfterViewInit {
     private route: ActivatedRoute,
     private toast: ToastService,
     private confirmDialog: ConfirmService,
+    private bookService: BookService,
+    private myBooksService: MyBooksService,
   ) {}
-  @ViewChild(InfoCardComponent) infoCardComponent?: InfoCardComponent;
 
   ngOnInit(): void {
     // The panel starts closed; tell the topbar, and again when leaving the page
@@ -164,7 +175,7 @@ export class LibraryComponent implements AfterViewInit {
         this.currentUserId = user?.userId ?? '';
         this.isSuperAdmin = !!user?.isSuperAdmin; // <-- Set here, after user is loaded
         if (this.selectedBook) {
-          this.updateInfoCardActions(this.selectedBook);
+          this.updateBookActions(this.selectedBook);
         }
       });
     // Genre, search and "see all" live in the URL (/library?genre=Fantasy&q=dune)
@@ -205,7 +216,7 @@ export class LibraryComponent implements AfterViewInit {
           const fresh = this.books.find((b) => b.bookId === this.selectedBook!.bookId);
           if (fresh) {
             this.selectedBook = fresh;
-            this.updateInfoCardActions(fresh);
+            this.updateBookActions(fresh);
           }
         }
       },
@@ -224,6 +235,7 @@ export class LibraryComponent implements AfterViewInit {
         (this.selectedGenre === GenreEnums.All ||
           book.genre === this.selectedGenre) &&
         this.matchesStatus(book) &&
+        this.matchesLibrary(book) &&
         this.matchesFormat(book) &&
         this.matchesMinimumRating(book) &&
         (!term ||
@@ -314,6 +326,12 @@ export class LibraryComponent implements AfterViewInit {
         clear: () => (this.selectedMinimumRating = 0),
       });
     }
+    if (this.selectedLibrary !== 'all') {
+      chips.push({
+        label: this.libraryFilters.find((f) => f.value === this.selectedLibrary)!.label,
+        clear: () => (this.selectedLibrary = 'all'),
+      });
+    }
     if (this.selectedStatus !== 'all') {
       chips.push({
         label: this.statusFilters.find((f) => f.value === this.selectedStatus)!.label,
@@ -354,6 +372,7 @@ export class LibraryComponent implements AfterViewInit {
     this.draft = {
       genre: this.selectedGenre,
       status: this.selectedStatus,
+      library: this.selectedLibrary,
       format: this.selectedBookFormat,
       minimumRating: this.selectedMinimumRating,
     };
@@ -371,6 +390,7 @@ export class LibraryComponent implements AfterViewInit {
     this.draft = {
       genre: GenreEnums.All,
       status: 'all',
+      library: 'all',
       format: 'all',
       minimumRating: 0,
     };
@@ -379,6 +399,7 @@ export class LibraryComponent implements AfterViewInit {
   applyFilters() {
     this.selectedGenre = this.draft.genre;
     this.selectedStatus = this.draft.status;
+    this.selectedLibrary = this.draft.library;
     this.selectedBookFormat = this.draft.format;
     this.selectedMinimumRating = this.draft.minimumRating;
     this.updateQueryParams();
@@ -389,6 +410,17 @@ export class LibraryComponent implements AfterViewInit {
   onEscape() {
     if (this.filtersOpen) {
       this.closeFilters();
+    }
+  }
+
+  private matchesLibrary(book: LibraryBook): boolean {
+    switch (this.selectedLibrary) {
+      case 'mine':
+        return book.isMine;
+      case 'shared':
+        return !book.isMine;
+      default:
+        return true;
     }
   }
 
@@ -434,56 +466,148 @@ export class LibraryComponent implements AfterViewInit {
     this.searchTerm = '';
     this.selectedGenre = GenreEnums.All;
     this.selectedStatus = 'all';
+    this.selectedLibrary = 'all';
     this.selectedBookFormat = 'all';
     this.selectedMinimumRating = 0;
     this.updateQueryParams();
   }
 
-  // The list already carries everything the popup shows; only reviews are fetched
+  // The list carries most of what the popup shows; reviews are fetched, and for
+  // my own physical book who it's lent to
   onBookRowClicked(book: LibraryBook) {
     this.selectedBook = book;
-    this.showInfoCard = true;
-    this.updateInfoCardActions(book);
-    this.selectedBookReviews = [];
-    this.libraryService.getBookReviews(book.bookId).subscribe({
-      next: (reviewResponse) => {
-        this.selectedBookReviews = (reviewResponse.result || []).map(
-          (review: any): InfoCardDisplayRow[] => [
-            { label: '', value: review.userName },
-            { label: '', value: review.createdAt },
-            { label: '', value: `Rating: ${review.ratingItem?.rating}` },
-            { isBreak: true, value: '' },
-            { label: '', value: review.reviewHeader },
-            { label: '', value: review.reviewText },
-          ],
-        );
+    this.updateBookActions(book);
+    this.selectedBookReviews = null;
+    this.ownBookLoan = null;
+    const bookId = book.bookId;
+    if (book.isMine && book.bookType !== BookTypeEnums.EBook) {
+      this.myBooksService.get(+bookId).subscribe({
+        // Ignore a late answer for a book that's no longer open; on failure the
+        // status line keeps what the list says
+        next: (response) => {
+          if (this.selectedBook?.bookId === bookId && response.isSuccess) {
+            this.ownBookLoan = response.result;
+          }
+        },
+        error: () => {},
+      });
+    }
+    this.libraryService.getBookReviews(bookId).subscribe({
+      // Ignore a late answer for a book that's no longer open
+      next: (response: { result?: BookReview[] }) => {
+        if (this.selectedBook?.bookId === bookId) this.selectedBookReviews = response.result ?? [];
       },
       error: () => {
-        this.selectedBookReviews = [];
+        if (this.selectedBook?.bookId === bookId) this.selectedBookReviews = [];
       },
     });
   }
 
-  updateInfoCardActions(book: LibraryBook) {
+  updateBookActions(book: LibraryBook) {
     const isInReadList =
       this.user?.readList?.some((item) => +item.bookId === +book.bookId) ??
       false;
+    const readList: BookAction = {
+      label: isInReadList ? 'Remove from reading list' : 'Add to reading list',
+      // The same bookmark as the ribbon on the covers
+      icon: isInReadList ? 'bi-bookmark-fill' : 'bi-bookmark',
+      pressed: isInReadList,
+      action: () => this.toggleReadList(book),
+    };
 
-    this.infoCardActions = [
-      {
-        label: book.isCheckedOutByMe ? 'Return' : 'Borrow',
-        action: () => this.toggleBorrow(book),
-        disabled: this.isBorrowDisabled(book),
+    // By format and owner. Physical books that aren't mine (friends', #85) get
+    // Borrow/Request, Return and Reserve there; the old borrow/reserve endpoints
+    // refuse owned books, so none of them now.
+    const download: BookAction[] =
+      book.bookType === BookTypeEnums.EBook && book.hasEpub && this.user
+        ? [{ label: 'Download', icon: 'bi-download', action: () => this.downloadEpub(book) }]
+        : [];
+    if (book.isMine) {
+      this.bookActions = [
+        ...download, // once owners have e-books
+        {
+          label: 'Manage in My owned books',
+          icon: 'bi-bookshelf',
+          action: () => this.manageOwnBook(book),
+        },
+        { label: 'Edit', icon: 'bi-pencil', action: () => this.editOwnBook(book) },
+        readList,
+      ];
+    } else if (book.bookType === BookTypeEnums.EBook) {
+      this.bookActions = [
+        ...download,
+        // Placeholder until e-books can be read online (e-book epic)
+        { label: 'Read online · coming soon', icon: 'bi-book-half', action: () => {}, disabled: true },
+        readList,
+      ];
+    } else {
+      this.bookActions = [readList];
+    }
+  }
+
+  // Lending, history and editing live on My owned books; its search finds the book
+  manageOwnBook(book: LibraryBook) {
+    this.closeBook();
+    this.router.navigate(['/my/owned-books'], { queryParams: { q: book.title } });
+  }
+
+  // Fetch the file, then hand it to the browser as a download named after the book
+  downloadEpub(book: LibraryBook) {
+    this.bookService.downloadEpub(book.bookId).subscribe({
+      next: (file) => {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${book.title.replace(/[\\/:*?"<>|]+/g, '').trim() || 'book'}.epub`;
+        link.click();
+        // Give the browser a moment to start the download before freeing the file
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       },
-      {
-        label: book.isReservedByMe ? 'Cancel reservation' : 'Reserve',
-        action: () => this.toggleReservation(book),
+      error: (err) => {
+        this.toast.error(
+          err?.status === 404
+            ? `The file for "${book.title}" is missing.`
+            : err?.status === 401
+              ? 'Log in to download e-books.'
+              : `Couldn't download "${book.title}".`,
+        );
       },
-      {
-        label: isInReadList ? 'Remove from reading list' : 'Add to reading list',
-        action: () => this.toggleReadList(book),
-      },
-    ];
+    });
+  }
+
+  editOwnBook(book: LibraryBook) {
+    this.closeBook();
+    this.router.navigate(['/my/owned-books', book.bookId, 'edit']);
+  }
+
+  // Can I get it? By format first: e-books are downloaded, physical books lent.
+  // Only my own physical books are in the Library for now; friends' come in #85.
+  get bookStatusLine(): BookStatusLine | null {
+    const book = this.selectedBook;
+    if (!book) return null;
+    if (book.bookType === BookTypeEnums.EBook) {
+      // The Download button says enough; only say why it's missing
+      if (!book.hasEpub) return { text: 'No file yet', tone: 'muted' };
+      return this.user ? null : { text: 'Log in to download', tone: 'muted' };
+    }
+    const overdue = book.bookStatus === BookStatusEnum.Overdue;
+    const lent = book.bookStatus === BookStatusEnum.CheckedOut || overdue;
+    if (book.isMine) {
+      // Who has it comes from api/my/books; until it's in (or if it fails), the list's status
+      const loan = this.ownBookLoan?.bookId === +book.bookId ? this.ownBookLoan : null;
+      if (loan) {
+        if (!loan.lentTo) return { text: 'On your shelf', tone: 'ok' };
+        return {
+          text: `Lent to ${loan.lentTo}`,
+          detail: `since ${formatDay(loan.lentOn)} · ${overdue ? 'was due' : 'due'} ${formatDay(loan.dueDate)}`,
+          tone: 'out',
+        };
+      }
+      return lent
+        ? { text: 'Lent out', tone: 'out' }
+        : { text: 'On your shelf', tone: 'ok' };
+    }
+    return lent ? { text: 'Checked out', tone: 'out' } : { text: 'Available', tone: 'ok' };
   }
   isBorrowDisabled(book: LibraryBook): boolean {
     const isCheckedOutBySomeoneElse =
@@ -497,23 +621,8 @@ export class LibraryComponent implements AfterViewInit {
 
     return isCheckedOutBySomeoneElse || hasPriorReservations;
   }
-  getBookStatusDisplay(book: LibraryBook): { status: string; availability: string } {
-    const status =
-      this.bookStatusOptions.displayNames[book.bookStatus]?.toString() ||
-      (typeof book.bookStatus === 'string'
-        ? book.bookStatus
-        : book.bookStatus?.toString() || '');
 
-    // If user has a reservation, show their reservation's availability date
-    const date = book.myReservationAvailableDate ?? book.availabilityDate;
-    const availabilityDate = date ? new Date(date).toLocaleDateString() : '';
-
-    return {
-      status,
-      availability: availabilityDate,
-    };
-  }
-
+  // Not offered in the popup until #85 (friend loans); kept until then.
   // After borrowing, returning or (un)reserving, reload the list: the server
   // works out the new "…ByMe" flags and getAllBooks refreshes the open popup.
   // Returning asks first; borrowing is one click, like on Manage books.
@@ -614,63 +723,8 @@ export class LibraryComponent implements AfterViewInit {
     this.loadError = false;
     this.getAllBooks();
   }
-  closeInfoCard() {
-    this.showInfoCard = false;
+  closeBook() {
     this.selectedBook = null;
-  }
-
-  get infoCardCol2(): InfoCardColumn2 {
-    if (!this.selectedBook) return {};
-    const statusObj = this.getBookStatusDisplay(this.selectedBook);
-    return {
-      rows: [
-        { title: 'Title', value: this.selectedBook.title ?? '' },
-        { title: 'Author', value: this.selectedBook.author ?? '' },
-      ],
-      rowPairs: [
-        {
-          first: {
-            title: 'Genre',
-            value:
-              this.genreOptions.displayNames[
-                this.selectedBook.genre
-              ]?.toString() ||
-              this.selectedBook.genre?.toString() ||
-              '',
-          },
-          second: {
-            title: 'Book type',
-            value:
-              this.bookTypeOptions.displayNames[
-                this.selectedBook.bookType
-              ]?.toString() || '',
-          },
-        },
-        {
-          first: {
-            title: 'Published',
-            value: this.selectedBook.publicationYear?.toString() || '',
-          },
-          second: { title: statusObj.status, value: statusObj.availability },
-        },
-      ],
-      longText: {
-        title: 'Description',
-        value: this.selectedBook.bookDescription ?? '',
-      },
-    };
-  }
-
-  get infoCardCol3(): InfoCardColumn3 {
-    if (!this.selectedBook) return {};
-    return {
-      rows: [
-        {
-          title: 'Reviews',
-          value: this.selectedBookReviews, // This is InfoCardDisplayRow[][]
-        },
-      ],
-    };
   }
 
   onGenreSelected(genre: GenreEnums) {
