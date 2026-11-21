@@ -393,9 +393,14 @@ namespace NyriaNest.Application.Users
             {
                 response.IsSuccess = true;
                 response.StatusCode = HttpStatusCode.OK;
-                response.Result = user.UserHistory
-                    .OrderByDescending(r => r.Timestamp)
-                    .ToList();
+                // Queried directly: GetByIdAsync doesn't load UserHistory (#121), and
+                // every other caller would load it for nothing
+                response.Result = await _dbContext.StatusHistoryItems
+                    .AsNoTracking()
+                    .Include(h => h.Book)
+                    .Where(h => h.UserId == userId)
+                    .OrderByDescending(h => h.Timestamp)
+                    .ToListAsync();
             }
             else
             {
