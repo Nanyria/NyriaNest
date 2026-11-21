@@ -198,7 +198,73 @@ public class AdminStatusNotificationTests(ApiFactory factory) : IClassFixture<Ap
         (await HistoryOf(bookId)).Should().Contain(h => h.UserId == me.Id && h.Notes == "Restored by admin: Removed by mistake");
     }
 
+    // ---- Someone else's book lent to a name (#83 step 8e) ----
+    // The loan is the owner's own note of who has it: Lost/Removed is a flag on the
+    // book and leaves the loan alone, so after a restore the book is lent as before.
+
+    [Theory]
+    [InlineData(BookStatusEnum.Removed)]
+    [InlineData(BookStatusEnum.Lost)]
+    public async Task SomeoneElsesBook_LentToAName_TakenDownAndRestored_KeepsTheLoan(BookStatusEnum status)
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = await factory.CreateUserAsync();
+        var bookId = await AddBookAsync("Lent to Ruth", BookStatusEnum.CheckedOut, ownerId: owner.Id);
+        await AddLoanAsync(bookId, borrowerName: "Ruth (neighbour)");
+
+        var takeDown = await SetStatusAsync(admin, bookId, status, "Inappropriate content");
+
+        takeDown.StatusCode.Should().Be(HttpStatusCode.OK, await takeDown.Content.ReadAsStringAsync(Ct));
+        var takenDown = await BookAsync(bookId);
+        takenDown.AdminStatus.Should().Be(status);
+        takenDown.BookStatus.Should().Be(status);
+        (await LoanOf(bookId))!.BorrowerName.Should().Be("Ruth (neighbour)");
+
+        var restore = await RestoreAsync(admin, bookId, "Removed by mistake");
+
+        restore.StatusCode.Should().Be(HttpStatusCode.OK, await restore.Content.ReadAsStringAsync(Ct));
+        var restored = await BookAsync(bookId);
+        restored.AdminStatus.Should().BeNull();
+        restored.BookStatus.Should().Be(BookStatusEnum.CheckedOut); // lent as before
+        (await LoanOf(bookId))!.BorrowerName.Should().Be("Ruth (neighbour)");
+    }
+
+    [Fact]
+    public async Task Book_LentToAMember_StillCantBeTakenDown()
+    {
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var owner = await factory.CreateUserAsync();
+        var borrower = await factory.CreateUserAsync();
+        var bookId = await AddBookAsync("Lent to a member", BookStatusEnum.CheckedOut, ownerId: owner.Id);
+        await AddLoanAsync(bookId, userId: borrower.Id);
+
+        var response = await SetStatusAsync(admin, bookId, BookStatusEnum.Removed, "Inappropriate content");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("This book is checked out. Return it first.");
+        (await BookAsync(bookId)).AdminStatus.Should().BeNull();
+        (await LoanOf(bookId))!.UserId.Should().Be(borrower.Id);
+    }
+
     // ---- Helpers ----
+
+    // Exactly one of the two: a member's loan or a loan by name
+    private Task AddLoanAsync(int bookId, string? borrowerName = null, string? userId = null) =>
+        factory.WithDbAsync(async db =>
+        {
+            db.CheckOutItems.Add(new CheckedOutItem
+            {
+                BookId = bookId,
+                BorrowerName = borrowerName,
+                UserId = userId,
+                CheckOutDate = DateTime.UtcNow,
+                ReturnDate = DateTime.UtcNow.AddDays(14),
+            });
+            await db.SaveChangesAsync(Ct);
+        });
+
+    private Task<CheckedOutItem?> LoanOf(int bookId) => factory.WithDbAsync(db =>
+        db.CheckOutItems.AsNoTracking().SingleOrDefaultAsync(c => c.BookId == bookId, Ct));
 
     private Task<HttpResponseMessage> SetStatusAsync(HttpClient client, int bookId, BookStatusEnum status, string? notes) =>
         client.PutAsJsonAsync($"api/Book/{bookId}/admin-status", new { status, notes }, Ct);

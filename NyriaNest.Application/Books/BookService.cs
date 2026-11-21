@@ -719,7 +719,10 @@ namespace NyriaNest.Application.Books
                 response.ErrorMessages.Add(ReasonMessage);
                 return response;
             }
-            if (book.CheckedOutBy != null)
+            // Lent to a member: they'd lose a book they still hold (friend loans decide more in #85).
+            // Lent to a name: the loan is only the owner's note of who has it, so it stays and
+            // the book is lent as before after a restore (#83).
+            if (book.CheckedOutBy is { BorrowerName: null })
             {
                 response.ErrorMessages.Add("This book is checked out. Return it first.");
                 return response;
