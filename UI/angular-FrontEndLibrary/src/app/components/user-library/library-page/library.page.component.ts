@@ -28,7 +28,9 @@ import {
   BookDetailsDialogComponent,
   BookStatusLine,
 } from '../book-details-dialog/book-details-dialog.component';
-import { BookReview } from '../../../Models/interfaces';
+import { BookReview, MyBook } from '../../../Models/interfaces';
+import { MyBooksService } from '../../../Services/my-books.service';
+import { formatDay } from '../../../Helpers/loan-dates';
 import { ScrollStripComponent } from '../../layout/scroll-strip/scroll-strip.component';
 import {
   BookTypeOptions,
@@ -140,6 +142,7 @@ export class LibraryComponent implements AfterViewInit {
   // The book popup is open while a book is selected
   selectedBook: LibraryBook | null = null;
   selectedBookReviews: BookReview[] | null = null; // null while loading
+  ownBookLoan: MyBook | null = null; // my own selected book, with its loan
   bookActions: BookAction[] = [];
   isSuperAdmin: boolean = false;
   bookTypeOptions = BookTypeOptions;
@@ -154,6 +157,7 @@ export class LibraryComponent implements AfterViewInit {
     private toast: ToastService,
     private confirmDialog: ConfirmService,
     private bookService: BookService,
+    private myBooksService: MyBooksService,
   ) {}
 
   ngOnInit(): void {
@@ -468,12 +472,26 @@ export class LibraryComponent implements AfterViewInit {
     this.updateQueryParams();
   }
 
-  // The list already carries everything the popup shows; only reviews are fetched
+  // The list carries most of what the popup shows; reviews are fetched, and for
+  // my own physical book who it's lent to
   onBookRowClicked(book: LibraryBook) {
     this.selectedBook = book;
     this.updateBookActions(book);
     this.selectedBookReviews = null;
+    this.ownBookLoan = null;
     const bookId = book.bookId;
+    if (book.isMine && book.bookType !== BookTypeEnums.EBook) {
+      this.myBooksService.get(+bookId).subscribe({
+        // Ignore a late answer for a book that's no longer open; on failure the
+        // status line keeps what the list says
+        next: (response) => {
+          if (this.selectedBook?.bookId === bookId && response.isSuccess) {
+            this.ownBookLoan = response.result;
+          }
+        },
+        error: () => {},
+      });
+    }
     this.libraryService.getBookReviews(bookId).subscribe({
       // Ignore a late answer for a book that's no longer open
       next: (response: { result?: BookReview[] }) => {
@@ -572,10 +590,19 @@ export class LibraryComponent implements AfterViewInit {
       if (!book.hasEpub) return { text: 'No file yet', tone: 'muted' };
       return this.user ? null : { text: 'Log in to download', tone: 'muted' };
     }
-    const lent =
-      book.bookStatus === BookStatusEnum.CheckedOut ||
-      book.bookStatus === BookStatusEnum.Overdue;
+    const overdue = book.bookStatus === BookStatusEnum.Overdue;
+    const lent = book.bookStatus === BookStatusEnum.CheckedOut || overdue;
     if (book.isMine) {
+      // Who has it comes from api/my/books; until it's in (or if it fails), the list's status
+      const loan = this.ownBookLoan?.bookId === +book.bookId ? this.ownBookLoan : null;
+      if (loan) {
+        if (!loan.lentTo) return { text: 'On your shelf', tone: 'ok' };
+        return {
+          text: `Lent to ${loan.lentTo}`,
+          detail: `since ${formatDay(loan.lentOn)} · ${overdue ? 'was due' : 'due'} ${formatDay(loan.dueDate)}`,
+          tone: 'out',
+        };
+      }
       return lent
         ? { text: 'Lent out', tone: 'out' }
         : { text: 'On your shelf', tone: 'ok' };

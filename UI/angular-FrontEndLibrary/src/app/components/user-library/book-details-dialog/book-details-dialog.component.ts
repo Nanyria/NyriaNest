@@ -12,12 +12,12 @@ import {
 import { BookReview, LibraryBook } from '../../../Models/interfaces';
 import { BookTypeEnums, LanguageDisplayNames, LanguageEnums } from '../../../Helpers/Enums/enum';
 import { BookTypeOptions, GenreOptions } from '../../../Helpers/Helper';
-import { formatMoment } from '../../Users/my-owned-books/loan-dates';
+import { formatMoment } from '../../../Helpers/loan-dates';
 
 /** An icon button under the cover; the label is its hover text and accessible name */
 export interface BookAction {
   label: string;
-  icon: string; // Bootstrap icon, e.g. 'bi-heart'
+  icon: string; // Bootstrap icon, e.g. 'bi-bookmark'
   action: () => void;
   disabled?: boolean;
   pressed?: boolean; // for toggles, e.g. in the reading list

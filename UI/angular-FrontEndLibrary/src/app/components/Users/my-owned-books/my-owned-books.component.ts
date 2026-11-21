@@ -19,7 +19,7 @@ import {
 import { GenreOptions } from '../../../Helpers/Helper';
 import { PagerComponent } from '../../layout/pager/pager.component';
 import { LoanDialogComponent, LoanDialogMode } from './loan-dialog.component';
-import { dateOnly, formatDay, formatMoment, todayIso } from './loan-dates';
+import { dateOnly, formatDay, formatMoment, todayIso } from '../../../Helpers/loan-dates';
 
 type ViewState =
   | { kind: 'loading' }

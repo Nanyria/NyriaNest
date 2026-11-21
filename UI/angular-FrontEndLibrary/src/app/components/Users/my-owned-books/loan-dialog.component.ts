@@ -13,7 +13,7 @@ import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors, Va
 import { Observable } from 'rxjs';
 import { MyBook } from '../../../Models/interfaces';
 import { MyBooksService } from '../../../Services/my-books.service';
-import { dateOnly, formatDay, todayIso } from './loan-dates';
+import { dateOnly, formatDay, todayIso } from '../../../Helpers/loan-dates';
 
 export type LoanDialogMode = 'lend' | 'return';
 
