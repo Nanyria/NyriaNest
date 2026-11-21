@@ -51,7 +51,7 @@ export const ADMIN_NAV: NavGroup = {
   items: [
     { label: 'Dashboard', icon: 'bi-speedometer2' },
     { label: 'Manage books', icon: 'bi-journals', route: '/admin/manage-books' },
-    { label: 'Add book', icon: 'bi-journal-plus', route: '/add-book' },
+    { label: 'Add e-book', icon: 'bi-journal-plus', route: '/admin/manage-books/add' },
     { label: 'Manage users', icon: 'bi-people', route: '/admin/manage-users' },
   ],
 };
