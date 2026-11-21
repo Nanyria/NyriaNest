@@ -177,17 +177,28 @@ public class BookCatalogueAndEpubTests(ApiFactory factory) : IClassFixture<ApiFa
     }
 
     [Fact]
-    public async Task Catalogue_NeedsAttention_ListsOnlyEbooksWithoutAnEpub()
+    public async Task Catalogue_StatusFilter_TellsBooksOnTheShelfFromEbooksWithAndWithoutAFile()
     {
+        // #83: Available is for physical books; an e-book is Ready (has an EPUB) or
+        // NoFile. Like Overdue, neither is stored. A taken-down book is in none of them.
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
         var tag = Tag();
+        var lent = Book($"Lent {tag}");
         var withFile = Book($"With file {tag}", type: BookTypeEnums.EBook);
         withFile.EpubFileKey = $"{tag}/book.epub";
-        await AddBooksAsync(withFile, Book($"Without file {tag}", type: BookTypeEnums.EBook), Book($"Paper {tag}"));
+        var removed = Book($"Removed {tag}", type: BookTypeEnums.EBook);
+        removed.EpubFileKey = $"{tag}/removed.epub";
+        removed.AdminStatus = BookStatusEnum.Removed;
+        await AddBooksAsync(Book($"Paper {tag}"), lent, withFile, Book($"Without file {tag}", type: BookTypeEnums.EBook), removed);
+        await factory.WithDbAsync(async db =>
+        {
+            db.CheckOutItems.Add(new() { BookId = lent.BookId, BorrowerName = "Ruth (neighbour)", CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(14) });
+            await db.SaveChangesAsync(Ct);
+        });
 
-        var result = await CatalogueAsync(admin, $"q={tag}&needsAttention=true");
-
-        Titles(result).Should().Equal($"Without file {tag}");
+        Titles(await CatalogueAsync(admin, $"q={tag}&status=available")).Should().Equal($"Paper {tag}");
+        Titles(await CatalogueAsync(admin, $"q={tag}&status=ready")).Should().Equal($"With file {tag}");
+        Titles(await CatalogueAsync(admin, $"q={tag}&status=noFile")).Should().Equal($"Without file {tag}");
     }
 
     [Theory]

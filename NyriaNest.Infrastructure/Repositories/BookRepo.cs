@@ -160,14 +160,16 @@ namespace NyriaNest.Infrastructure.Repositories
             }
             if (q.Genre.HasValue) books = books.Where(b => b.Genre == q.Genre.Value);
             if (q.BookType.HasValue) books = books.Where(b => b.BookType == q.BookType.Value);
-            if (q.NeedsAttention) books = books.Where(b => b.BookType == BookTypeEnums.EBook && b.EpubFileKey == null);
 
             // Status is worked out from loans, reservations and the admin status,
             // the same way GetBookStatus does, rather than trusting the stored BookStatus
             // (Returned and Added are rejected by the service before we get here)
             books = q.Status switch
             {
-                BookStatusEnum.Available => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
+                // Available is for physical books; an e-book is Ready or NoFile instead (#83)
+                BookStatusEnum.Available => books.Where(b => b.BookType != BookTypeEnums.EBook && b.AdminStatus == null && b.CheckedOutBy == null && !b.Reservations.Any()),
+                BookStatusEnum.Ready => books.Where(b => b.BookType == BookTypeEnums.EBook && b.AdminStatus == null && b.EpubFileKey != null),
+                BookStatusEnum.NoFile => books.Where(b => b.BookType == BookTypeEnums.EBook && b.AdminStatus == null && b.EpubFileKey == null),
                 BookStatusEnum.CheckedOut => books.Where(b => b.CheckedOutBy != null),
                 BookStatusEnum.Overdue => books.Where(b => b.CheckedOutBy != null && b.CheckedOutBy.ReturnDate < now),
                 BookStatusEnum.Reserved => books.Where(b => b.AdminStatus == null && b.CheckedOutBy == null && b.Reservations.Any()),
