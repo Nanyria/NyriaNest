@@ -37,6 +37,12 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the owner that an admin restored their book, and why (#83). Doesn't save.</summary>
         void NotifyOwnerOfAdminRestore(Book book, string reason);
 
+        /// <summary>Tells someone they got a friend request (#84). Doesn't save.</summary>
+        void NotifyFriendRequestReceived(string addresseeId, string requesterUserName);
+
+        /// <summary>Tells the requester their friend request was accepted, and that nothing is shared yet (#84). Doesn't save.</summary>
+        void NotifyFriendRequestAccepted(string requesterId, string accepterUserName);
+
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
 
@@ -134,6 +140,23 @@ namespace NyriaNest.Application.Notifications
         public void NotifyOwnerOfAdminReturn(Book book, string borrower, string reason) =>
             NotifyOwner(book, $"An admin marked your book \"{book.Title}\" as returned by {borrower}. Reason: {reason}",
                 NotificationType.BookLoanChangedByAdmin);
+
+        public void NotifyFriendRequestReceived(string addresseeId, string requesterUserName) =>
+            _dbContext.NotificationItems.Add(new NotificationItem
+            {
+                UserId = addresseeId,
+                Message = $"{requesterUserName} sent you a friend request. You can answer it in Friends.",
+                Type = NotificationType.FriendRequestReceived,
+            });
+
+        // Accepting shares nothing by itself (ADR 0005), so the requester is asked whether they want to
+        public void NotifyFriendRequestAccepted(string requesterId, string accepterUserName) =>
+            _dbContext.NotificationItems.Add(new NotificationItem
+            {
+                UserId = requesterId,
+                Message = $"{accepterUserName} accepted your friend request. Do you want to share your library or e-books with {accepterUserName}? You can turn it on in Friends.",
+                Type = NotificationType.FriendRequestAccepted,
+            });
 
         // The book still exists here, so the notification points at it
         private void NotifyOwner(Book book, string message, NotificationType type)

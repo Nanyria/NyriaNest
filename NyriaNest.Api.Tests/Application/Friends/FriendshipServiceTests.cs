@@ -410,4 +410,24 @@ public class FriendshipServiceTests : IDisposable
             found.Select(u => u.UserName).Should().BeEquivalentTo(["annika"]);
         }
     }
+
+    [Fact]
+    public async Task Search_still_finds_someone_after_a_decline_since_asking_again_is_allowed()
+    {
+        using (var db = _db.CreateContext())
+        {
+            var service = Service(db);
+            var toAnna = (await service.SendRequestAsync(_me.Id, "anna")).Result.Id;
+            await service.DeclineAsync(_anna.Id, toAnna);
+            var fromErik = (await service.SendRequestAsync(_erik.Id, "me")).Result.Id;
+            await service.DeclineAsync(_me.Id, fromErik);
+        }
+
+        using (var db = _db.CreateContext())
+        {
+            var service = Service(db);
+            (await service.SearchUsersAsync(_me.Id, "anna")).Result.Select(u => u.UserName).Should().Equal("anna");
+            (await service.SearchUsersAsync(_me.Id, "erik")).Result.Select(u => u.UserName).Should().Equal("erik");
+        }
+    }
 }
