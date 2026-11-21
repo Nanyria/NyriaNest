@@ -6,7 +6,7 @@
   (close)="onNativeClose()"
   (click)="onClick($event)"
 >
-  <form class="confirm__body" novalidate (ngSubmit)="save()">
+  <form class="confirm__body" novalidate [formGroup]="form" (ngSubmit)="save()">
     <span class="confirm__seal" aria-hidden="true">
       <i class="bi" [class]="mode() === 'lend' ? 'bi-box-arrow-up-right' : 'bi-box-arrow-in-down-left'"></i>
     </span>

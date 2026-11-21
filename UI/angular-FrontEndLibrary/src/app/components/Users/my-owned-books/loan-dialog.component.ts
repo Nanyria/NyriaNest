@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  OnInit,
   afterNextRender,
   inject,
   input,
@@ -9,7 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { MyBook } from '../../../Models/interfaces';
 import { MyBooksService } from '../../../Services/my-books.service';
@@ -34,7 +35,7 @@ const notBefore = (min: () => string) => (c: AbstractControl): ValidationErrors 
   changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ReactiveFormsModule],
 })
-export class LoanDialogComponent {
+export class LoanDialogComponent implements OnInit {
   private myBooks = inject(MyBooksService);
   private dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
@@ -55,13 +56,23 @@ export class LoanDialogComponent {
     nonNullable: true,
     validators: [Validators.required, notAfter(() => this.today)],
   });
+  // "Not before the lend day" is added in ngOnInit: validators run as soon as a
+  // control is created, and the book input isn't set yet at that point (NG0950)
   readonly returnedOn = new FormControl(this.today, {
     nonNullable: true,
-    validators: [Validators.required, notAfter(() => this.today), notBefore(() => this.lentOnDay())],
+    validators: [Validators.required, notAfter(() => this.today)],
   });
+  // Bound with [formGroup] so (ngSubmit) fires and the browser's own submit
+  // (which would reload the page) is stopped
+  readonly form = new FormGroup({ borrowerName: this.borrowerName, lentOn: this.lentOn, returnedOn: this.returnedOn });
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal());
+  }
+
+  ngOnInit(): void {
+    this.returnedOn.addValidators(notBefore(() => this.lentOnDay()));
+    this.returnedOn.updateValueAndValidity();
   }
 
   /** The day it was lent, the earliest it can have come back */
