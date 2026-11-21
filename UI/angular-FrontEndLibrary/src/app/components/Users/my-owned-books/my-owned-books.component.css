@@ -237,7 +237,9 @@
   display: flex;
 }
 
-.ob-menu__list button {
+/* Edit is a link (it opens a page), the rest are buttons; they look the same */
+.ob-menu__list button,
+.ob-menu__list a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -251,7 +253,12 @@
   cursor: pointer;
 }
 
-.ob-menu__list button:hover {
+.ob-menu__list a {
+  text-decoration: none;
+}
+
+.ob-menu__list button:hover,
+.ob-menu__list a:hover {
   background-color: var(--nn-surface-hover);
 }
 

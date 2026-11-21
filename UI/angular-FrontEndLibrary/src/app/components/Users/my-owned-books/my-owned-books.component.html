@@ -145,23 +145,12 @@
                 <td class="ob-col-reading"><span class="nn-muted" aria-label="Not available yet">—</span></td>
                 <td class="ob-cell-actions">
                   <div class="ob-actions">
-                    @if (!isWithdrawn(b)) {
-                      <a
-                        class="nn-btn nn-btn--outline nn-btn--icon"
-                        [routerLink]="['/my/owned-books', b.bookId, 'edit']"
-                        title="Edit"
-                        [attr.aria-label]="'Edit ' + b.title"
-                      >
-                        <i class="bi bi-pencil" aria-hidden="true"></i>
-                      </a>
-                    }
-
                     <button
                       #menuButton
                       type="button"
                       class="nn-btn nn-btn--outline nn-btn--icon"
                       [attr.popovertarget]="'ob-menu-' + b.bookId"
-                      [attr.aria-label]="'More actions for ' + b.title"
+                      [attr.aria-label]="'Actions for ' + b.title"
                     >
                       <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
                     </button>
@@ -175,6 +164,9 @@
                     >
                       <!-- A book an admin took down: only its history and deleting it -->
                       @if (!isWithdrawn(b)) {
+                        <a [routerLink]="['/my/owned-books', b.bookId, 'edit']">
+                          <i class="bi bi-pencil" aria-hidden="true"></i> Edit
+                        </a>
                         @if (isLent(b)) {
                           <button type="button" (click)="openLoanDialog(b, 'return')">
                             <i class="bi bi-box-arrow-in-down-left" aria-hidden="true"></i> Mark returned
