@@ -108,6 +108,8 @@ export interface LibraryBook {
   averageRating: number | null;
   reservationCount: number;
 
+  // My own book (false for shared books and for visitors)
+  isMine: boolean;
   isCheckedOutByMe: boolean;
   isReservedByMe: boolean;
   myReservationAvailableDate: string | null;

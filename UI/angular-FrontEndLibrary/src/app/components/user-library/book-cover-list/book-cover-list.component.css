@@ -119,6 +119,26 @@
   opacity: 1;
 }
 
+/* "Mine": the tag in grid/list, the badge on the cover on shelves */
+.book__mine-tag,
+.book__mine-badge {
+  border-color: var(--nn-primary);
+  background-color: var(--nn-primary);
+  color: var(--nn-on-primary);
+}
+
+.book__mine-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 1px 10px;
+  border: 1px solid var(--nn-primary);
+  border-radius: var(--nn-radius-pill);
+  box-shadow: 0 1px 3px rgba(42, 22, 14, 0.35);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
 .book__meta {
   display: flex;
   flex-direction: column;
