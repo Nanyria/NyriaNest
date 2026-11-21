@@ -40,6 +40,7 @@ import {
 } from '../../../Helpers/genre-styles/genre-cards';
 
 type StatusFilter = 'all' | 'available' | 'reserved' | 'checkedOut';
+type LibraryFilter = 'all' | 'mine' | 'shared';
 type SortOption = 'title' | 'author' | 'added' | 'newest' | 'popular';
 type BookFormatFilter = 'physical' | 'ebook' | 'audiobook' | 'all';
 
@@ -79,6 +80,7 @@ export class LibraryComponent implements AfterViewInit {
   searchTerm = '';
   selectedGenre: GenreEnums = GenreEnums.All;
   selectedStatus: StatusFilter = 'all';
+  selectedLibrary: LibraryFilter = 'all';
   selectedBookFormat: BookFormatFilter = 'all';
   selectedMinimumRating = 0;
   sortBy: SortOption = 'title';
@@ -92,10 +94,17 @@ export class LibraryComponent implements AfterViewInit {
   draft = {
     genre: GenreEnums.All,
     status: 'all' as StatusFilter,
+    library: 'all' as LibraryFilter,
     format: 'all' as BookFormatFilter,
     minimumRating: 0,
   };
 
+  // Shared = not mine for now; friends' books get their own choice in #85
+  libraryFilters: { value: LibraryFilter; label: string }[] = [
+    { value: 'all', label: 'All libraries' },
+    { value: 'mine', label: 'Mine' },
+    { value: 'shared', label: 'Shared library' },
+  ];
   statusFilters: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'available', label: 'Available' },
@@ -224,6 +233,7 @@ export class LibraryComponent implements AfterViewInit {
         (this.selectedGenre === GenreEnums.All ||
           book.genre === this.selectedGenre) &&
         this.matchesStatus(book) &&
+        this.matchesLibrary(book) &&
         this.matchesFormat(book) &&
         this.matchesMinimumRating(book) &&
         (!term ||
@@ -314,6 +324,12 @@ export class LibraryComponent implements AfterViewInit {
         clear: () => (this.selectedMinimumRating = 0),
       });
     }
+    if (this.selectedLibrary !== 'all') {
+      chips.push({
+        label: this.libraryFilters.find((f) => f.value === this.selectedLibrary)!.label,
+        clear: () => (this.selectedLibrary = 'all'),
+      });
+    }
     if (this.selectedStatus !== 'all') {
       chips.push({
         label: this.statusFilters.find((f) => f.value === this.selectedStatus)!.label,
@@ -354,6 +370,7 @@ export class LibraryComponent implements AfterViewInit {
     this.draft = {
       genre: this.selectedGenre,
       status: this.selectedStatus,
+      library: this.selectedLibrary,
       format: this.selectedBookFormat,
       minimumRating: this.selectedMinimumRating,
     };
@@ -371,6 +388,7 @@ export class LibraryComponent implements AfterViewInit {
     this.draft = {
       genre: GenreEnums.All,
       status: 'all',
+      library: 'all',
       format: 'all',
       minimumRating: 0,
     };
@@ -379,6 +397,7 @@ export class LibraryComponent implements AfterViewInit {
   applyFilters() {
     this.selectedGenre = this.draft.genre;
     this.selectedStatus = this.draft.status;
+    this.selectedLibrary = this.draft.library;
     this.selectedBookFormat = this.draft.format;
     this.selectedMinimumRating = this.draft.minimumRating;
     this.updateQueryParams();
@@ -389,6 +408,17 @@ export class LibraryComponent implements AfterViewInit {
   onEscape() {
     if (this.filtersOpen) {
       this.closeFilters();
+    }
+  }
+
+  private matchesLibrary(book: LibraryBook): boolean {
+    switch (this.selectedLibrary) {
+      case 'mine':
+        return book.isMine;
+      case 'shared':
+        return !book.isMine;
+      default:
+        return true;
     }
   }
 
@@ -434,6 +464,7 @@ export class LibraryComponent implements AfterViewInit {
     this.searchTerm = '';
     this.selectedGenre = GenreEnums.All;
     this.selectedStatus = 'all';
+    this.selectedLibrary = 'all';
     this.selectedBookFormat = 'all';
     this.selectedMinimumRating = 0;
     this.updateQueryParams();

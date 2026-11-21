@@ -318,6 +318,23 @@
 
         <div class="nn-divider"><span class="nn-divider__mark"></span></div>
 
+        <!-- Visitors only see the shared library, so they get no choice here -->
+        @if (user) {
+          <fieldset>
+            <legend>Library</legend>
+            <div class="filter-panel__choices">
+              @for (filter of libraryFilters; track filter.value) {
+                <label>
+                  <input type="radio" name="library" [value]="filter.value" [(ngModel)]="draft.library" />
+                  <span>{{ filter.label }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
+
+          <div class="nn-divider"><span class="nn-divider__mark"></span></div>
+        }
+
         <fieldset>
           <legend>Availability</legend>
           <div class="filter-panel__choices">
