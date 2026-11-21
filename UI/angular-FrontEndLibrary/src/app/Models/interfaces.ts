@@ -74,6 +74,19 @@ export interface EditBookDto {
   epubFileSize?: number | null;
 }
 
+// A book on My owned books (GET api/my/books, #83). The loan fields are null
+// when it's on the owner's shelf. Dates come without "Z": they're UTC.
+export interface MyBook extends Omit<EditBookDto, 'bookId'> {
+  bookId: number;
+  ownerId?: string | null;
+  ownerName?: string | null;
+  bookStatus: BookStatusEnum;
+  adminStatus: BookStatusEnum.Lost | BookStatusEnum.Removed | null; // set by an admin
+  lentTo: string | null;
+  lentOn: string | null;
+  dueDate: string | null;
+}
+
 export interface LibraryBook {
   bookId: string;
   title: string;

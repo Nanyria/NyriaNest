@@ -1,0 +1,178 @@
+<!-- The title's rule runs up to the Add book button, like the toolbar on Manage books -->
+<div class="ob-toolbar">
+  <h1 class="nn-section-title ob-toolbar__title">
+    <i class="bi bi-bookshelf" aria-hidden="true"></i>My owned books
+    @let loaded = state();
+    @if (loaded.kind === 'ready' && loaded.books.length) {
+      <span class="nn-muted ob-count">({{ loaded.books.length }})</span>
+    }
+    <span class="nn-section-title__rule" aria-hidden="true"></span>
+  </h1>
+  <a class="nn-btn nn-btn--primary ob-add" routerLink="/add-book">
+    <i class="bi bi-plus-lg" aria-hidden="true"></i> Add book
+  </a>
+</div>
+
+@if (actionError(); as message) {
+  <p class="ob-alert" role="alert">
+    <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ message }}
+  </p>
+}
+
+@let s = state();
+@if (s.kind === 'loading') {
+  <p class="ob-state" aria-busy="true">Loading your books…</p>
+} @else if (s.kind === 'error') {
+  <div class="ob-state">
+    <p>Couldn't load your books.</p>
+    <button type="button" class="nn-btn nn-btn--outline" (click)="retry()">Try again</button>
+  </div>
+} @else {
+    @let books = s.books;
+    @if (books.length === 0) {
+      <div class="ob-state">
+        <p>Add the books on your shelf to keep track of who has borrowed them.</p>
+        <a class="nn-btn nn-btn--primary" routerLink="/add-book">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> Add book
+        </a>
+      </div>
+    } @else {
+      <div class="ob-table-wrap">
+        <table class="ob-table">
+          <thead>
+            <tr>
+              <th scope="col">Book</th>
+              <th scope="col" class="ob-col-meta">Type / Year</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of books; track b.bookId) {
+              <tr class="ob-row" [class.has-history]="isHistoryOpen(b)">
+                <td>
+                  <div class="ob-book">
+                    <img class="nn-cover ob-cover" [src]="b.coverImagePath || fallbackCover" alt="" />
+                    <div>
+                      <div class="ob-title">{{ b.title }}</div>
+                      <div class="ob-author">{{ b.author }}</div>
+                      <!-- Shown instead of the meta column on narrower screens -->
+                      <div class="ob-meta-inline nn-muted">{{ bookTypeNames[b.bookType] }} · {{ b.publicationYear }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="ob-col-meta">
+                  {{ bookTypeNames[b.bookType] }}
+                  <div class="nn-muted">{{ b.publicationYear }}</div>
+                </td>
+                <td class="ob-cell-status">
+                  @if (statusLabel(b); as label) {
+                    <span class="nn-tag" [class]="statusClass(b)">{{ label }}</span>
+                  }
+                  @if (loanDetail(b); as detail) {
+                    <div class="ob-detail" [class.is-overdue]="isOverdue(b)">{{ detail }}</div>
+                  }
+                </td>
+                <td class="ob-cell-actions">
+                  <div class="ob-actions">
+                    @if (!isWithdrawn(b)) {
+                      <a
+                        class="nn-btn nn-btn--outline nn-btn--icon"
+                        [routerLink]="['/my/owned-books', b.bookId, 'edit']"
+                        title="Edit"
+                        [attr.aria-label]="'Edit ' + b.title"
+                      >
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                      </a>
+                    }
+
+                    <button
+                      #menuButton
+                      type="button"
+                      class="nn-btn nn-btn--outline nn-btn--icon"
+                      [attr.popovertarget]="'ob-menu-' + b.bookId"
+                      [attr.aria-label]="'More actions for ' + b.title"
+                    >
+                      <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                    </button>
+                    <!-- Popover: closes on Esc or a click outside -->
+                    <div
+                      class="ob-menu__list nn-panel"
+                      popover
+                      [id]="'ob-menu-' + b.bookId"
+                      (beforetoggle)="placeMenu($event, menuButton)"
+                      (click)="closeMenu($event)"
+                    >
+                      <!-- A book an admin took down: only its history and deleting it -->
+                      @if (!isWithdrawn(b)) {
+                        @if (isLent(b)) {
+                          <button type="button" (click)="openLoanDialog(b, 'return')">
+                            <i class="bi bi-box-arrow-in-down-left" aria-hidden="true"></i> Mark returned
+                          </button>
+                        } @else {
+                          <button type="button" (click)="openLoanDialog(b, 'lend')">
+                            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Lend
+                          </button>
+                        }
+                      }
+                      <button type="button" [attr.aria-expanded]="isHistoryOpen(b)" (click)="toggleHistory(b)">
+                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                        {{ isHistoryOpen(b) ? 'Hide history' : 'History' }}
+                      </button>
+                      <button type="button" class="is-danger" (click)="delete(b)">
+                        <i class="bi bi-trash3" aria-hidden="true"></i> Delete
+                      </button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- History, newest first, under its book -->
+              @if (history(); as h) {
+                @if (h.bookId === b.bookId) {
+                  <tr class="ob-history-row">
+                    <td colspan="4">
+                      <div class="ob-history" [attr.aria-label]="'History of ' + b.title" role="region">
+                        @if (h.kind === 'loading') {
+                          <p class="nn-muted" aria-busy="true">Loading history…</p>
+                        } @else if (h.kind === 'error') {
+                          <p>
+                            Couldn't load the history.
+                            <button type="button" class="nn-link-button" (click)="loadHistory(b.bookId)">Try again</button>
+                          </p>
+                        } @else {
+                            @let items = h.items;
+                            @let showAll = h.showAll;
+                            @if (items.length === 0) {
+                              <p class="nn-muted">Nothing has happened to this book yet.</p>
+                            } @else {
+                              <ol class="ob-history__list">
+                                @for (item of showAll ? items : items.slice(0, historyPreview); track item.statusHistoryItemId) {
+                                  <li>
+                                    <span class="ob-history__date">{{ formatMoment(item.timestamp) }}</span>
+                                    <span>{{ historyText(item) }}</span>
+                                  </li>
+                                }
+                              </ol>
+                              @if (!showAll && items.length > historyPreview) {
+                                <button type="button" class="nn-link-button" (click)="showAllHistory()">
+                                  Show all ({{ items.length }})
+                                </button>
+                              }
+                            }
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+}
+
+@if (loanDialog(); as d) {
+  <app-loan-dialog [book]="d.book" [mode]="d.mode" (closed)="onLoanDialogClosed($event)" />
+}

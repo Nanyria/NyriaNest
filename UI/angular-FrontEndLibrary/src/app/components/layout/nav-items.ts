@@ -36,6 +36,7 @@ export const MAIN_NAV: NavEntry[] = [
     label: 'My books',
     icon: 'nn-icon-mybooks',
     items: [
+      { label: 'My owned books', icon: 'bi-bookshelf', route: '/my/owned-books' },
       { label: 'Reading list', icon: 'bi-heart', route: '/my/reading-list' },
       { label: 'Borrowed books', icon: 'bi-book-half', route: '/my/loans' },
       { label: 'Reservations', icon: 'bi-bookmark', route: '/my/reservations' },

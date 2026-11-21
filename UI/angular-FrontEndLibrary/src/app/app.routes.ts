@@ -8,6 +8,7 @@ import { UserReservationsComponent } from './components/Users/user-reservations/
 // import { UserMessagesComponent } from './components/Users/user-messages/user-messages.component';
 import { UserReadlistComponent } from './components/Users/user-readlist/user-readlist-component';
 import { UserCheckoutsComponent } from './components/Users/user-checkouts/user-checkouts-component';
+import { MyOwnedBooksComponent } from './components/Users/my-owned-books/my-owned-books.component';
 import { AdminPageComponent } from './components/admin/admin-page/admin-page.component';
 import { ManageBooksComponent } from './components/admin/manage-books/manage-books.component';
 import { ManageUsersComponent } from './components/admin/manage-users/manage-users.component';
@@ -41,10 +42,12 @@ export const routes: Routes = [
         path: 'my',
         component: UserPageComponent,
         children: [
+          // The books on the user's own shelf and who has borrowed them (#83)
+          { path: 'owned-books', component: MyOwnedBooksComponent },
           { path: 'reading-list', component: UserReadlistComponent },
           { path: 'loans', component: UserCheckoutsComponent },
           { path: 'reservations', component: UserReservationsComponent },
-          { path: '', redirectTo: 'reading-list', pathMatch: 'full' }
+          { path: '', redirectTo: 'owned-books', pathMatch: 'full' }
         ]
       },
       // Settings: /settings/profile and /settings/security. One route with a parameter, so

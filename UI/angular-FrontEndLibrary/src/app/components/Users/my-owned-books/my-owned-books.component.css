@@ -1,0 +1,281 @@
+/* Same table, tags and ⋯ menu as Manage books (ob- = owned books) */
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---------- Header ---------- */
+.ob-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-4);
+  flex-wrap: wrap;
+}
+
+/* Takes the free space, so its rule runs up to the button */
+.ob-toolbar__title {
+  flex: 1 1 240px;
+  margin: 0;
+}
+
+.ob-count {
+  font-size: 1rem;
+}
+
+.ob-add {
+  white-space: nowrap;
+}
+
+.ob-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #d99a93;
+  border-radius: var(--nn-radius-sm);
+  background-color: #f8e4e1;
+  color: var(--nn-accent);
+}
+
+.ob-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-4) 0;
+  margin: 0;
+}
+
+.ob-state p {
+  margin: 0;
+}
+
+/* ---------- Table ---------- */
+/* position: relative keeps the visually-hidden "Actions" header inside the
+   scroll area, or it makes the page scroll sideways on phones */
+.ob-table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+
+.ob-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ob-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+  background-color: var(--nn-surface-sunken);
+  padding: 10px 12px;
+}
+
+.ob-table td {
+  padding: 10px 12px;
+  border-top: 1px solid var(--nn-border);
+  vertical-align: middle;
+}
+
+.ob-book {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ob-cover {
+  width: 36px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.ob-title {
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.ob-author {
+  color: var(--nn-ink);
+}
+
+.ob-detail {
+  font-size: 0.85rem;
+  color: var(--nn-ink-muted);
+  margin-top: 3px;
+}
+
+.ob-detail.is-overdue {
+  color: var(--nn-accent);
+}
+
+.ob-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ---------- ⋯ menu ---------- */
+/* A popover in the top layer; placeMenu() sets top/bottom and right.
+   inset and margin undo the browser's default centring of popovers. */
+.ob-menu__list {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 6px;
+}
+
+/* display only while open, or it would override the popover's hidden state */
+.ob-menu__list:popover-open {
+  display: flex;
+}
+
+.ob-menu__list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--nn-radius-sm);
+  background: none;
+  color: var(--nn-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ob-menu__list button:hover {
+  background-color: var(--nn-surface-hover);
+}
+
+.ob-menu__list .is-danger {
+  color: var(--nn-accent);
+}
+
+/* ---------- History under a row ---------- */
+.ob-history-row td {
+  border-top: none;
+  padding-top: 0;
+}
+
+.ob-history {
+  margin-left: 50px; /* lines up with the title, past the cover */
+  padding: 10px 14px;
+  border-left: 2px solid var(--nn-gold);
+  background-color: var(--nn-surface-sunken);
+  border-radius: 0 var(--nn-radius-sm) var(--nn-radius-sm) 0;
+}
+
+.ob-history p {
+  margin: 0;
+}
+
+.ob-history__list {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ob-history__list li {
+  display: flex;
+  gap: var(--nn-space-3);
+}
+
+.ob-history__date {
+  flex: 0 0 96px;
+  color: var(--nn-ink-muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* ---------- Narrower screens: fold type/year into the book cell ---------- */
+.ob-meta-inline {
+  display: none;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .ob-col-meta {
+    display: none;
+  }
+
+  .ob-meta-inline {
+    display: block;
+  }
+}
+
+/* ---------- Phones: each row becomes a small card ---------- */
+@media (max-width: 640px) {
+  .ob-toolbar .ob-add {
+    width: 100%;
+  }
+
+  .ob-table,
+  .ob-table tbody,
+  .ob-table td {
+    display: block;
+  }
+
+  /* Hidden visually but still read out by screen readers */
+  .ob-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .ob-table tr.ob-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px var(--nn-space-3);
+    padding: var(--nn-space-3) 0;
+    border-top: 1px solid var(--nn-border);
+  }
+
+  .ob-table td {
+    padding: 0;
+    border: none;
+  }
+
+  .ob-table td.ob-col-meta {
+    display: none;
+  }
+
+  .ob-row td:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .ob-cell-status { grid-column: 1; grid-row: 2; }
+
+  .ob-cell-actions {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+  }
+
+  .ob-history-row {
+    display: block;
+    padding-bottom: var(--nn-space-3);
+  }
+
+  .ob-history {
+    margin-left: 0;
+  }
+
+  .ob-history__list li {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ob-history__date {
+    flex-basis: auto;
+  }
+}
