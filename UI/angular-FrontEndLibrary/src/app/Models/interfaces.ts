@@ -165,16 +165,15 @@ export interface AdminBook {
 // Must match the backend's CatalogueSort names. The API matches names in any case.
 export type CatalogueSort = 'titleAsc' | 'titleDesc' | 'authorAsc' | 'yearDesc' | 'yearAsc';
 
-// The statuses you can filter by: BookStatusEnum names, minus Returned and Added
-// (the API rejects those). Sent as names, so the URL stays readable.
-export type CatalogueStatus = 'available' | 'checkedOut' | 'overdue' | 'reserved' | 'lost' | 'removed';
+// The statuses Manage books filters by: BookStatusEnum names. Available is for
+// physical books, Ready / NoFile for e-books. Sent as names, so the URL stays readable.
+export type CatalogueStatus = 'available' | 'checkedOut' | 'overdue' | 'ready' | 'noFile' | 'lost' | 'removed';
 
 export interface CatalogueQuery {
   q?: string;
   genre?: GenreEnums;
   bookType?: BookTypeEnums;
   status?: CatalogueStatus;
-  needsAttention?: boolean;
   sort?: CatalogueSort;
   page?: number;
   pageSize?: number;

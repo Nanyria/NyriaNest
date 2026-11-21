@@ -57,7 +57,6 @@ function readQuery(p: ParamMap): CatalogueQuery {
     genre: num('genre'),
     bookType: num('bookType'),
     status: (p.get('status') as CatalogueStatus | null) ?? undefined,
-    needsAttention: p.get('needsAttention') === 'true' || undefined,
     sort: (p.get('sort') as CatalogueSort | null) ?? 'titleAsc',
     page: num('page') ?? 1,
     pageSize: PAGE_SIZE,
@@ -119,7 +118,7 @@ export class ManageBooksComponent {
 
   readonly hasFilters = computed(() => {
     const q = this.query();
-    return !!(q.q || q.genre !== undefined || q.bookType !== undefined || q.status || q.needsAttention);
+    return !!(q.q || q.genre !== undefined || q.bookType !== undefined || q.status);
   });
 
   // Shown above the list when an action (mark lost, delete, …) fails
@@ -159,12 +158,23 @@ export class ManageBooksComponent {
   retry() {
     this.refresh$.next();
   }
-  // Status badge text. Overdue isn't a stored status: it's a checked-out book past its due date.
+  // The status shown in the pill, matching the Status filter. A taken-down book
+  // is Lost/Removed whatever else is true; an e-book is Ready or NoFile (it isn't
+  // lent); a physical book is Available, Lent out or Overdue. Reservations aren't
+  // shown: owned books can't be reserved any more.
+  displayStatus(b: AdminBook): BookStatusEnum {
+    if (this.isWithdrawn(b)) return b.bookStatus;
+    if (this.isEbook(b)) return b.hasEpub ? BookStatusEnum.Ready : BookStatusEnum.NoFile;
+    if (b.borrowerName) return b.isOverdue ? BookStatusEnum.Overdue : BookStatusEnum.CheckedOut;
+    return BookStatusEnum.Available;
+  }
+
   statusLabel(b: AdminBook): string {
-    switch (b.bookStatus) {
-      // Someone's own book is lent by its owner, as on the Library page
-      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'Overdue' : b.ownerId ? 'Lent out' : 'Checked out';
-      case BookStatusEnum.Reserved: return 'Reserved';
+    switch (this.displayStatus(b)) {
+      case BookStatusEnum.CheckedOut: return 'Lent out';
+      case BookStatusEnum.Overdue: return 'Overdue';
+      case BookStatusEnum.Ready: return 'Ready';
+      case BookStatusEnum.NoFile: return 'No file';
       case BookStatusEnum.Lost: return 'Lost';
       case BookStatusEnum.Removed: return 'Removed';
       default: return 'Available';
@@ -172,34 +182,32 @@ export class ManageBooksComponent {
   }
 
   statusClass(b: AdminBook): string {
-    switch (b.bookStatus) {
-      case BookStatusEnum.CheckedOut: return b.isOverdue ? 'nn-tag--overdue' : 'nn-tag--checked-out';
-      case BookStatusEnum.Reserved: return 'nn-tag--reserved';
+    switch (this.displayStatus(b)) {
+      case BookStatusEnum.CheckedOut: return 'nn-tag--checked-out';
+      case BookStatusEnum.Overdue: return 'nn-tag--overdue';
+      case BookStatusEnum.NoFile: return 'nn-tag--reserved'; // amber: needs an admin
       case BookStatusEnum.Lost:
       case BookStatusEnum.Removed: return 'nn-tag--withdrawn';
-      default: return 'nn-tag--available';
+      default: return 'nn-tag--available'; // Available and Ready
     }
   }
 
-  // The small line under the badge: who has it, who's next, or the admin's note
+  // The small line under the pill: the admin's note, who has it, or the file
   statusDetail(b: AdminBook): string {
-    const date = (s?: string | null) =>
-      s ? new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-
-    if (b.borrowerName) {
-      if (b.isOverdue && b.dueDate) {
-        const days = Math.ceil((Date.now() - new Date(b.dueDate).getTime()) / 86_400_000);
-        return `${b.borrowerName} · ${days} day${days === 1 ? '' : 's'} overdue`;
-      }
-      return `${b.borrowerName} · due ${date(b.dueDate)}`;
+    if (this.isWithdrawn(b)) {
+      const lent = b.borrowerName ? `Still lent to ${b.borrowerName}` : '';
+      return [b.adminStatusNotes, lent].filter(Boolean).join(' · ');
     }
-    // The date is an estimate of when the book reaches them, not a hold expiry
-    if (b.nextInLineName) {
-      return b.expectedDate
-        ? `Next in line: ${b.nextInLineName} · expected ${date(b.expectedDate)}`
-        : `Next in line: ${b.nextInLineName}`;
+    if (this.isEbook(b)) return b.hasEpub ? 'EPUB attached' : 'Upload an EPUB';
+    if (!b.borrowerName) return '';
+    if (b.isOverdue && b.dueDate) {
+      const days = Math.ceil((Date.now() - new Date(b.dueDate).getTime()) / 86_400_000);
+      return `${b.borrowerName} · ${days} day${days === 1 ? '' : 's'} overdue`;
     }
-    return b.adminStatusNotes ?? '';
+    const due = b.dueDate
+      ? new Date(b.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      : '';
+    return due ? `${b.borrowerName} · due ${due}` : b.borrowerName;
   }
 
   isEbook(b: AdminBook) {

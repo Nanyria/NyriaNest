@@ -133,11 +133,6 @@
   margin: 0;
 }
 
-.mb-attention {
-  gap: 8px;
-  flex-shrink: 0;
-}
-
 .mb-clear {
   align-self: flex-start;
 }
@@ -266,17 +261,6 @@
   color: var(--nn-accent);
 }
 
-.mb-file-ok {
-  color: #2e5d3f;
-  white-space: nowrap;
-}
-
-.mb-file-missing {
-  color: var(--nn-accent);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
 .mb-actions {
   display: flex;
   gap: 6px;
@@ -351,7 +335,7 @@
 }
 
 /* ---------- Phones: each row becomes a small card ----------
-   Book on top; status and file below it; actions on the right */
+   Book on top; status below it, actions on the right */
 @media (max-width: 640px) {
   .mb-table,
   .mb-table tbody,
@@ -391,15 +375,10 @@
   }
 
   .mb-cell-status { grid-column: 1; grid-row: 2; }
-  .mb-cell-file   { grid-column: 1; grid-row: 3; }
 
   .mb-cell-actions {
     grid-column: 2;
-    grid-row: 2 / span 2;
+    grid-row: 2;
     align-self: center;
-  }
-
-  .mb-cell-file .nn-muted {
-    display: none; /* "N/A" for non-e-books adds nothing on a card */
   }
 }

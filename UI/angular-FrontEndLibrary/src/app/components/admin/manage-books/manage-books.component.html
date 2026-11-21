@@ -62,24 +62,14 @@
       <select class="nn-select nn-select--plain" (change)="setFilter({ status: $any($event.target).value || null })">
         <option value="" [selected]="!query().status">All statuses</option>
         <option value="available" [selected]="query().status === 'available'">Available</option>
-        <option value="checkedOut" [selected]="query().status === 'checkedOut'">Checked out</option>
+        <option value="checkedOut" [selected]="query().status === 'checkedOut'">Lent out</option>
         <option value="overdue" [selected]="query().status === 'overdue'">Overdue</option>
-        <option value="reserved" [selected]="query().status === 'reserved'">Reserved</option>
+        <option value="ready" [selected]="query().status === 'ready'">Ready (e-book)</option>
+        <option value="noFile" [selected]="query().status === 'noFile'">No file (e-book)</option>
         <option value="lost" [selected]="query().status === 'lost'">Lost</option>
         <option value="removed" [selected]="query().status === 'removed'">Removed</option>
       </select>
     </label>
-
-    <!-- E-books with no EPUB file attached -->
-    <button
-      type="button"
-      class="nn-chip mb-attention"
-      [class.is-active]="query().needsAttention"
-      [attr.aria-pressed]="!!query().needsAttention"
-      (click)="setFilter({ needsAttention: query().needsAttention ? null : true })"
-    >
-      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Needs attention
-    </button>
   </div>
 
   @if (hasFilters()) {
@@ -148,7 +138,6 @@
                 <th scope="col" class="mb-col-meta">Genre / Language</th>
                 <th scope="col" class="mb-col-meta">Type / Year</th>
                 <th scope="col">Status</th>
-                <th scope="col">File</th>
                 <th scope="col"><span class="visually-hidden">Actions</span></th>
               </tr>
             </thead>
@@ -190,18 +179,14 @@
                     <div class="nn-muted">{{ b.publicationYear }}</div>
                   </td>
                   <td class="mb-cell-status">
-                    <span class="nn-tag" [class]="statusClass(b)">{{ statusLabel(b) }}</span>
+                    <span class="nn-tag" [class]="statusClass(b)">
+                      @if (displayStatus(b) === Status.NoFile) {
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                      }
+                      {{ statusLabel(b) }}
+                    </span>
                     @if (statusDetail(b); as detail) {
-                      <div class="mb-detail" [class.is-overdue]="b.isOverdue">{{ detail }}</div>
-                    }
-                  </td>
-                  <td class="mb-cell-file">
-                    @if (!isEbook(b)) {
-                      <span class="nn-muted">N/A</span>
-                    } @else if (b.hasEpub) {
-                      <span class="mb-file-ok"><i class="bi bi-check2" aria-hidden="true"></i> EPUB attached</span>
-                    } @else {
-                      <span class="mb-file-missing"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> No EPUB file</span>
+                      <div class="mb-detail" [class.is-overdue]="displayStatus(b) === Status.Overdue">{{ detail }}</div>
                     }
                   </td>
                   <td class="mb-cell-actions">

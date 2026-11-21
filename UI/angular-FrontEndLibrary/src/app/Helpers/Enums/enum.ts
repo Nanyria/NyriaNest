@@ -8,6 +8,8 @@ export enum BookStatusEnum {
     Added,
     Lost,     // set by an admin
     Removed,  // set by an admin
+    Ready,    // e-book with an EPUB; like Overdue, worked out and never stored
+    NoFile,   // e-book without an EPUB; worked out too
 }
 
 export const BookStatusDisplayNames: { [key in BookStatusEnum]: string } = {
@@ -19,6 +21,8 @@ export const BookStatusDisplayNames: { [key in BookStatusEnum]: string } = {
     [BookStatusEnum.Added]: 'Added',
     [BookStatusEnum.Lost]: 'Lost',
     [BookStatusEnum.Removed]: 'Removed',
+    [BookStatusEnum.Ready]: 'Ready',
+    [BookStatusEnum.NoFile]: 'No file',
 };
 export enum GenreEnums {
     None,
