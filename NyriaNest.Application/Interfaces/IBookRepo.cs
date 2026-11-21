@@ -8,6 +8,8 @@ namespace NyriaNest.Application.Interfaces
     public interface IBookRepo
     {
         Task<Book?> GetByIdAsync(int bookId);
+        /// <summary>Like GetByIdAsync, but null when the user can't see the book (BookVisibility).</summary>
+        Task<Book?> GetVisibleByIdAsync(int bookId, string? userId);
         /// <summary>The book's status history, newest first, with the book loaded. Read-only.</summary>
         Task<List<StatusHistoryItem>> GetStatusHistoryAsync(int bookId);
         /// <summary>The book's reservation queue, oldest first, with each reader's name. Read-only.</summary>

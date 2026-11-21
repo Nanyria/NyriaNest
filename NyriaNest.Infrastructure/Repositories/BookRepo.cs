@@ -5,6 +5,7 @@ using NyriaNest.Application.DTOs.History;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
+using NyriaNest.Domain.Rules;
 using NyriaNest.Infrastructure.Data;
 
 namespace NyriaNest.Infrastructure.Repositories
@@ -33,15 +34,22 @@ namespace NyriaNest.Infrastructure.Repositories
 
         public async Task<Book?> GetByIdAsync(int id)
         {
-            return await _db.Books
-                .Include(b => b.Reviews)
-                    .ThenInclude(r => r.User)
-                .Include(b => b.Reviews)
-                    .ThenInclude(r => r.RatingItem)
-                .Include(b => b.CheckedOutBy)
-                .Include(b => b.Reservations)
+            return await WithDetails(_db.Books).FirstOrDefaultAsync(b => b.BookId == id);
+        }
+
+        public async Task<Book?> GetVisibleByIdAsync(int id, string? userId)
+        {
+            return await WithDetails(_db.Books.Where(BookVisibility.VisibleTo(userId)))
                 .FirstOrDefaultAsync(b => b.BookId == id);
         }
+
+        private static IQueryable<Book> WithDetails(IQueryable<Book> books) => books
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.User)
+            .Include(b => b.Reviews)
+                .ThenInclude(r => r.RatingItem)
+            .Include(b => b.CheckedOutBy)
+            .Include(b => b.Reservations);
 
         public async Task<List<Book>> GetOwnedByAsync(string ownerId)
         {
@@ -90,8 +98,8 @@ namespace NyriaNest.Infrastructure.Repositories
         {
             return await _db.Books
                 .AsNoTracking()
-                // Books an admin has marked Lost or Removed aren't part of the public catalogue
-                .Where(b => b.AdminStatus == null)
+                // The shared library and my own books, none marked Lost or Removed
+                .Where(BookVisibility.VisibleTo(userId))
                 .OrderBy(b => b.Title)
                 .Select(b => new LibraryBookDto
                 {
@@ -108,6 +116,7 @@ namespace NyriaNest.Infrastructure.Repositories
                     BookType = b.BookType,
                     AvailabilityDate = b.AvailabilityDate,
                     DateAdded = b.DateAdded,
+                    IsMine = userId != null && b.OwnerId == userId,
 
                     ReviewCount = b.Reviews.Count,
                     AverageRating = b.Reviews

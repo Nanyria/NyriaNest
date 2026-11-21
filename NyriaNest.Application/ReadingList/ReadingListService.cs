@@ -70,7 +70,8 @@ namespace NyriaNest.Application.ReadingList
             };
 
             var user = await _userRepo.GetByIdAsync<User>(userId);
-            var book = await _bookRepo.GetByIdAsync(bookId);
+            // A book you can't see looks missing (#83)
+            var book = await _bookRepo.GetVisibleByIdAsync(bookId, userId);
 
             if (user == null || book == null)
             {

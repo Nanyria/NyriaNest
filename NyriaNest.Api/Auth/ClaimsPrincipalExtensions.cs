@@ -12,5 +12,9 @@ namespace NyriaNest.Api.Auth
         public static string GetUserId(this ClaimsPrincipal user) =>
             user.FindFirst(TokenService.UserIdClaim)?.Value
             ?? throw new InvalidOperationException("The token has no userId claim.");
+
+        /// <summary>The logged-in user's id, or null for a visitor. For endpoints without [Authorize].</summary>
+        public static string? FindUserId(this ClaimsPrincipal user) =>
+            user.FindFirst(TokenService.UserIdClaim)?.Value;
     }
 }

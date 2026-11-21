@@ -34,6 +34,7 @@ namespace NyriaNest.Application.DTOs.Books
         public int ReservationCount { get; set; }
 
         // Only about the logged-in user (false/null when not logged in)
+        public bool IsMine { get; set; }
         public bool IsCheckedOutByMe { get; set; }
         public bool IsReservedByMe { get; set; }
         public DateTime? MyReservationAvailableDate { get; set; }
