@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, HostListener, inject } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -15,6 +15,8 @@ import { HasUnsavedChanges } from '../../../Services/unsaved-changes.guard';
 import { ToastService } from '../../../Services/toast.service';
 import { ConfirmService } from '../../../Services/confirm.service';
 import { MyBooksService } from '../../../Services/my-books.service';
+import { AuthService } from '../../../Services/auth.service';
+import { OTHER_REASON, REASON_MAX_LENGTH, REASON_PRESETS } from '../../layout/reason-dialog/reason-dialog.component';
 import { EditBookDto, SlimBookDto } from '../../../Models/interfaces';
 import {
   GenreEnums,
@@ -77,6 +79,9 @@ const FIELDS: FieldRef[] = [
   { controls: ['genre'], focus: '#genre' },
   { controls: ['language'], focus: '#language' },
   { controls: ['epubFile'], focus: '.add-book__files .add-book__file-input' },
+  // Only required when an admin edits someone else's book
+  { controls: ['reasonPreset'], focus: '#reasonPreset' },
+  { controls: ['reasonOther'], focus: '#reasonOther' },
 ];
 
 // One page for adding and editing, for own books and admins alike; the route decides:
@@ -131,6 +136,14 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
 
   coverPreviewFailed = false;
 
+  // An admin editing someone else's book gives a reason; the owner is told it (#83)
+  needsReason = false;
+  ownerName: string | null = null;
+  readonly reasonPresets = REASON_PRESETS.edit;
+  readonly otherReason = OTHER_REASON;
+  readonly reasonMaxLength = REASON_MAX_LENGTH;
+  private myId = inject(AuthService).getUserId();
+
   constructor(
     private fb: FormBuilder,
     private bookService: BookService,
@@ -164,6 +177,21 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
       epubFile: [null as File | null],
       // Edit mode: the admin removed the stored EPUB; it's deleted on save
       removeStoredEpub: [false],
+      // Someone else's book: a preset, or "Other" and their own words. No
+      // validators until the book is loaded and turns out to need a reason.
+      reasonPreset: [''],
+      reasonOther: ['', Validators.maxLength(REASON_MAX_LENGTH)],
+    });
+
+    // "Other" needs words of its own; whitespace doesn't count
+    this.addBookForm.get('reasonPreset')!.valueChanges.subscribe((preset) => {
+      const other = this.addBookForm.get('reasonOther')!;
+      other.setValidators(
+        preset === OTHER_REASON
+          ? [Validators.maxLength(REASON_MAX_LENGTH), (c) => (c.value?.trim() ? null : { required: true })]
+          : Validators.maxLength(REASON_MAX_LENGTH),
+      );
+      other.updateValueAndValidity({ emitEvent: false });
     });
 
     this.addBookForm.get('bookType')!.valueChanges.subscribe((type) => this.applyEpubRule(type));
@@ -262,7 +290,19 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
       coverImagePath: book.coverImagePath ?? '',
       epubFile: null,
       removeStoredEpub: false,
+      reasonPreset: '',
+      reasonOther: '',
     });
+
+    // Same rule as the API: an admin on someone else's book (not a shared one, not their own)
+    this.needsReason = this.area === 'admin' && !!book.ownerId && book.ownerId !== this.myId;
+    this.ownerName = book.ownerName ?? null;
+    if (this.needsReason) {
+      const preset = this.addBookForm.get('reasonPreset')!;
+      preset.setValidators(Validators.required);
+      preset.updateValueAndValidity();
+    }
+
     this.hasStoredEpub = book.hasEpub;
     this.storedEpubName = book.epubFileName ?? null;
     this.storedEpubSize = book.epubFileSize ?? null;
@@ -308,6 +348,25 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     return this.hasStoredEpub && this.bookType !== null && !this.isEbook;
   }
 
+  // Something about the book itself changed (details or EPUB). The reason only
+  // explains a change, so picking one alone leaves nothing to save: otherwise the
+  // owner would be told about an edit that changed nothing.
+  get detailsChanged(): boolean {
+    return Object.entries(this.addBookForm.controls).some(
+      ([name, control]) => name !== 'reasonPreset' && name !== 'reasonOther' && control.dirty,
+    );
+  }
+
+  get isOtherReason(): boolean {
+    return this.addBookForm.get('reasonPreset')!.value === OTHER_REASON;
+  }
+
+  // What's sent as the reason: the preset, or the admin's own words for "Other"
+  get reason(): string {
+    const value = this.addBookForm.value;
+    return this.isOtherReason ? (value.reasonOther ?? '').trim() : value.reasonPreset;
+  }
+
   get coverUrl(): string {
     return (this.addBookForm.get('coverImagePath')!.value ?? '').trim();
   }
@@ -332,27 +391,28 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // Next to the save button. The button stays clickable (except when nothing
   // changed in edit mode), so this only sums up what a save attempt found.
   get saveHint(): string {
-    if (this.isEdit && this.addBookForm.pristine) return 'No changes to save yet.';
+    if (this.isEdit && !this.detailsChanged) return 'No changes to save yet.';
     if (!this.hasBlockingErrors) return '';
     const count = this.invalidFields.length;
     return count === 1 ? '1 field needs attention.' : `${count} fields need attention.`;
   }
 
   // Picking a format preselects its first type.
-  // patchValue() doesn't mark the form as changed, so these do it themselves.
+  // patchValue() doesn't mark anything as changed, so these do it themselves.
+  // They mark the control (which marks the form too), so detailsChanged sees it.
   setFormat(format: BookFormat): void {
     if (this.format === format) return;
     this.addBookForm.patchValue({
       format,
       bookType: this.firstType(format),
     });
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('bookType')!.markAsDirty();
   }
 
   setBookType(type: BookTypeEnums): void {
     if (this.bookType === type) return;
     this.addBookForm.patchValue({ bookType: type });
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('bookType')!.markAsDirty();
   }
 
   showError(name: string): boolean {
@@ -403,7 +463,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // Edit mode: nothing is deleted until the admin saves
   setRemoveStoredEpub(remove: boolean): void {
     this.addBookForm.patchValue({ removeStoredEpub: remove });
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('removeStoredEpub')!.markAsDirty();
   }
 
   private takeEpub(file: File | null): void {
@@ -417,7 +477,7 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
     }
     this.clearEpubError();
     this.addBookForm.get('epubFile')!.setValue(file);
-    this.addBookForm.markAsDirty();
+    this.addBookForm.get('epubFile')!.markAsDirty();
   }
 
   private clearEpubError(): void {
@@ -499,7 +559,9 @@ export class AddBookComponent implements OnInit, HasUnsavedChanges {
   // file. If only the file fails, the details stay saved and the page says so.
   private saveChanges(id: string, book: SlimBookDto): void {
     const request: Observable<unknown> =
-      this.area === 'my' ? this.myBooks.update(Number(id), book) : this.bookService.updateBook(id, book);
+      this.area === 'my'
+        ? this.myBooks.update(Number(id), book)
+        : this.bookService.updateBook(id, book, this.needsReason ? this.reason : undefined);
     request.subscribe({
       next: () => {
         // The API drops the file when an e-book becomes another type

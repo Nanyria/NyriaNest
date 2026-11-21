@@ -8,7 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 
 export type ReasonKind = 'edit' | 'delete' | 'removed' | 'lost' | 'restore';
@@ -68,6 +68,9 @@ export class ReasonDialogComponent {
     nonNullable: true,
     validators: [Validators.maxLength(REASON_MAX_LENGTH)],
   });
+  // Bound with [formGroup] so (ngSubmit) fires and the browser's own submit
+  // (which would reload the page) is stopped
+  readonly form = new FormGroup({ preset: this.preset, otherText: this.otherText });
 
   constructor() {
     afterNextRender(() => this.dialog().nativeElement.showModal());

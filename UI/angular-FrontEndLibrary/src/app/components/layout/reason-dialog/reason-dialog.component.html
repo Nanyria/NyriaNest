@@ -7,7 +7,7 @@
   (close)="onNativeClose()"
   (click)="onClick($event)"
 >
-  <form class="confirm__body" novalidate (ngSubmit)="save()">
+  <form class="confirm__body" novalidate [formGroup]="form" (ngSubmit)="save()">
     <span class="confirm__seal" [class.is-danger]="o.danger" aria-hidden="true">
       <i class="bi" [class]="'bi-' + o.icon"></i>
     </span>
