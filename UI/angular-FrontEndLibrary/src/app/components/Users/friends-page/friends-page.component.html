@@ -20,6 +20,7 @@
       <div class="nn-field">
         <i class="bi bi-search" aria-hidden="true"></i>
         <input
+          #searchInput
           class="nn-input"
           type="search"
           placeholder="Search for friends…"
@@ -82,6 +83,17 @@
                           (click)="accept(row.friendship!)"
                         >
                           Accept
+                        </button>
+                      }
+                      @case ('stranger') {
+                        <button
+                          type="button"
+                          class="nn-btn nn-btn--primary friends__result-btn"
+                          [disabled]="busyAdd === row.key"
+                          [attr.aria-label]="'Send friend request to ' + row.userName"
+                          (click)="addFriend(row, searchInput)"
+                        >
+                          <i class="bi bi-person-plus" aria-hidden="true"></i> Add
                         </button>
                       }
                     }

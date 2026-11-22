@@ -105,6 +105,32 @@ export class FriendsPageComponent {
     if (!wrapper.contains(event.relatedTarget as Node | null)) this.closeSearch();
   }
 
+  // ---------- Add: send a friend request to someone new from the search results ----------
+  // The user waiting for the server, so the button can't be clicked twice
+  busyAdd: string | null = null;
+
+  addFriend(row: SearchRow, searchInput: HTMLInputElement): void {
+    // The button is disabled now and goes away after the reload: move the focus back to the
+    // search first, so the dropdown stays open and Esc / clicking outside still close it
+    searchInput.focus();
+    this.busyAdd = row.key;
+    this.friendsService.sendRequest(row.userName).subscribe({
+      next: () => {
+        this.toast.success(`Friend request sent to ${row.userName}.`);
+        // Once the overview has the request, the person shows as "Request sent" (from the overview),
+        // so they leave the API results at that same moment: no gap where the row disappears
+        this.load(() => {
+          this.strangers = this.strangers.filter((u) => u.userId !== row.key);
+          this.busyAdd = null;
+        });
+      },
+      error: () => {
+        this.busyAdd = null;
+        this.toast.error(`Couldn't send a friend request to ${row.userName}. Please try again.`);
+      },
+    });
+  }
+
   // "Your friends" narrowed by the search; all of them when the search is empty
   get shownFriends(): FriendshipItem[] {
     const friends = this.overview?.friends ?? [];
@@ -144,12 +170,14 @@ export class FriendsPageComponent {
   }
 
   // Only the first load shows "Loading…"; reloads after a change keep the page in place
-  load(): void {
+  // afterLoad: runs once the new overview is in (e.g. to update the search results at the same moment)
+  load(afterLoad?: () => void): void {
     if (!this.overview) this.state = 'loading';
     this.friendsService.getOverview().subscribe({
       next: (response) => {
         this.overview = response.result;
         this.state = 'ready';
+        afterLoad?.();
       },
       error: () => (this.state = 'error'),
     });
