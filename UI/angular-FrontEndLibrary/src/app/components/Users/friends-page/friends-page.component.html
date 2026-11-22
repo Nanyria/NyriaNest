@@ -1,10 +1,18 @@
+<!-- Bookshelves with ivy at the window's edges, behind the page; only on wide screens -->
+<img class="friends__deco friends__deco--left" src="assets/images/friend-page/background-images/LeftBookshelf.webp" alt="" aria-hidden="true" decoding="async" />
+<img class="friends__deco friends__deco--right" src="assets/images/friend-page/background-images/RightBookshelf.webp" alt="" aria-hidden="true" decoding="async" />
+
 <section class="friends">
-  <header class="friends__header">
-    <i class="bi bi-people friends__icon" aria-hidden="true"></i>
-    <div class="friends__heading">
-      <h1 class="friends__title">Friends</h1>
-      <p class="friends__subtitle">Who you share your books with.</p>
+  <!-- Same header as Library, Add book and Manage books: compass, breadcrumb, title, centred divider -->
+  <header class="nn-admin-header friends__header">
+    <span class="nn-admin-header__compass" aria-hidden="true"></span>
+    <div class="nn-admin-header__heading">
+      <nav class="nn-eyebrow nn-admin-header__breadcrumb" aria-label="Breadcrumb">
+        <a routerLink="/home">Home</a> / Friends
+      </nav>
+      <h1 class="nn-admin-header__title">Friends</h1>
     </div>
+    <span class="nn-admin-header__divider" aria-hidden="true"></span>
   </header>
 
   @switch (state) {
@@ -20,15 +28,36 @@
     @default {
       @let o = overview!;
 
-      <!-- How many friends each of my sharing settings is on for, out of the limit (ADR 0005) -->
-      <ul class="friends__limits" aria-label="Sharing limits">
-        <ng-container
-          *ngTemplateOutlet="limitCard; context: { label: 'Physical library', icon: 'bi-stack', used: o.physicalLibraryUsed, limit: o.physicalLibraryLimit, who: sharingWith('physical-library') }"
-        ></ng-container>
-        <ng-container
-          *ngTemplateOutlet="limitCard; context: { label: 'E-books', icon: 'bi-tablet', used: o.ebooksUsed, limit: o.ebooksLimit, who: sharingWith('ebooks') }"
-        ></ng-container>
-      </ul>
+      <!-- Top row: the two sharing cards on the left half, Add friend on the right half -->
+      <div class="friends__top">
+        <!-- How many friends each of my sharing settings is on for, out of the limit (ADR 0005) -->
+        <ul class="friends__limits" aria-label="Sharing limits">
+          <ng-container
+            *ngTemplateOutlet="limitCard; context: { label: 'Physical library', icon: 'bi-stack', used: o.physicalLibraryUsed, limit: o.physicalLibraryLimit, who: sharingWith('physical-library') }"
+          ></ng-container>
+          <ng-container
+            *ngTemplateOutlet="limitCard; context: { label: 'E-books', icon: 'bi-tablet', used: o.ebooksUsed, limit: o.ebooksLimit, who: sharingWith('ebooks') }"
+          ></ng-container>
+        </ul>
+
+        <!-- Find someone by user name and send a request. Placeholder: the search works from 7c.1 (#84) -->
+        <section class="friends__find nn-panel" aria-labelledby="find-friend-h">
+          <h2 id="find-friend-h" class="friends__find-title">
+            <i class="bi bi-person-plus" aria-hidden="true"></i>Add friend
+          </h2>
+          <div class="nn-field">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input
+              class="nn-input"
+              type="search"
+              placeholder="Search by user name…"
+              aria-label="Search by user name"
+              autocomplete="off"
+            />
+          </div>
+          <p class="friends__find-hint">Type at least 2 letters of their user name.</p>
+        </section>
+      </div>
 
       <ng-template #limitCard let-label="label" let-icon="icon" let-used="used" let-limit="limit" let-who="who">
         <li class="friends__limit nn-panel">

@@ -1,48 +1,68 @@
-/* Same header and type as the Notifications page; wider for the two boxes per friend.
-   The two sections are the theme's framed panels (nn-panel--framed), titled like
-   Manage books (nn-section-title with its rule). */
+/* Reaches over the shell's side padding (and adds it back inside), so anything
+   sticking out is clipped at the edge of the main area instead of making the page
+   scroll sideways, as on Library and the admin pages. The bookshelves and the ⋮
+   menus are fixed to the window, so the clipping doesn't reach them. */
+:host {
+  display: block;
+  margin-inline: calc(-1 * var(--nn-space-6));
+  padding-inline: var(--nn-space-6);
+  overflow-x: clip;
+}
+
+@media (max-width: 991px) {
+  :host {
+    margin-inline: calc(-1 * var(--nn-space-4));
+    padding-inline: var(--nn-space-4);
+  }
+}
+
+/* As wide as the admin pages (Manage books, Add book: .admin-content, 1360px with
+   16px at the sides). The two sections are the theme's framed panels
+   (nn-panel--framed), titled like Manage books (nn-section-title with its rule). */
 .friends {
-  max-width: 1040px;
+  position: relative;
+  z-index: 1; /* above the bookshelves */
+  max-width: 1360px;
   margin: 0 auto;
+  padding-inline: var(--nn-space-4);
   padding-top: var(--nn-space-2);
   display: flex;
   flex-direction: column;
   gap: var(--nn-space-5);
 }
 
-/* ---------- Header: icon, title and subtitle ---------- */
-.friends__header {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: var(--nn-space-4);
+/* ---------- Bookshelves at the window's edges ----------
+   Fixed down to the bottom of the window, so they stay put while the page scrolls.
+   The ivy at the top of the artwork is cut off at the image's edge, so they start
+   behind the topbar (which sits above them, z-index 20): the cut edge is hidden
+   by the bar and the ivy seems to grow out from under it.
+   Behind the page, so where the content is wider than the gap beside it, only the
+   parts reaching past the panels show (like the leaves on Manage books). Hidden on
+   narrower screens, where they'd hardly show. */
+.friends__deco {
+  --deco-top: 24px; /* inside the topbar's height, below its 8px margin */
+  display: none;
+  position: fixed;
+  top: var(--deco-top);
+  z-index: 0;
+  height: calc(100vh - var(--deco-top));
+  width: auto;
+  pointer-events: none;
+  user-select: none;
 }
 
-.friends__icon {
-  margin-top: 4px;
-  font-size: 2rem;
-  line-height: 1;
-  color: var(--nn-gold);
+.friends__deco--left {
+  left: 0;
 }
 
-.friends__heading {
-  flex: 1;
-  min-width: 0;
+.friends__deco--right {
+  right: 0;
 }
 
-.friends__title {
-  margin: 0;
-  font-family: var(--nn-font-display);
-  font-size: 2.2rem;
-  font-weight: 600;
-  line-height: 1.1;
-  color: var(--nn-ink-strong);
-}
-
-.friends__subtitle {
-  margin: var(--nn-space-1) 0 0;
-  font-size: 1.05rem;
-  color: var(--nn-ink-muted);
+@media (min-width: 1340px) {
+  .friends__deco {
+    display: block;
+  }
 }
 
 /* ---------- Loading and error ---------- */
@@ -55,6 +75,13 @@
   margin: 0 0 var(--nn-space-3);
 }
 
+/* ---------- Top row: the two limit cards (left half) and Add friend (right half) ---------- */
+.friends__top {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nn-space-4);
+}
+
 /* ---------- The two limit cards: "Shared with 2 friends", a bar, faces, "2 / 10" ---------- */
 .friends__limits {
   list-style: none;
@@ -65,11 +92,14 @@
   gap: var(--nn-space-4);
 }
 
+/* A quarter of the width each: icon and text on top, faces and "1 / 100" below */
 .friends__limit {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--nn-space-4);
-  padding: var(--nn-space-4) var(--nn-space-5);
+  column-gap: var(--nn-space-3);
+  row-gap: var(--nn-space-3);
+  padding: var(--nn-space-4);
 }
 
 /* The icon in a soft gold circle */
@@ -77,12 +107,12 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background-color: color-mix(in srgb, var(--nn-gold-soft) 45%, transparent);
   color: var(--nn-gold-ink);
-  font-size: 1.5rem;
+  font-size: 1.3rem;
 }
 
 .friends__limit-body {
@@ -100,7 +130,7 @@
 
 .friends__limit-text {
   font-family: var(--nn-font-display);
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 600;
   line-height: 1.2;
   color: var(--nn-ink-strong);
@@ -122,13 +152,14 @@
   background-color: var(--nn-primary);
 }
 
-/* Faces of the friends shared with, overlapping, above "used / limit" */
+/* Under the icon and text, across the card: the faces of the friends shared with
+   (overlapping) on the left, "used / limit" on the right */
 .friends__limit-side {
-  flex-shrink: 0;
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--nn-space-2);
+  min-height: 32px;
 }
 
 .friends__faces {
@@ -136,8 +167,8 @@
 }
 
 .friends__face {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--nn-surface);
@@ -158,9 +189,39 @@
 }
 
 .friends__limit-count {
+  margin-left: auto; /* on the right, with or without faces */
   font-size: 1.05rem;
   white-space: nowrap;
   color: var(--nn-ink-strong);
+}
+
+/* ---------- Add friend: the search panel beside the limit cards ---------- */
+.friends__find {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-4) var(--nn-space-5);
+}
+
+.friends__find-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--nn-font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.friends__find-title .bi {
+  color: var(--nn-gold-ink);
+}
+
+.friends__find-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
 }
 
 /* ---------- Framed sections ---------- */
@@ -529,17 +590,21 @@ label.friends__row-label {
   cursor: progress;
 }
 
-/* ---------- Tablets: the limit cards stacked ---------- */
-@media (max-width: 860px) {
-  .friends__limits {
+/* ---------- Narrower screens: Add friend under the limit cards ---------- */
+@media (max-width: 1100px) {
+  .friends__top {
     grid-template-columns: 1fr;
   }
 }
 
 /* ---------- Phones ---------- */
 @media (max-width: 640px) {
-  .friends__title {
-    font-size: 1.8rem;
+  .friends__limits {
+    grid-template-columns: 1fr;
+  }
+
+  .friends__find {
+    padding: var(--nn-space-3) var(--nn-space-4);
   }
 
   .friends__limit {

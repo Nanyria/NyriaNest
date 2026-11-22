@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { FriendsService, SharingSetting } from '../../../Services/friends.service';
 import { FriendshipItem, FriendsOverview } from '../../../Models/interfaces';
@@ -17,7 +18,7 @@ import { ToastService } from '../../../Services/toast.service';
   templateUrl: './friends-page.component.html',
   styleUrls: ['./friends-page.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [DatePipe, NgTemplateOutlet],
+  imports: [DatePipe, NgTemplateOutlet, RouterLink],
 })
 export class FriendsPageComponent {
   overview: FriendsOverview | null = null;
