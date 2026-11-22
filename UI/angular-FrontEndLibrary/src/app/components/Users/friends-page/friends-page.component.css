@@ -1,17 +1,21 @@
-/* Same header and type as the Notifications page; a little wider for the two boxes per friend */
+/* Same header and type as the Notifications page; wider for the two boxes per friend.
+   The two sections are the theme's framed panels (nn-panel--framed), titled like
+   Manage books (nn-section-title with its rule). */
 .friends {
-  max-width: 920px;
+  max-width: 1040px;
   margin: 0 auto;
   padding-top: var(--nn-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-5);
 }
 
-/* ---------- Header: icon, title, subtitle and the limits line ---------- */
+/* ---------- Header: icon, title and subtitle ---------- */
 .friends__header {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--nn-space-4);
-  margin-bottom: var(--nn-space-5);
 }
 
 .friends__icon {
@@ -41,31 +45,6 @@
   color: var(--nn-ink-muted);
 }
 
-/* "Sharing e-books with 2 of 10 friends · physical books with 1 of 100" */
-.friends__limits {
-  margin: var(--nn-space-2) 0 0;
-  font-size: 0.9rem;
-  color: var(--nn-ink-muted);
-}
-
-.friends__limit {
-  white-space: nowrap;
-}
-
-.friends__limit .bi {
-  margin-right: 2px;
-  color: var(--nn-gold-ink);
-}
-
-.friends__limit strong {
-  font-weight: 600;
-  color: var(--nn-ink-strong);
-}
-
-.friends__limit-sep {
-  margin: 0 var(--nn-space-2);
-}
-
 /* ---------- Loading and error ---------- */
 .friends__state {
   padding: var(--nn-space-5) 0;
@@ -76,9 +55,123 @@
   margin: 0 0 var(--nn-space-3);
 }
 
-/* ---------- Sections: friends, and later the requests ---------- */
-.friends__section-title {
-  margin: 0 0 var(--nn-space-3);
+/* ---------- The two limit cards: "Shared with 2 friends", a bar, faces, "2 / 10" ---------- */
+.friends__limits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nn-space-4);
+}
+
+.friends__limit {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-4);
+  padding: var(--nn-space-4) var(--nn-space-5);
+}
+
+/* The icon in a soft gold circle */
+.friends__limit-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--nn-gold-soft) 45%, transparent);
+  color: var(--nn-gold-ink);
+  font-size: 1.5rem;
+}
+
+.friends__limit-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.friends__limit-label {
+  font-size: 0.95rem;
+  color: var(--nn-ink-muted);
+}
+
+.friends__limit-text {
+  font-family: var(--nn-font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--nn-ink-strong);
+}
+
+.friends__bar {
+  display: block;
+  height: 6px;
+  margin-top: var(--nn-space-2);
+  border-radius: var(--nn-radius-pill);
+  background-color: color-mix(in srgb, var(--nn-gold-soft) 55%, transparent);
+  overflow: hidden;
+}
+
+.friends__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--nn-primary);
+}
+
+/* Faces of the friends shared with, overlapping, above "used / limit" */
+.friends__limit-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--nn-space-2);
+}
+
+.friends__faces {
+  display: flex;
+}
+
+.friends__face {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--nn-surface);
+  box-shadow: 0 0 0 1px var(--nn-border-strong);
+}
+
+.friends__face + .friends__face {
+  margin-left: -10px;
+}
+
+.friends__face--more {
+  display: grid;
+  place-items: center;
+  background-color: var(--nn-surface-sunken);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nn-ink);
+}
+
+.friends__limit-count {
+  font-size: 1.05rem;
+  white-space: nowrap;
+  color: var(--nn-ink-strong);
+}
+
+/* ---------- Framed sections ---------- */
+.friends__panel {
+  padding: var(--nn-frame-pad); /* clears the frame (nn-panel--framed) */
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-4);
+}
+
+.friends__panel-title {
   font-family: var(--nn-font-display);
   font-size: 1.6rem;
   font-weight: 600;
@@ -92,14 +185,14 @@
 }
 
 .friends__empty {
-  margin: 0 0 var(--nn-space-5);
+  margin: 0;
   color: var(--nn-ink-muted);
 }
 
-/* ---------- Requests: received as cards, sent as a dashed line ---------- */
+/* ---------- Requests: received in a light box, sent as a dashed line ---------- */
 .friends__requests {
   list-style: none;
-  margin: 0 0 var(--nn-space-6);
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -111,7 +204,13 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--nn-space-3);
-  padding: var(--nn-space-3) var(--nn-space-5);
+  padding: var(--nn-space-3) var(--nn-space-4);
+  border-radius: var(--nn-radius);
+}
+
+.friends__request--received {
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 45%);
+  border: 1px solid var(--nn-border);
 }
 
 .friends__request-text {
@@ -135,7 +234,6 @@
 /* Sent: lighter than a received request, since there's nothing to answer */
 .friends__request--sent {
   border: 1px dashed var(--nn-border-strong);
-  border-radius: var(--nn-radius-lg);
   font-size: 0.95rem;
 }
 
@@ -169,26 +267,30 @@
   opacity: 0.6;
 }
 
-/* ---------- One card per friend ---------- */
+/* ---------- One card per friend, inside the framed panel ---------- */
 .friends__list {
   list-style: none;
-  margin: 0 0 var(--nn-space-5);
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--nn-space-3);
+  gap: var(--nn-space-4);
 }
 
 .friends__card {
-  padding: var(--nn-space-5);
+  padding: var(--nn-space-4) var(--nn-space-5) var(--nn-space-5);
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 30%);
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius-lg);
+  box-shadow: var(--nn-shadow);
 }
 
-/* Avatar, name and "Friends since" */
+/* Avatar, name, date, and the ⋮ menu on the right */
 .friends__who {
   display: flex;
   align-items: center;
   gap: var(--nn-space-3);
-  margin-bottom: var(--nn-space-3);
+  margin-bottom: var(--nn-space-4);
 }
 
 .friends__avatar {
@@ -200,6 +302,14 @@
   border: 1px solid var(--nn-border-strong);
 }
 
+/* A gold ring, like the avatar in the topbar */
+.friends__avatar--large {
+  width: 72px;
+  height: 72px;
+  border: 2px solid var(--nn-gold);
+  box-shadow: 0 0 0 3px var(--nn-surface), 0 0 0 4px var(--nn-gold-soft);
+}
+
 .friends__who-text {
   flex: 1;
   min-width: 0;
@@ -209,15 +319,19 @@
 
 .friends__name {
   font-family: var(--nn-font-display);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 600;
   line-height: 1.2;
   color: var(--nn-ink-strong);
   overflow-wrap: anywhere;
 }
 
+.friends__name--large {
+  font-size: 1.6rem;
+}
+
 .friends__since {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--nn-ink-muted);
 }
 
@@ -263,40 +377,68 @@
   color: var(--nn-accent);
 }
 
-/* "You share" and "{name} shares", side by side */
+/* ---------- "{name} shares" and "You share", side by side ---------- */
 .friends__boxes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--nn-space-3);
+  gap: var(--nn-space-4);
 }
 
 .friends__box {
-  padding: var(--nn-space-3) var(--nn-space-4);
-  /* A shade lighter than the card, so the two boxes stand out inside it */
-  background-color: color-mix(in srgb, var(--nn-surface), #fff 45%);
   border: 1px solid var(--nn-border);
   border-radius: var(--nn-radius);
+  background-color: color-mix(in srgb, var(--nn-surface-sunken) 35%, transparent);
+  overflow: hidden;
 }
 
+/* Small caps title with a short gold rule and diamond, like the section titles */
 .friends__box-title {
-  margin: 0 0 var(--nn-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  margin: 0;
+  padding: var(--nn-space-2) var(--nn-space-4);
   font-family: var(--nn-font-body);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--nn-ink-muted);
   overflow-wrap: anywhere;
 }
 
+.friends__box-rule {
+  position: relative;
+  flex: 0 1 90px;
+  height: 1px;
+  margin-left: 12px;
+  background-color: var(--nn-gold-soft);
+}
+
+.friends__box-rule::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--nn-gold);
+  background-color: var(--nn-gold-soft);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
 .friends__row {
   display: flex;
   align-items: center;
-  gap: var(--nn-space-2);
-  min-height: 40px;
+  gap: var(--nn-space-3);
+  min-height: 52px;
+  padding: var(--nn-space-2) var(--nn-space-4);
+  border-top: 1px solid var(--nn-border);
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 40%);
 }
 
 .friends__row-icon {
+  font-size: 1.15rem;
   color: var(--nn-gold-ink);
 }
 
@@ -304,22 +446,34 @@
   flex: 1;
   min-width: 0;
   margin: 0;
+  font-size: 1.05rem;
   color: var(--nn-ink);
-  cursor: default;
 }
 
 label.friends__row-label {
   cursor: pointer;
 }
 
-/* The friend's side: green check when on, a quiet dash when off */
+/* The friend's side: ✓ in a green circle, ✗ in a grey one */
 .friends__mark {
-  font-size: 1.1rem;
-  color: var(--nn-primary);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--nn-border-strong);
+  background-color: var(--nn-surface-sunken);
+  color: var(--nn-ink-muted);
+  font-size: 0.95rem;
 }
 
-.friends__row.is-off .friends__mark {
-  color: var(--nn-ink-muted);
+/* Mixed with white, not transparent, so it reads as green on the parchment */
+.friends__mark.is-on {
+  border-color: color-mix(in srgb, var(--nn-primary) 55%, #fff);
+  background-color: color-mix(in srgb, var(--nn-primary) 22%, #fff);
+  color: var(--nn-primary);
+  font-size: 1.1rem;
 }
 
 /* A refused change, e.g. over the limit: under the boxes, in the accent colour */
@@ -349,10 +503,10 @@ label.friends__row-label {
 .friends__switch .form-check-input {
   float: none;
   margin: 0;
-  width: 2.6em;
-  height: 1.4em;
+  width: 2.8em;
+  height: 1.5em;
   cursor: pointer;
-  background-color: var(--nn-surface);
+  background-color: var(--nn-surface-sunken);
   border-color: var(--nn-border-strong);
 }
 
@@ -375,35 +529,63 @@ label.friends__row-label {
   cursor: progress;
 }
 
-/* Phones: smaller title, the two boxes stacked */
+/* ---------- Tablets: the limit cards stacked ---------- */
+@media (max-width: 860px) {
+  .friends__limits {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Phones ---------- */
 @media (max-width: 640px) {
   .friends__title {
     font-size: 1.8rem;
   }
 
+  .friends__limit {
+    padding: var(--nn-space-3) var(--nn-space-4);
+    gap: var(--nn-space-3);
+  }
+
+  .friends__limit-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.25rem;
+  }
+
+  .friends__face {
+    width: 30px;
+    height: 30px;
+  }
+
+  .friends__panel-title {
+    font-size: 1.35rem;
+  }
+
+  .friends__card {
+    padding: var(--nn-space-3) var(--nn-space-3) var(--nn-space-4);
+  }
+
+  .friends__avatar--large {
+    width: 56px;
+    height: 56px;
+  }
+
+  .friends__name--large {
+    font-size: 1.3rem;
+  }
+
   .friends__boxes {
     grid-template-columns: 1fr;
+    gap: var(--nn-space-3);
   }
 
   /* A received request: Decline and Accept on their own line, sharing the width */
-  .friends__request {
-    padding: var(--nn-space-3) var(--nn-space-4);
-  }
-
   .friends__request-actions {
     flex-basis: 100%;
   }
 
   .friends__request-actions .nn-btn {
     flex: 1;
-  }
-
-  /* The two limits on a line each, without a dot left hanging at the end of the first */
-  .friends__limit {
-    display: block;
-  }
-
-  .friends__limit-sep {
-    display: none;
   }
 }

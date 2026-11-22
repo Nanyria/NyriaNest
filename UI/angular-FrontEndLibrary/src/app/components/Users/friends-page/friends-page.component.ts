@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, HostListener } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { FriendsService, SharingSetting } from '../../../Services/friends.service';
@@ -17,7 +17,7 @@ import { ToastService } from '../../../Services/toast.service';
   templateUrl: './friends-page.component.html',
   styleUrls: ['./friends-page.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [DatePipe],
+  imports: [DatePipe, NgTemplateOutlet],
 })
 export class FriendsPageComponent {
   overview: FriendsOverview | null = null;
@@ -42,6 +42,22 @@ export class FriendsPageComponent {
       },
       error: () => (this.state = 'error'),
     });
+  }
+
+  // ---------- The two limit cards ----------
+  // At most this many faces on a limit card; the rest are a "+3"
+  readonly maxFaces = 4;
+
+  // The friends I've turned this setting on for, in the list's order (by name)
+  sharingWith(setting: SharingSetting): FriendshipItem[] {
+    const friends = this.overview?.friends ?? [];
+    return friends.filter((f) => (setting === 'ebooks' ? f.iShareEbooks : f.iSharePhysicalLibrary));
+  }
+
+  // How full the bar is, 0-100. At least a sliver when something is shared, so 1 of 100 shows.
+  barPercent(used: number, limit: number): number {
+    if (limit <= 0 || used <= 0) return 0;
+    return Math.min(100, Math.max(2, (used / limit) * 100));
   }
 
   // The switch waiting for the server, e.g. "12:ebooks", so it can't be clicked twice
