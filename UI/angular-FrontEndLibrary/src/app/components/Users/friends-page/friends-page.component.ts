@@ -148,10 +148,37 @@ export class FriendsPageComponent {
     });
   }
 
-  // "Your friends" narrowed by the search; all of them when the search is empty
+  // ---------- Chips above "Your friends": who shares what, on top of the search ----------
+  readonly friendFilters = [
+    { value: 'all', label: 'All friends' },
+    { value: 'shares-with-me', label: 'Shares with me' },
+    { value: 'sharing-with-them', label: 'Sharing with them' },
+  ] as const;
+  friendFilter: (typeof this.friendFilters)[number]['value'] = 'all';
+
+  // Either kind of book counts: physical library or e-books
+  private passesFilter(f: FriendshipItem): boolean {
+    switch (this.friendFilter) {
+      case 'shares-with-me': return f.friendSharesPhysicalLibrary || f.friendSharesEbooks;
+      case 'sharing-with-them': return f.iSharePhysicalLibrary || f.iShareEbooks;
+      default: return true;
+    }
+  }
+
+  // "Your friends" narrowed by the chip and the search; all of them when neither is set
   get shownFriends(): FriendshipItem[] {
     const friends = this.overview?.friends ?? [];
-    return this.searchTerm ? friends.filter((f) => this.matches(f.friendUserName)) : friends;
+    return friends.filter((f) => this.passesFilter(f) && (!this.searchTerm || this.matches(f.friendUserName)));
+  }
+
+  // Why the list is empty although there are friends: names the chip and/or the search
+  get noMatchMessage(): string {
+    const byName = this.searchTerm ? ` with a user name starting with "${this.searchTerm}"` : '';
+    switch (this.friendFilter) {
+      case 'shares-with-me': return `None of your friends${byName} shares their books with you yet.`;
+      case 'sharing-with-them': return `You don't share your books with any friend${byName} yet.`;
+      default: return `None of your friends has a user name starting with "${this.searchTerm}".`;
+    }
   }
 
   // Waits for a pause in typing; switchMap drops an older answer when a newer search starts

@@ -516,6 +516,21 @@
   opacity: 0.6;
 }
 
+/* ---------- Chips above the friend cards: All friends / Shares with me / Sharing with them ---------- */
+.friends__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nn-space-2);
+  margin-bottom: var(--nn-space-4);
+}
+
+@media (max-width: 640px) {
+  .friends__filters .nn-chip {
+    padding: 4px 12px;
+    font-size: 0.9rem;
+  }
+}
+
 /* ---------- Friend cards, two per row inside the framed panel ---------- */
 .friends__list {
   list-style: none;

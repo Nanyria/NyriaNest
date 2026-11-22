@@ -289,10 +289,26 @@
           <span class="nn-section-title__rule" aria-hidden="true"></span>
         </h2>
 
+        @if (o.friends.length > 0) {
+          <div class="friends__filters" role="group" aria-label="Show friends">
+            @for (filter of friendFilters; track filter.value) {
+              <button
+                type="button"
+                class="nn-chip"
+                [class.is-active]="friendFilter === filter.value"
+                [attr.aria-pressed]="friendFilter === filter.value"
+                (click)="friendFilter = filter.value"
+              >
+                {{ filter.label }}
+              </button>
+            }
+          </div>
+        }
+
         @if (o.friends.length === 0) {
           <p class="friends__empty">No friends yet. Find someone by their user name to send a friend request.</p>
         } @else if (shown.length === 0) {
-          <p class="friends__empty">None of your friends has a user name starting with "{{ searchTerm }}".</p>
+          <p class="friends__empty">{{ noMatchMessage }}</p>
         } @else {
           <ul class="friends__list">
             @for (friend of shown; track friend.id) {
