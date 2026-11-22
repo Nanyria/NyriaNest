@@ -346,6 +346,14 @@ button.topbar__link:hover {
   cursor: default;
 }
 
+/* Our own drawn icons (theme .nn-icon-*) have a wider box than a Bootstrap icon; in this menu
+   they're drawn a bit narrower with negative margins, so the text lines up with the other items */
+.topbar__menu-nn-icon::before {
+  width: 1.2em;
+  height: 1.1em;
+  margin-inline: -0.1em;
+}
+
 /* ---------- The bell's dropdown ---------- */
 /* Messages wrap, and the panel never gets wider than the screen */
 .topbar__notif-panel {

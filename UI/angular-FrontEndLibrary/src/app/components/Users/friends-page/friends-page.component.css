@@ -219,6 +219,12 @@
   color: var(--nn-ink-strong);
 }
 
+/* ---------- Header logo: the Friends logo (two dragons) in the compass spot ---------- */
+.friends__logo {
+  width: 56px; /* the compass is 46px; aspect-ratio 1 from the theme keeps it square */
+  background-image: url('/assets/images/friend-page/decorations/friends-page-logo-5.webp');
+}
+
 /* ---------- Search for friends: in the header, results drop down under it ---------- */
 .friends__search {
   position: relative;
