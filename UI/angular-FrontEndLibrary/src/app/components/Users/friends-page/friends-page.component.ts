@@ -123,17 +123,28 @@ export class FriendsPageComponent {
         this.toast.success(nowFriends
           ? `You're now friends with ${row.userName}.`
           : `Friend request sent to ${row.userName}.`);
-        // Once the overview has the request, the person shows as "Request sent" (from the overview),
-        // so they leave the API results at that same moment: no gap where the row disappears
-        this.load(() => {
-          this.strangers = this.strangers.filter((u) => u.userId !== row.key);
-          this.busyAdd = null;
-        });
+        this.reloadAfterAdd(row);
       },
-      error: () => {
-        this.busyAdd = null;
-        this.toast.error(`Couldn't send a friend request to ${row.userName}. Please try again.`);
+      error: (err: HttpErrorResponse) => {
+        // The API says why when it knows (e.g. the user no longer exists); a generic text otherwise
+        const message = err.error?.errorMessages?.[0];
+        this.toast.error(message ?? `Couldn't send a friend request to ${row.userName}. Please try again.`);
+        // The API answered, so the search row is out of date ("already sent", "already friends",
+        // no such user): reload so it shows what's true now. Without an answer (server down)
+        // a reload would only fail too, so keep the row and let the user try again.
+        if (message) this.reloadAfterAdd(row);
+        else this.busyAdd = null;
       },
+    });
+  }
+
+  // Once the overview has them, the person shows from the overview ("Request sent", "✓ Friends"),
+  // so they leave the API results at that same moment: no gap where the row disappears.
+  // Someone the server doesn't know simply drops out of the results.
+  private reloadAfterAdd(row: SearchRow): void {
+    this.load(() => {
+      this.strangers = this.strangers.filter((u) => u.userId !== row.key);
+      this.busyAdd = null;
     });
   }
 
