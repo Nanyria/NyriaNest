@@ -8,6 +8,7 @@ import { Observable, catchError, debounceTime, distinctUntilChanged, map, of, sw
 import { FriendsService, SharingSetting } from '../../../Services/friends.service';
 import { FriendshipItem, FriendsOverview, UserSearchResult } from '../../../Models/interfaces';
 import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
+import { FriendshipStatus } from '../../../Helpers/Enums/enum';
 import { ConfirmService } from '../../../Services/confirm.service';
 import { ToastService } from '../../../Services/toast.service';
 
@@ -115,8 +116,13 @@ export class FriendsPageComponent {
     searchInput.focus();
     this.busyAdd = row.key;
     this.friendsService.sendRequest(row.userName).subscribe({
-      next: () => {
-        this.toast.success(`Friend request sent to ${row.userName}.`);
+      next: (res) => {
+        // If they had asked us in the meantime, the server accepts their request instead
+        // (one row per pair); the reload then shows them as "✓ Friends"
+        const nowFriends = res.result?.status === FriendshipStatus.Accepted;
+        this.toast.success(nowFriends
+          ? `You're now friends with ${row.userName}.`
+          : `Friend request sent to ${row.userName}.`);
         // Once the overview has the request, the person shows as "Request sent" (from the overview),
         // so they leave the API results at that same moment: no gap where the row disappears
         this.load(() => {
