@@ -13,6 +13,85 @@
       <h1 class="nn-admin-header__title">Friends</h1>
     </div>
     <span class="nn-admin-header__divider" aria-hidden="true"></span>
+    <!-- One search for friends, requests and new people; results drop down under the field,
+         and the same text filters "Your friends" below -->
+    <div class="friends__search" (focusin)="openSearch()" (focusout)="onSearchFocusOut($event)" (keydown.escape)="closeSearch()">
+      <div class="nn-field">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input
+          class="nn-input"
+          type="search"
+          placeholder="Search for friends…"
+          aria-label="Search for friends"
+          autocomplete="off"
+          [formControl]="search"
+          (input)="openSearch()"
+        />
+      </div>
+      @if (showSearchPanel) {
+        <div class="friends__search-panel nn-panel" id="friend-search-panel" tabindex="-1">
+          @let results = searchResults;
+          <div class="friends__find-status" aria-live="polite">
+            @switch (searchState) {
+              @case ('idle') {
+                <p class="friends__find-hint">Type at least {{ minSearchLength }} letters of a user name.</p>
+              }
+              @case ('loading') {
+                <p class="friends__find-hint">Searching…</p>
+              }
+              @case ('error') {
+                <p class="friends__find-hint friends__find-hint--error">Couldn't search for new people right now. Please try again.</p>
+              }
+              @case ('ready') {
+                @if (results.length === 0) {
+                  <p class="friends__find-hint">No one found with a user name starting with "{{ searchTerm }}".</p>
+                } @else {
+                  <p class="visually-hidden">{{ results.length }} {{ results.length === 1 ? 'person' : 'people' }} found.</p>
+                }
+              }
+            }
+          </div>
+          @if (results.length > 0) {
+            <ul class="friends__results" aria-label="Search results">
+              @for (row of results; track row.key) {
+                <li class="friends__result">
+                  <img
+                    class="friends__result-avatar"
+                    [src]="row.picture || defaultPicture"
+                    (error)="onAvatarError($event)"
+                    alt=""
+                  />
+                  <span class="friends__result-name">{{ row.userName }}</span>
+                  <span class="friends__result-action">
+                    @switch (row.kind) {
+                      @case ('friend') {
+                        <span class="friends__result-status friends__result-status--friend">
+                          <i class="bi bi-check-lg" aria-hidden="true"></i>Friends
+                        </span>
+                      }
+                      @case ('sent') {
+                        <span class="friends__result-status">Request sent</span>
+                      }
+                      @case ('received') {
+                        <button
+                          type="button"
+                          class="nn-btn nn-btn--primary friends__result-btn"
+                          [disabled]="busyRequest === row.friendship!.id"
+                          [attr.aria-label]="'Accept friend request from ' + row.userName"
+                          (click)="accept(row.friendship!)"
+                        >
+                          Accept
+                        </button>
+                      }
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
   </header>
 
   @switch (state) {
@@ -28,42 +107,127 @@
     @default {
       @let o = overview!;
 
-      <!-- Top row: the two sharing cards on the left half, Add friend on the right half -->
+      <!-- Top row: the two limit cards side by side on the left half, friend requests on the right half.
+           Requests come first in the markup, so they also come first (and are read first) when the row stacks. -->
       <div class="friends__top">
-        <!-- How many friends each of my sharing settings is on for, out of the limit (ADR 0005) -->
+        <!-- Requests: received ones first (they need an answer), then the ones I sent; one at a time with ‹ › -->
+        <section class="nn-panel nn-panel--framed nn-panel--titled friends__panel friends__requests-panel" aria-labelledby="requests-h">
+          @let requests = requestRows;
+          <div class="friends__requests-head">
+            <h2 id="requests-h" class="nn-section-title friends__panel-title friends__panel-title--small">
+              <i class="bi bi-person-plus" aria-hidden="true"></i>Friend requests
+              <!-- With more than one, the pager's "1 / 4" shows the total instead -->
+              @if (requests.length === 1) {
+                <span class="friends__section-count">(1)</span>
+              }
+              <span class="nn-section-title__rule" aria-hidden="true"></span>
+            </h2>
+            @if (requests.length > 1) {
+              <div class="friends__pager">
+                <button
+                  type="button"
+                  class="friends__pager-btn"
+                  aria-label="Previous request"
+                  [disabled]="requestIndex === 0"
+                  (click)="showRequest(requestIndex - 1)"
+                >
+                  <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+                <span class="friends__pager-count" aria-live="polite">
+                  <span class="visually-hidden">Request&nbsp;</span>{{ requestIndex + 1 }} / {{ requests.length }}
+                </span>
+                <button
+                  type="button"
+                  class="friends__pager-btn"
+                  aria-label="Next request"
+                  [disabled]="requestIndex >= requests.length - 1"
+                  (click)="showRequest(requestIndex + 1)"
+                >
+                  <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
+            }
+          </div>
+          @if (requests.length === 0) {
+            <p class="friends__empty">No friend requests right now. Use the search above to find people.</p>
+          } @else {
+            <ul class="friends__requests">
+              @for (row of shownRequests; track row.item.id) {
+                @let request = row.item;
+                @if (row.received) {
+                  <li class="friends__request friends__request--received">
+                    <img
+                      class="friends__avatar friends__avatar--small"
+                      [src]="request.friendProfilePictureUrl || defaultPicture"
+                      (error)="onAvatarError($event)"
+                      alt=""
+                    />
+                    <span class="friends__request-text">
+                      <strong>{{ request.friendUserName }}</strong>&nbsp;<span class="friends__waiting">wants to be your friend · {{ request.requestedAt | date: 'mediumDate' }}</span>
+                    </span>
+                    <div class="friends__request-actions">
+                      <button
+                        type="button"
+                        class="nn-btn nn-btn--outline friends__request-btn"
+                        [disabled]="busyRequest === request.id"
+                        (click)="decline(request)"
+                      >
+                        Decline
+                      </button>
+                      <button
+                        type="button"
+                        class="nn-btn nn-btn--primary friends__request-btn"
+                        [disabled]="busyRequest === request.id"
+                        (click)="accept(request)"
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  </li>
+                } @else {
+                  <li class="friends__request friends__request--sent">
+                    <i class="bi bi-send friends__sent-icon" aria-hidden="true"></i>
+                    <span class="friends__request-text">
+                      <!-- &nbsp;: Angular drops the plain space between the two tags -->
+                      You asked <strong>{{ request.friendUserName }}</strong>&nbsp;<span class="friends__waiting">· waiting for an answer</span>
+                    </span>
+                    <button
+                      type="button"
+                      class="friends__link-button"
+                      [disabled]="busyRequest === request.id"
+                      (click)="cancel(request)"
+                    >
+                      Cancel request
+                    </button>
+                  </li>
+                }
+              }
+            </ul>
+          }
+        </section>
+
+        <!-- How many friends each of my sharing settings is on for, out of the limit (ADR 0005).
+             Cards on purpose: they're meant to become clickable later. -->
         <ul class="friends__limits" aria-label="Sharing limits">
           <ng-container
-            *ngTemplateOutlet="limitCard; context: { label: 'Physical library', icon: 'bi-stack', used: o.physicalLibraryUsed, limit: o.physicalLibraryLimit, who: sharingWith('physical-library') }"
+            *ngTemplateOutlet="limitCard; context: { label: 'Physical library', short: 'Physical', icon: 'bi-book', used: o.physicalLibraryUsed, limit: o.physicalLibraryLimit, who: sharingWith('physical-library') }"
           ></ng-container>
           <ng-container
-            *ngTemplateOutlet="limitCard; context: { label: 'E-books', icon: 'bi-tablet', used: o.ebooksUsed, limit: o.ebooksLimit, who: sharingWith('ebooks') }"
+            *ngTemplateOutlet="limitCard; context: { label: 'E-books', short: 'E-books', icon: 'bi-tablet', used: o.ebooksUsed, limit: o.ebooksLimit, who: sharingWith('ebooks') }"
           ></ng-container>
         </ul>
-
-        <!-- Find someone by user name and send a request. Placeholder: the search works from 7c.1 (#84) -->
-        <section class="friends__find nn-panel" aria-labelledby="find-friend-h">
-          <h2 id="find-friend-h" class="friends__find-title">
-            <i class="bi bi-person-plus" aria-hidden="true"></i>Add friend
-          </h2>
-          <div class="nn-field">
-            <i class="bi bi-search" aria-hidden="true"></i>
-            <input
-              class="nn-input"
-              type="search"
-              placeholder="Search by user name…"
-              aria-label="Search by user name"
-              autocomplete="off"
-            />
-          </div>
-          <p class="friends__find-hint">Type at least 2 letters of their user name.</p>
-        </section>
       </div>
 
-      <ng-template #limitCard let-label="label" let-icon="icon" let-used="used" let-limit="limit" let-who="who">
+      <!-- One limit card: icon, label and "Shared with 2 friends", the bar, then faces and "2 / 10" -->
+      <ng-template #limitCard let-label="label" let-short="short" let-icon="icon" let-used="used" let-limit="limit" let-who="who">
         <li class="friends__limit nn-panel">
           <span class="friends__limit-icon" aria-hidden="true"><i class="bi" [class]="icon"></i></span>
-          <div class="friends__limit-body">
-            <span class="friends__limit-label">{{ label }}</span>
+          <span class="friends__limit-body">
+            <!-- Phones show the short label ("Physical"); screen readers always get the full one -->
+            <span class="friends__limit-label">
+              <span class="friends__limit-label-full">{{ label }}</span>
+              <span class="friends__limit-label-short" aria-hidden="true">{{ short }}</span>
+            </span>
             <span class="friends__limit-text">
               @if (used === 0) {
                 Not shared yet
@@ -71,109 +235,54 @@
                 Shared with {{ used }} {{ used === 1 ? 'friend' : 'friends' }}
               }
             </span>
-            <span class="friends__bar" aria-hidden="true">
-              <span class="friends__bar-fill" [style.width.%]="barPercent(used, limit)"></span>
+          </span>
+          @if (who.length > 0) {
+            <span class="friends__faces">
+              @for (friend of who.slice(0, maxFaces); track friend.id) {
+                <img
+                  class="friends__face"
+                  [src]="friend.friendProfilePictureUrl || defaultPicture"
+                  (error)="onAvatarError($event)"
+                  [alt]="friend.friendUserName"
+                  [title]="friend.friendUserName"
+                />
+              }
+              @if (who.length > maxFaces) {
+                <span class="friends__face friends__face--more">+{{ who.length - maxFaces }}</span>
+              }
             </span>
-          </div>
-          <div class="friends__limit-side">
-            @if (who.length > 0) {
-              <span class="friends__faces">
-                @for (friend of who.slice(0, maxFaces); track friend.id) {
-                  <img
-                    class="friends__face"
-                    [src]="friend.friendProfilePictureUrl || defaultPicture"
-                    (error)="onAvatarError($event)"
-                    [alt]="friend.friendUserName"
-                    [title]="friend.friendUserName"
-                  />
-                }
-                @if (who.length > maxFaces) {
-                  <span class="friends__face friends__face--more">+{{ who.length - maxFaces }}</span>
-                }
-              </span>
-            }
-            <span class="friends__limit-count">
-              {{ used }} / {{ limit }}
-              <span class="visually-hidden">friends, the most you can share with</span>
-            </span>
-          </div>
+          }
+          <span class="friends__limit-count">
+            <span aria-hidden="true">{{ used }} / {{ limit }}</span>
+            <span class="visually-hidden">The limit is {{ limit }} {{ limit === 1 ? 'friend' : 'friends' }}</span>
+          </span>
+          <span class="friends__bar" aria-hidden="true">
+            <span class="friends__bar-fill" [style.width.%]="barPercent(used, limit)"></span>
+          </span>
         </li>
       </ng-template>
 
-      <!-- Requests: received ones first (they need an answer), then the ones I sent -->
-      @if (o.received.length + o.sent.length > 0) {
-        <section class="nn-panel nn-panel--framed nn-panel--titled friends__panel" aria-labelledby="requests-h">
-          <h2 id="requests-h" class="nn-section-title friends__panel-title">
-            <i class="bi bi-person-plus" aria-hidden="true"></i>Friend requests
-            <span class="friends__section-count">({{ o.received.length + o.sent.length }})</span>
-            <span class="nn-section-title__rule" aria-hidden="true"></span>
-          </h2>
-          <ul class="friends__requests">
-            @for (request of o.received; track request.id) {
-              <li class="friends__request friends__request--received">
-                <img
-                  class="friends__avatar"
-                  [src]="request.friendProfilePictureUrl || defaultPicture"
-                  (error)="onAvatarError($event)"
-                  alt=""
-                />
-                <div class="friends__who-text">
-                  <span class="friends__name">{{ request.friendUserName }}</span>
-                  <span class="friends__since">Wants to be your friend · Sent {{ request.requestedAt | date: 'mediumDate' }}</span>
-                </div>
-                <div class="friends__request-actions">
-                  <button
-                    type="button"
-                    class="nn-btn nn-btn--outline"
-                    [disabled]="busyRequest === request.id"
-                    (click)="decline(request)"
-                  >
-                    Decline
-                  </button>
-                  <button
-                    type="button"
-                    class="nn-btn nn-btn--primary"
-                    [disabled]="busyRequest === request.id"
-                    (click)="accept(request)"
-                  >
-                    Accept
-                  </button>
-                </div>
-              </li>
-            }
-            @for (request of o.sent; track request.id) {
-              <li class="friends__request friends__request--sent">
-                <i class="bi bi-send friends__sent-icon" aria-hidden="true"></i>
-                <span class="friends__request-text">
-                  <!-- &nbsp;: Angular drops the plain space between the two tags -->
-                  You sent a request to <strong>{{ request.friendUserName }}</strong>&nbsp;<span class="friends__waiting">· waiting for an answer</span>
-                </span>
-                <button
-                  type="button"
-                  class="friends__link-button"
-                  [disabled]="busyRequest === request.id"
-                  (click)="cancel(request)"
-                >
-                  Cancel request
-                </button>
-              </li>
-            }
-          </ul>
-        </section>
-      }
-
       <section class="nn-panel nn-panel--framed nn-panel--titled friends__panel" aria-labelledby="friends-h">
+        @let shown = shownFriends;
         <h2 id="friends-h" class="nn-section-title friends__panel-title">
           <i class="bi bi-people" aria-hidden="true"></i>Your friends
-          <span class="friends__section-count">({{ o.friends.length }})</span>
+          <span class="friends__section-count">
+            @if (shown.length === o.friends.length) {
+              ({{ o.friends.length }})
+            } @else {
+              ({{ shown.length }} of {{ o.friends.length }})
+            }
+          </span>
           <span class="nn-section-title__rule" aria-hidden="true"></span>
         </h2>
 
         @if (o.friends.length === 0) {
           <p class="friends__empty">No friends yet. Find someone by their user name to send a friend request.</p>
+        } @else if (shown.length === 0) {
+          <p class="friends__empty">None of your friends has a user name starting with "{{ searchTerm }}".</p>
         } @else {
           <ul class="friends__list">
-            @for (friend of o.friends; track friend.id) {
+            @for (friend of shown; track friend.id) {
               <li class="friends__card">
                 <div class="friends__who">
                   <img
@@ -187,6 +296,18 @@
                     @if (friend.acceptedAt) {
                       <span class="friends__since">Friends since {{ friend.acceptedAt | date: 'mediumDate' }}</span>
                     }
+                  </div>
+                  <!-- What's shared at a glance: first what I share (green ↑ badge), then what they share (gold ↓ badge);
+                       an icon is filled when on. Each icon has its sentence as tooltip and for screen readers. -->
+                  <div class="friends__glance">
+                    <div class="friends__glance-row">
+                      <ng-container *ngTemplateOutlet="shareIcon; context: { on: friend.iSharePhysicalLibrary, icon: 'bi-book', dir: 'up', label: shareLabel(friend, 'mine', 'physical') }"></ng-container>
+                      <ng-container *ngTemplateOutlet="shareIcon; context: { on: friend.iShareEbooks, icon: 'bi-tablet', dir: 'up', label: shareLabel(friend, 'mine', 'ebooks') }"></ng-container>
+                    </div>
+                    <div class="friends__glance-row">
+                      <ng-container *ngTemplateOutlet="shareIcon; context: { on: friend.friendSharesPhysicalLibrary, icon: 'bi-book', dir: 'down', label: shareLabel(friend, 'theirs', 'physical') }"></ng-container>
+                      <ng-container *ngTemplateOutlet="shareIcon; context: { on: friend.friendSharesEbooks, icon: 'bi-tablet', dir: 'down', label: shareLabel(friend, 'theirs', 'ebooks') }"></ng-container>
+                    </div>
                   </div>
                   <button
                     #menuButton
@@ -211,70 +332,87 @@
                   </div>
                 </div>
 
-                <div class="friends__boxes">
-                  <!-- What the friend shares with me: read only, only they can change it -->
-                  <div class="friends__box">
-                    <h3 class="friends__box-title">
-                      {{ friend.friendUserName }} shares
-                      <span class="friends__box-rule" aria-hidden="true"></span>
-                    </h3>
-                    <div class="friends__row">
-                      <i class="bi bi-stack friends__row-icon" aria-hidden="true"></i>
-                      <span class="friends__row-label">Physical books</span>
-                      <ng-container *ngTemplateOutlet="mark; context: { on: friend.friendSharesPhysicalLibrary }"></ng-container>
-                    </div>
-                    <div class="friends__row">
-                      <i class="bi bi-tablet friends__row-icon" aria-hidden="true"></i>
-                      <span class="friends__row-label">E-books</span>
-                      <ng-container *ngTemplateOutlet="mark; context: { on: friend.friendSharesEbooks }"></ng-container>
-                    </div>
-                  </div>
+                @if (isOpen(friend)) {
+                  <div class="friends__open" [id]="'friend-sharing-' + friend.id">
+                    <div class="friends__boxes">
+                      <!-- My own two settings for this friend: first, like the ↗ icons on the card -->
+                      <div class="friends__box">
+                        <h3 class="friends__box-title">
+                          You share
+                          <span class="friends__box-rule" aria-hidden="true"></span>
+                        </h3>
+                        <div class="friends__row">
+                          <i class="bi bi-book friends__row-icon" aria-hidden="true"></i>
+                          <label class="friends__row-label" [for]="'share-library-' + friend.id">Your physical books</label>
+                          <div class="form-check form-switch friends__switch">
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              role="switch"
+                              [id]="'share-library-' + friend.id"
+                              [checked]="friend.iSharePhysicalLibrary"
+                              [disabled]="isBusy(friend, 'physical-library')"
+                              (change)="setSharing(friend, 'physical-library', $any($event.target))"
+                            />
+                          </div>
+                        </div>
+                        <div class="friends__row">
+                          <i class="bi bi-tablet friends__row-icon" aria-hidden="true"></i>
+                          <label class="friends__row-label" [for]="'share-ebooks-' + friend.id">Your e-books</label>
+                          <div class="form-check form-switch friends__switch">
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              role="switch"
+                              [id]="'share-ebooks-' + friend.id"
+                              [checked]="friend.iShareEbooks"
+                              [disabled]="isBusy(friend, 'ebooks')"
+                              (change)="setSharing(friend, 'ebooks', $any($event.target))"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                  <!-- My own two settings for this friend -->
-                  <div class="friends__box">
-                    <h3 class="friends__box-title">
-                      You share
-                      <span class="friends__box-rule" aria-hidden="true"></span>
-                    </h3>
-                    <div class="friends__row">
-                      <i class="bi bi-stack friends__row-icon" aria-hidden="true"></i>
-                      <label class="friends__row-label" [for]="'share-library-' + friend.id">Your physical books</label>
-                      <div class="form-check form-switch friends__switch">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          [id]="'share-library-' + friend.id"
-                          [checked]="friend.iSharePhysicalLibrary"
-                          [disabled]="isBusy(friend, 'physical-library')"
-                          (change)="setSharing(friend, 'physical-library', $any($event.target))"
-                        />
+                      <!-- What the friend shares with me: read only, only they can change it; second, like the ↙ icons -->
+                      <div class="friends__box">
+                        <h3 class="friends__box-title">
+                          {{ friend.friendUserName }} shares
+                          <span class="friends__box-rule" aria-hidden="true"></span>
+                        </h3>
+                        <div class="friends__row">
+                          <i class="bi bi-book friends__row-icon" aria-hidden="true"></i>
+                          <span class="friends__row-label">Physical books</span>
+                          <ng-container *ngTemplateOutlet="mark; context: { on: friend.friendSharesPhysicalLibrary }"></ng-container>
+                        </div>
+                        <div class="friends__row">
+                          <i class="bi bi-tablet friends__row-icon" aria-hidden="true"></i>
+                          <span class="friends__row-label">E-books</span>
+                          <ng-container *ngTemplateOutlet="mark; context: { on: friend.friendSharesEbooks }"></ng-container>
+                        </div>
                       </div>
                     </div>
-                    <div class="friends__row">
-                      <i class="bi bi-tablet friends__row-icon" aria-hidden="true"></i>
-                      <label class="friends__row-label" [for]="'share-ebooks-' + friend.id">Your e-books</label>
-                      <div class="form-check form-switch friends__switch">
-                        <input
-                          class="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          [id]="'share-ebooks-' + friend.id"
-                          [checked]="friend.iShareEbooks"
-                          [disabled]="isBusy(friend, 'ebooks')"
-                          (change)="setSharing(friend, 'ebooks', $any($event.target))"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                @if (errorFor(friend); as message) {
-                  <p class="friends__error" role="alert">
-                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-                    {{ message }}
-                  </p>
+                    @if (errorFor(friend); as message) {
+                      <p class="friends__error" role="alert">
+                        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                        {{ message }}
+                      </p>
+                    }
+                  </div>
                 }
+
+                <!-- Round arrow in the middle of the card's bottom: opens the switches -->
+                <button
+                  type="button"
+                  class="friends__toggle"
+                  [attr.aria-expanded]="isOpen(friend)"
+                  [attr.aria-controls]="'friend-sharing-' + friend.id"
+                  [attr.aria-label]="'Sharing with ' + friend.friendUserName"
+                  [title]="isOpen(friend) ? 'Hide sharing settings' : 'Show sharing settings'"
+                  (click)="toggleCard(friend)"
+                >
+                  <i class="bi bi-chevron-down friends__toggle-icon" aria-hidden="true"></i>
+                </button>
               </li>
             }
           </ul>
@@ -286,6 +424,17 @@
         <span class="friends__mark" [class.is-on]="on">
           <i class="bi" [class.bi-check-lg]="on" [class.bi-x-lg]="!on" aria-hidden="true"></i>
           <span class="visually-hidden">{{ on ? 'shared with you' : 'not shared' }}</span>
+        </span>
+      </ng-template>
+
+      <!-- One icon on a card's top right: filled green when on, outline when off; the corner badge
+           shows the direction (green ↑ = I share it, gold ↓ = they share it) -->
+      <ng-template #shareIcon let-on="on" let-icon="icon" let-dir="dir" let-label="label">
+        <span class="friends__glance-icon" [class.is-on]="on" role="img" [attr.aria-label]="label" [title]="label">
+          <i class="bi" [class]="on ? icon + '-fill' : icon" aria-hidden="true"></i>
+          <span class="friends__glance-badge" [class.friends__glance-badge--theirs]="dir === 'down'" aria-hidden="true">
+            <i class="bi" [class.bi-arrow-up]="dir === 'up'" [class.bi-arrow-down]="dir === 'down'"></i>
+          </span>
         </span>
       </ng-template>
     }

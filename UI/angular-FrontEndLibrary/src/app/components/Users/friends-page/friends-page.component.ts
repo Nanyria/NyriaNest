@@ -2,12 +2,23 @@ import { Component, ChangeDetectionStrategy, HostListener } from '@angular/core'
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, catchError, debounceTime, distinctUntilChanged, map, of, switchMap, tap } from 'rxjs';
 import { FriendsService, SharingSetting } from '../../../Services/friends.service';
-import { FriendshipItem, FriendsOverview } from '../../../Models/interfaces';
+import { FriendshipItem, FriendsOverview, UserSearchResult } from '../../../Models/interfaces';
 import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
 import { ConfirmService } from '../../../Services/confirm.service';
 import { ToastService } from '../../../Services/toast.service';
+
+// One row in the search results: a friend, a request either way, or someone new
+interface SearchRow {
+  key: string; // user id
+  userName: string;
+  picture: string | null;
+  kind: 'friend' | 'received' | 'sent' | 'stranger';
+  friendship?: FriendshipItem; // not for strangers
+}
 
 // Friends and friend requests, and what the user shares with each friend (#84).
 // Everything comes from one overview call, loaded again after each change so the
@@ -18,7 +29,7 @@ import { ToastService } from '../../../Services/toast.service';
   templateUrl: './friends-page.component.html',
   styleUrls: ['./friends-page.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [DatePipe, NgTemplateOutlet, RouterLink],
+  imports: [DatePipe, NgTemplateOutlet, RouterLink, ReactiveFormsModule],
 })
 export class FriendsPageComponent {
   overview: FriendsOverview | null = null;
@@ -31,6 +42,105 @@ export class FriendsPageComponent {
     private toast: ToastService,
   ) {
     this.load();
+    this.listenToSearch();
+  }
+
+  // ---------- Search for friends: one bar for friends, requests and new people ----------
+  // Friends and open requests come from the overview (the API search leaves them out);
+  // everyone else comes from the API. The same text also filters "Your friends".
+  readonly minSearchLength = 2;
+  readonly search = new FormControl('', { nonNullable: true });
+  // The text being searched for, after the pause in typing; '' below the minimum
+  searchTerm = '';
+  // State of the API part only: known people show at once
+  searchState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  private strangers: UserSearchResult[] = [];
+
+  // Same rule as the API: user name starts with the text, any case
+  private matches(userName: string): boolean {
+    return userName.toLowerCase().startsWith(this.searchTerm.toLowerCase());
+  }
+
+  // Everyone the search found, by name. Built from the overview each time, so a reload
+  // after Accept (or later Add) moves the person to their new status.
+  get searchResults(): SearchRow[] {
+    if (!this.searchTerm || !this.overview) return [];
+    const o = this.overview;
+    const known = (items: FriendshipItem[], kind: SearchRow['kind']): SearchRow[] =>
+      items.filter((f) => this.matches(f.friendUserName)).map((f) => ({
+        key: f.friendUserId,
+        userName: f.friendUserName,
+        picture: f.friendProfilePictureUrl,
+        kind,
+        friendship: f,
+      }));
+    const rows = [
+      ...known(o.friends, 'friend'),
+      ...known(o.received, 'received'),
+      ...known(o.sent, 'sent'),
+      ...this.strangers.map((u): SearchRow => ({ key: u.userId, userName: u.userName, picture: null, kind: 'stranger' })),
+    ];
+    return rows.sort((a, b) => a.userName.localeCompare(b.userName));
+  }
+
+  // The dropdown under the header's search field: open while the search has focus and
+  // something is typed; Escape or leaving the search (click or Tab elsewhere) closes it
+  searchOpen = false;
+
+  get showSearchPanel(): boolean {
+    return this.searchOpen && this.search.value.trim().length > 0;
+  }
+
+  openSearch(): void {
+    this.searchOpen = true;
+  }
+
+  closeSearch(): void {
+    this.searchOpen = false;
+  }
+
+  // Focus moving to something inside the search (e.g. an Accept button) keeps it open
+  onSearchFocusOut(event: FocusEvent): void {
+    const wrapper = event.currentTarget as HTMLElement;
+    if (!wrapper.contains(event.relatedTarget as Node | null)) this.closeSearch();
+  }
+
+  // "Your friends" narrowed by the search; all of them when the search is empty
+  get shownFriends(): FriendshipItem[] {
+    const friends = this.overview?.friends ?? [];
+    return this.searchTerm ? friends.filter((f) => this.matches(f.friendUserName)) : friends;
+  }
+
+  // Waits for a pause in typing; switchMap drops an older answer when a newer search starts
+  private listenToSearch(): void {
+    this.search.valueChanges
+      .pipe(
+        map((text) => text.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        tap((text) => {
+          const searching = text.length >= this.minSearchLength;
+          this.searchTerm = searching ? text : '';
+          this.strangers = [];
+          this.searchState = searching ? 'loading' : 'idle';
+        }),
+        switchMap((text) => {
+          if (text.length < this.minSearchLength) return of(null);
+          return this.friendsService.search(text).pipe(
+            map((response) => response.result ?? []),
+            catchError(() => of('error' as const)),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((results) => {
+        if (results === 'error') {
+          this.searchState = 'error';
+        } else if (results !== null) {
+          this.strangers = results;
+          this.searchState = 'ready';
+        }
+      });
   }
 
   // Only the first load shows "Loading…"; reloads after a change keep the page in place
@@ -59,6 +169,31 @@ export class FriendsPageComponent {
   barPercent(used: number, limit: number): number {
     if (limit <= 0 || used <= 0) return 0;
     return Math.min(100, Math.max(2, (used / limit) * 100));
+  }
+
+  // ---------- Friend cards: collapsed to a summary, "Sharing" opens the switches ----------
+  // Kept by friendship id, so a card stays open through the reload after a change
+  private openCards = new Set<number>();
+
+  isOpen(friend: FriendshipItem): boolean {
+    return this.openCards.has(friend.id);
+  }
+
+  toggleCard(friend: FriendshipItem): void {
+    if (!this.openCards.delete(friend.id)) this.openCards.add(friend.id);
+  }
+
+  // The sentence behind one of the four icons, as tooltip and for screen readers,
+  // e.g. "You share your physical books with boris.books" / "boris.books doesn't share their e-books with you"
+  shareLabel(friend: FriendshipItem, side: 'mine' | 'theirs', kind: 'physical' | 'ebooks'): string {
+    const name = friend.friendUserName;
+    const what = kind === 'physical' ? 'physical books' : 'e-books';
+    if (side === 'mine') {
+      const on = kind === 'physical' ? friend.iSharePhysicalLibrary : friend.iShareEbooks;
+      return on ? `You share your ${what} with ${name}` : `You don't share your ${what} with ${name}`;
+    }
+    const on = kind === 'physical' ? friend.friendSharesPhysicalLibrary : friend.friendSharesEbooks;
+    return on ? `${name} shares their ${what} with you` : `${name} doesn't share their ${what} with you`;
   }
 
   // The switch waiting for the server, e.g. "12:ebooks", so it can't be clicked twice
@@ -116,6 +251,7 @@ export class FriendsPageComponent {
     document.querySelectorAll<HTMLElement>('.friends__menu:popover-open').forEach((m) => m.hidePopover());
   }
 
+  // ---------- Remove (from the ⋮ menu) ----------
   // Ends the friendship for both of us: the row goes, with all four settings
   async remove(friend: FriendshipItem): Promise<void> {
     const confirmed = await this.confirmDialog.confirm({
@@ -140,6 +276,33 @@ export class FriendsPageComponent {
   }
 
   // ---------- Requests ----------
+  // Received first (they need an answer), then sent. The panel shows one at a time,
+  // with ‹ › to move through them, so it stays as tall as the limit cards beside it.
+  private requestPosition = 0;
+
+  // Kept in range when the list gets shorter (e.g. after accepting the last one)
+  get requestIndex(): number {
+    return Math.min(this.requestPosition, Math.max(0, this.requestRows.length - 1));
+  }
+
+  showRequest(index: number): void {
+    this.requestPosition = Math.max(0, Math.min(index, this.requestRows.length - 1));
+  }
+
+  get requestRows(): { item: FriendshipItem; received: boolean }[] {
+    const o = this.overview;
+    if (!o) return [];
+    return [
+      ...o.received.map((item) => ({ item, received: true })),
+      ...o.sent.map((item) => ({ item, received: false })),
+    ];
+  }
+
+  get shownRequests(): { item: FriendshipItem; received: boolean }[] {
+    const rows = this.requestRows;
+    return rows.slice(this.requestIndex, this.requestIndex + 1);
+  }
+
   // The request waiting for the server, so its buttons can't be clicked twice
   busyRequest: number | null = null;
 
