@@ -52,6 +52,7 @@
       </li>
     }
 
+    <li><ng-container *ngTemplateOutlet="row; context: { $implicit: friends }"></ng-container></li>
     <li><ng-container *ngTemplateOutlet="row; context: { $implicit: settings }"></ng-container></li>
 
     <li>

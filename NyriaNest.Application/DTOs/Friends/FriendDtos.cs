@@ -12,6 +12,10 @@ namespace NyriaNest.Application.DTOs.Friends
         public int Id { get; set; }
         public string FriendUserId { get; set; } = "";
         public string FriendUserName { get; set; } = "";
+
+        /// <summary>The friend's profile picture; null when they have none (the app shows the default one).</summary>
+        public string? FriendProfilePictureUrl { get; set; }
+
         public FriendshipStatus Status { get; set; }
 
         /// <summary>True when I sent the request, false when the friend did.</summary>

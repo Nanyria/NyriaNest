@@ -1,0 +1,409 @@
+/* Same header and type as the Notifications page; a little wider for the two boxes per friend */
+.friends {
+  max-width: 920px;
+  margin: 0 auto;
+  padding-top: var(--nn-space-2);
+}
+
+/* ---------- Header: icon, title, subtitle and the limits line ---------- */
+.friends__header {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--nn-space-4);
+  margin-bottom: var(--nn-space-5);
+}
+
+.friends__icon {
+  margin-top: 4px;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--nn-gold);
+}
+
+.friends__heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.friends__title {
+  margin: 0;
+  font-family: var(--nn-font-display);
+  font-size: 2.2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--nn-ink-strong);
+}
+
+.friends__subtitle {
+  margin: var(--nn-space-1) 0 0;
+  font-size: 1.05rem;
+  color: var(--nn-ink-muted);
+}
+
+/* "Sharing e-books with 2 of 10 friends · physical books with 1 of 100" */
+.friends__limits {
+  margin: var(--nn-space-2) 0 0;
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+}
+
+.friends__limit {
+  white-space: nowrap;
+}
+
+.friends__limit .bi {
+  margin-right: 2px;
+  color: var(--nn-gold-ink);
+}
+
+.friends__limit strong {
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.friends__limit-sep {
+  margin: 0 var(--nn-space-2);
+}
+
+/* ---------- Loading and error ---------- */
+.friends__state {
+  padding: var(--nn-space-5) 0;
+  color: var(--nn-ink-muted);
+}
+
+.friends__state p {
+  margin: 0 0 var(--nn-space-3);
+}
+
+/* ---------- Sections: friends, and later the requests ---------- */
+.friends__section-title {
+  margin: 0 0 var(--nn-space-3);
+  font-family: var(--nn-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.friends__section-count {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--nn-ink-muted);
+}
+
+.friends__empty {
+  margin: 0 0 var(--nn-space-5);
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- Requests: received as cards, sent as a dashed line ---------- */
+.friends__requests {
+  list-style: none;
+  margin: 0 0 var(--nn-space-6);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+}
+
+.friends__request {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-3) var(--nn-space-5);
+}
+
+.friends__request-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--nn-ink);
+  overflow-wrap: anywhere;
+}
+
+.friends__request-text strong {
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.friends__request-actions {
+  display: flex;
+  gap: var(--nn-space-2);
+  margin-left: auto;
+}
+
+/* Sent: lighter than a received request, since there's nothing to answer */
+.friends__request--sent {
+  border: 1px dashed var(--nn-border-strong);
+  border-radius: var(--nn-radius-lg);
+  font-size: 0.95rem;
+}
+
+.friends__sent-icon {
+  color: var(--nn-ink-muted);
+}
+
+.friends__waiting {
+  color: var(--nn-ink-muted);
+}
+
+/* "Cancel request": a quiet underlined text button */
+.friends__link-button {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--nn-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.friends__link-button:hover:not(:disabled) {
+  color: var(--nn-primary-hover);
+}
+
+.friends__link-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* ---------- One card per friend ---------- */
+.friends__list {
+  list-style: none;
+  margin: 0 0 var(--nn-space-5);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+}
+
+.friends__card {
+  padding: var(--nn-space-5);
+}
+
+/* Avatar, name and "Friends since" */
+.friends__who {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  margin-bottom: var(--nn-space-3);
+}
+
+.friends__avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--nn-border-strong);
+}
+
+.friends__who-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.friends__name {
+  font-family: var(--nn-font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--nn-ink-strong);
+  overflow-wrap: anywhere;
+}
+
+.friends__since {
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- The ⋮ menu: same popover as My owned books ---------- */
+.friends__menu-button {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.friends__menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 6px;
+}
+
+/* display only while open, or it would override the popover's hidden state */
+.friends__menu:popover-open {
+  display: flex;
+}
+
+.friends__menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--nn-radius-sm);
+  background: none;
+  color: var(--nn-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.friends__menu button:hover {
+  background-color: var(--nn-surface-hover);
+}
+
+.friends__menu .is-danger {
+  color: var(--nn-accent);
+}
+
+/* "You share" and "{name} shares", side by side */
+.friends__boxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nn-space-3);
+}
+
+.friends__box {
+  padding: var(--nn-space-3) var(--nn-space-4);
+  /* A shade lighter than the card, so the two boxes stand out inside it */
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 45%);
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius);
+}
+
+.friends__box-title {
+  margin: 0 0 var(--nn-space-2);
+  font-family: var(--nn-font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nn-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.friends__row {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  min-height: 40px;
+}
+
+.friends__row-icon {
+  color: var(--nn-gold-ink);
+}
+
+.friends__row-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--nn-ink);
+  cursor: default;
+}
+
+label.friends__row-label {
+  cursor: pointer;
+}
+
+/* The friend's side: green check when on, a quiet dash when off */
+.friends__mark {
+  font-size: 1.1rem;
+  color: var(--nn-primary);
+}
+
+.friends__row.is-off .friends__mark {
+  color: var(--nn-ink-muted);
+}
+
+/* A refused change, e.g. over the limit: under the boxes, in the accent colour */
+.friends__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nn-space-2);
+  margin: var(--nn-space-3) 0 0;
+  padding: var(--nn-space-2) var(--nn-space-3);
+  border-left: 3px solid var(--nn-accent);
+  border-radius: var(--nn-radius-sm);
+  background-color: color-mix(in srgb, var(--nn-accent) 8%, transparent);
+  color: var(--nn-accent);
+}
+
+.friends__error .bi {
+  margin-top: 2px;
+}
+
+/* ---------- Bootstrap's switch in the site's colours ---------- */
+.friends__switch {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.friends__switch .form-check-input {
+  float: none;
+  margin: 0;
+  width: 2.6em;
+  height: 1.4em;
+  cursor: pointer;
+  background-color: var(--nn-surface);
+  border-color: var(--nn-border-strong);
+}
+
+.friends__switch .form-check-input:checked {
+  background-color: var(--nn-primary);
+  border-color: var(--nn-primary);
+}
+
+.friends__switch .form-check-input:focus {
+  border-color: var(--nn-gold);
+  box-shadow: var(--nn-focus);
+}
+
+/* Bootstrap draws the off knob in blue on focus; keep it the border colour */
+.friends__switch .form-check-input:focus:not(:checked) {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23c9ad7f'/%3e%3c/svg%3e");
+}
+
+.friends__switch .form-check-input:disabled {
+  cursor: progress;
+}
+
+/* Phones: smaller title, the two boxes stacked */
+@media (max-width: 640px) {
+  .friends__title {
+    font-size: 1.8rem;
+  }
+
+  .friends__boxes {
+    grid-template-columns: 1fr;
+  }
+
+  /* A received request: Decline and Accept on their own line, sharing the width */
+  .friends__request {
+    padding: var(--nn-space-3) var(--nn-space-4);
+  }
+
+  .friends__request-actions {
+    flex-basis: 100%;
+  }
+
+  .friends__request-actions .nn-btn {
+    flex: 1;
+  }
+
+  /* The two limits on a line each, without a dot left hanging at the end of the first */
+  .friends__limit {
+    display: block;
+  }
+
+  .friends__limit-sep {
+    display: none;
+  }
+}

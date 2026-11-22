@@ -221,11 +221,19 @@ namespace NyriaNest.Application.Friends
                     Row = f,
                     RequesterName = f.Requester.UserName,
                     AddresseeName = f.Addressee.UserName,
+                    RequesterPicture = f.Requester.ProfilePictureUrl,
+                    AddresseePicture = f.Addressee.ProfilePictureUrl,
                 })
                 .ToListAsync();
 
             var dtos = rows
-                .Select(r => ToDto(r.Row, userId, r.Row.RequesterId == userId ? r.AddresseeName : r.RequesterName))
+                .Select(r =>
+                {
+                    var iAmRequester = r.Row.RequesterId == userId;
+                    var dto = ToDto(r.Row, userId, iAmRequester ? r.AddresseeName : r.RequesterName);
+                    dto.FriendProfilePictureUrl = iAmRequester ? r.AddresseePicture : r.RequesterPicture;
+                    return dto;
+                })
                 .ToList();
             var friends = dtos.Where(d => d.Status == FriendshipStatus.Accepted).ToList();
 

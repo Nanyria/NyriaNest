@@ -1,0 +1,206 @@
+<section class="friends">
+  <header class="friends__header">
+    <i class="bi bi-people friends__icon" aria-hidden="true"></i>
+    <div class="friends__heading">
+      <h1 class="friends__title">Friends</h1>
+      <p class="friends__subtitle">Who you share your books with.</p>
+      @if (state === 'ready') {
+        @let o = overview!;
+        <!-- How many friends each of my sharing settings is on for, out of the limit (ADR 0005) -->
+        <p class="friends__limits">
+          <span class="friends__limit">
+            <i class="bi bi-tablet" aria-hidden="true"></i>
+            Sharing e-books with <strong>{{ o.ebooksUsed }}</strong> of {{ o.ebooksLimit }} friends
+          </span>
+          <span class="friends__limit-sep" aria-hidden="true">·</span>
+          <span class="friends__limit">
+            <i class="bi bi-book" aria-hidden="true"></i>
+            physical books with <strong>{{ o.physicalLibraryUsed }}</strong> of {{ o.physicalLibraryLimit }}
+          </span>
+        </p>
+      }
+    </div>
+  </header>
+
+  @switch (state) {
+    @case ('loading') {
+      <p class="friends__state" aria-busy="true">Loading friends…</p>
+    }
+    @case ('error') {
+      <div class="friends__state">
+        <p>Couldn't load your friends.</p>
+        <button type="button" class="nn-btn nn-btn--outline" (click)="load()">Try again</button>
+      </div>
+    }
+    @default {
+      @let o = overview!;
+      <!-- Requests: received ones first (they need an answer), then the ones I sent -->
+      @if (o.received.length + o.sent.length > 0) {
+        <h2 class="friends__section-title">
+          Requests <span class="friends__section-count">({{ o.received.length + o.sent.length }})</span>
+        </h2>
+        <ul class="friends__requests">
+          @for (request of o.received; track request.id) {
+            <li class="friends__request nn-panel">
+              <img
+                class="friends__avatar"
+                [src]="request.friendProfilePictureUrl || defaultPicture"
+                (error)="onAvatarError($event)"
+                alt=""
+              />
+              <div class="friends__who-text">
+                <span class="friends__request-text"><strong>{{ request.friendUserName }}</strong> wants to be friends</span>
+                <span class="friends__since">Sent {{ request.requestedAt | date: 'mediumDate' }}</span>
+              </div>
+              <div class="friends__request-actions">
+                <button
+                  type="button"
+                  class="nn-btn nn-btn--outline"
+                  [disabled]="busyRequest === request.id"
+                  (click)="decline(request)"
+                >
+                  Decline
+                </button>
+                <button
+                  type="button"
+                  class="nn-btn nn-btn--primary"
+                  [disabled]="busyRequest === request.id"
+                  (click)="accept(request)"
+                >
+                  Accept
+                </button>
+              </div>
+            </li>
+          }
+          @for (request of o.sent; track request.id) {
+            <li class="friends__request friends__request--sent">
+              <i class="bi bi-send friends__sent-icon" aria-hidden="true"></i>
+              <span class="friends__request-text">
+                <!-- &nbsp;: Angular drops the plain space between the two tags -->
+                You sent a request to <strong>{{ request.friendUserName }}</strong>&nbsp;<span class="friends__waiting">· waiting for an answer</span>
+              </span>
+              <button
+                type="button"
+                class="friends__link-button"
+                [disabled]="busyRequest === request.id"
+                (click)="cancel(request)"
+              >
+                Cancel request
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
+      <h2 class="friends__section-title">
+        Your friends <span class="friends__section-count">({{ o.friends.length }})</span>
+      </h2>
+      @if (o.friends.length === 0) {
+        <p class="friends__empty">No friends yet. Find someone by their user name to send a friend request.</p>
+      } @else {
+        <ul class="friends__list">
+          @for (friend of o.friends; track friend.id) {
+            <li class="friends__card nn-panel">
+              <div class="friends__who">
+                <img
+                  class="friends__avatar"
+                  [src]="friend.friendProfilePictureUrl || defaultPicture"
+                  (error)="onAvatarError($event)"
+                  alt=""
+                />
+                <div class="friends__who-text">
+                  <span class="friends__name">{{ friend.friendUserName }}</span>
+                  @if (friend.acceptedAt) {
+                    <span class="friends__since">Friends since {{ friend.acceptedAt | date: 'mediumDate' }}</span>
+                  }
+                </div>
+                <button
+                  #menuButton
+                  type="button"
+                  class="nn-btn nn-btn--ghost nn-btn--icon friends__menu-button"
+                  [attr.popovertarget]="'friend-menu-' + friend.id"
+                  [attr.aria-label]="'Actions for ' + friend.friendUserName"
+                >
+                  <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+                <!-- Popover, like My owned books: closes on Esc or a click outside -->
+                <div
+                  class="friends__menu nn-panel"
+                  popover
+                  [id]="'friend-menu-' + friend.id"
+                  (beforetoggle)="placeMenu($event, menuButton)"
+                  (click)="closeMenu($event)"
+                >
+                  <button type="button" class="is-danger" (click)="remove(friend)">
+                    <i class="bi bi-person-dash" aria-hidden="true"></i> Remove friend
+                  </button>
+                </div>
+              </div>
+
+              <div class="friends__boxes">
+                <!-- My own two settings for this friend -->
+                <div class="friends__box">
+                  <h3 class="friends__box-title">You share</h3>
+                  <div class="friends__row">
+                    <i class="bi bi-book friends__row-icon" aria-hidden="true"></i>
+                    <label class="friends__row-label" [for]="'share-library-' + friend.id">Physical books</label>
+                    <div class="form-check form-switch friends__switch">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        [id]="'share-library-' + friend.id"
+                        [checked]="friend.iSharePhysicalLibrary"
+                        [disabled]="isBusy(friend, 'physical-library')"
+                        (change)="setSharing(friend, 'physical-library', $any($event.target))"
+                      />
+                    </div>
+                  </div>
+                  <div class="friends__row">
+                    <i class="bi bi-tablet friends__row-icon" aria-hidden="true"></i>
+                    <label class="friends__row-label" [for]="'share-ebooks-' + friend.id">E-books</label>
+                    <div class="form-check form-switch friends__switch">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        [id]="'share-ebooks-' + friend.id"
+                        [checked]="friend.iShareEbooks"
+                        [disabled]="isBusy(friend, 'ebooks')"
+                        (change)="setSharing(friend, 'ebooks', $any($event.target))"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- What the friend shares with me: read only, only they can change it -->
+                <div class="friends__box">
+                  <h3 class="friends__box-title">{{ friend.friendUserName }} shares</h3>
+                  <div class="friends__row" [class.is-off]="!friend.friendSharesPhysicalLibrary">
+                    <i class="bi bi-book friends__row-icon" aria-hidden="true"></i>
+                    <span class="friends__row-label">Physical books</span>
+                    <i class="bi friends__mark" [class.bi-check-lg]="friend.friendSharesPhysicalLibrary" [class.bi-dash-lg]="!friend.friendSharesPhysicalLibrary" aria-hidden="true"></i>
+                    <span class="visually-hidden">{{ friend.friendSharesPhysicalLibrary ? 'shared with you' : 'not shared' }}</span>
+                  </div>
+                  <div class="friends__row" [class.is-off]="!friend.friendSharesEbooks">
+                    <i class="bi bi-tablet friends__row-icon" aria-hidden="true"></i>
+                    <span class="friends__row-label">E-books</span>
+                    <i class="bi friends__mark" [class.bi-check-lg]="friend.friendSharesEbooks" [class.bi-dash-lg]="!friend.friendSharesEbooks" aria-hidden="true"></i>
+                    <span class="visually-hidden">{{ friend.friendSharesEbooks ? 'shared with you' : 'not shared' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              @if (errorFor(friend); as message) {
+                <p class="friends__error" role="alert">
+                  <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                  {{ message }}
+                </p>
+              }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

@@ -394,6 +394,28 @@ public class FriendshipServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task The_overview_shows_each_persons_profile_picture_or_null_when_they_have_none()
+    {
+        using (var setup = _db.CreateContext())
+        {
+            setup.Users.Single(u => u.Id == _anna.Id).ProfilePictureUrl = "/assets/avatars/owl.png";
+            setup.Users.Single(u => u.Id == _olle.Id).ProfilePictureUrl = "/api/avatars/olle.png";
+            setup.SaveChanges();
+        }
+        await BecomeFriendsAsync(_me, _anna);
+        using var db = _db.CreateContext();
+        var service = Service(db);
+        await service.SendRequestAsync(_me.Id, "erik");
+        await service.SendRequestAsync(_olle.Id, "me");
+
+        var overview = (await service.GetOverviewAsync(_me.Id)).Result;
+
+        overview.Friends.Single().FriendProfilePictureUrl.Should().Be("/assets/avatars/owl.png");
+        overview.Received.Single().FriendProfilePictureUrl.Should().Be("/api/avatars/olle.png");
+        overview.Sent.Single().FriendProfilePictureUrl.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Search_finds_user_names_that_start_with_the_text_and_leaves_out_me_and_existing_rows()
     {
         using (var db = _db.CreateContext())

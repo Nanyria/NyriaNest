@@ -326,6 +326,7 @@ export interface FriendshipItem {
   id: number;
   friendUserId: string;
   friendUserName: string;
+  friendProfilePictureUrl: string | null; // null = show the default picture
   status: FriendshipStatus;
   sentByMe: boolean;
   requestedAt: string;

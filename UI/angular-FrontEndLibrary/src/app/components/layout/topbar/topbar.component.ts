@@ -15,6 +15,7 @@ import { ILoggedInUser, NotificationItem } from '../../../Models/interfaces';
 import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
 import {
   ADMIN_NAV,
+  FRIENDS_NAV,
   MAIN_NAV,
   NavGroup,
   NavItem,
@@ -141,9 +142,9 @@ export class TopbarComponent {
     );
   }
 
-  // The user menu too: its only page so far is Settings
+  // The user menu too: its pages so far are Friends and Settings
   get isUserMenuActive(): boolean {
-    return this.router.url.startsWith(SETTINGS_NAV.route!);
+    return [FRIENDS_NAV, SETTINGS_NAV].some((item) => this.router.url.startsWith(item.route!));
   }
 
   // Searching from anywhere opens the library filtered by the term
