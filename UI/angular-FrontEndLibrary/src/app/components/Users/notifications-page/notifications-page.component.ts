@@ -1,5 +1,7 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { notificationLink } from '../../../Helpers/notification-links';
 import { NotificationService } from '../../../Services/notification.service';
 import { ToastService } from '../../../Services/toast.service';
 import { NotificationItem, PagedResult } from '../../../Models/interfaces';
@@ -12,10 +14,12 @@ import { NotificationItem, PagedResult } from '../../../Models/interfaces';
   templateUrl: './notifications-page.component.html',
   styleUrls: ['./notifications-page.component.css'],
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
 })
 export class NotificationsPageComponent {
   readonly pageSize = 20;
+  // Friend requests etc. get a link to their page; opening it also marks the notification read
+  readonly notificationLink = notificationLink;
   page: PagedResult<NotificationItem> | null = null;
   state: 'loading' | 'error' | 'ready' = 'loading';
 

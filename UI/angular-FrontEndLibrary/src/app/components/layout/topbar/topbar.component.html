@@ -143,14 +143,15 @@
               } @else {
                 <ul class="topbar__notif-list">
                   @for (item of bellItems; track item.id) {
+                    @let link = notificationLink(item.type);
                     <li>
                       <button
                         type="button"
                         class="topbar__notif-item"
                         [class.is-unread]="!item.isRead"
-                        [attr.aria-label]="(item.isRead ? '' : 'Unread: ') + item.message"
-                        [title]="item.isRead ? '' : 'Mark as read'"
-                        (click)="markAsRead(item)"
+                        [attr.aria-label]="(item.isRead ? '' : 'Unread: ') + item.message + (link ? ' ' + link.label : '')"
+                        [title]="link ? link.label : item.isRead ? '' : 'Mark as read'"
+                        (click)="openNotification(item)"
                       >
                         <span class="topbar__notif-message">{{ item.message }}</span>
                         <span class="topbar__notif-date">{{ item.createdAt | date: 'yyyy-MM-dd' }}</span>

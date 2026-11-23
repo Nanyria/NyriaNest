@@ -43,6 +43,12 @@
                 <p class="notifications__message">{{ item.message }}</p>
                 <span class="notifications__date">{{ item.createdAt | date: 'yyyy-MM-dd' }}</span>
               </div>
+              @let link = notificationLink(item.type);
+              @if (link) {
+                <a class="nn-btn nn-btn--outline notifications__mark" [routerLink]="link.route" (click)="markAsRead(item)">
+                  {{ link.label }}
+                </a>
+              }
               @if (!item.isRead) {
                 <button type="button" class="nn-btn nn-btn--ghost notifications__mark" (click)="markAsRead(item)">
                   Mark as read
