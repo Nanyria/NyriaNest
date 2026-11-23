@@ -17,6 +17,7 @@ import { unsavedChangesGuard } from './Services/unsaved-changes.guard';
 import { StartPageComponent } from './components/start-page/start-page.component';
 import { MorePageComponent } from './components/more-page/more-page.component';
 import { NotificationsPageComponent } from './components/Users/notifications-page/notifications-page.component';
+import { FriendsPageComponent } from './components/Users/friends-page/friends-page.component';
 export const routes: Routes = [
   { path: '', component: StartPageComponent, canActivate: [AuthGuard] }, // Add canActivate here
   // Resetting a forgotten password (#51), in the start page's card. Open to everyone:
@@ -33,6 +34,8 @@ export const routes: Routes = [
       { path: 'more', component: MorePageComponent },
       // Every notification, read and unread; the topbar's bell links here (#91)
       { path: 'notifications', component: NotificationsPageComponent },
+      // Friends, friend requests and the sharing settings per friend (#84)
+      { path: 'friends', component: FriendsPageComponent },
       // The add/edit book page. Where it's opened from decides where the book goes
       // (data.area, #83): 'my' = the user's own books, 'admin' = Manage books, where
       // adding puts an e-book in the shared library. Kept outside the 'my' and 'admin'

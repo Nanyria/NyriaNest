@@ -56,6 +56,13 @@ export const ADMIN_NAV: NavGroup = {
   ],
 };
 
+// The user menu (desktop) and the More page (small screens), above Settings (#84)
+export const FRIENDS_NAV: NavItem = {
+  label: 'Friends',
+  icon: 'nn-icon-friends',
+  route: '/friends',
+};
+
 export const SETTINGS_NAV: NavItem = {
   label: 'Settings',
   icon: 'bi-gear',

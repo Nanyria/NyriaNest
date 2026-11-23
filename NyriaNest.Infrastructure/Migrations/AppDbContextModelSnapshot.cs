@@ -318,6 +318,61 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.ToTable("FavoriteItems", "library");
                 });
 
+            modelBuilder.Entity("NyriaNest.Domain.Entities.Friendship", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AddresseeId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("AddresseeSharesEbooks")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AddresseeSharesPhysicalLibrary")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DeclinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("RequesterId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("RequesterSharesEbooks")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequesterSharesPhysicalLibrary")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddresseeId");
+
+                    b.HasIndex("RequesterId", "AddresseeId")
+                        .IsUnique();
+
+                    b.ToTable("Friendships", "library", t =>
+                        {
+                            t.HasCheckConstraint("CK_Friendships_NotWithYourself", "[RequesterId] <> [AddresseeId]");
+                        });
+                });
+
             modelBuilder.Entity("NyriaNest.Domain.Entities.NotificationItem", b =>
                 {
                     b.Property<int>("Id")
@@ -671,6 +726,25 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Navigation("Book");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.Friendship", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.User", "Addressee")
+                        .WithMany()
+                        .HasForeignKey("AddresseeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NyriaNest.Domain.Entities.User", "Requester")
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Addressee");
+
+                    b.Navigation("Requester");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.NotificationItem", b =>

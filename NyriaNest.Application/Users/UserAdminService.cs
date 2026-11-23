@@ -137,6 +137,13 @@ namespace NyriaNest.Application.Users
                 var statusHistory = await _dbContext.StatusHistoryItems.Where(s => s.UserId == userId).ToListAsync();
                 _dbContext.StatusHistoryItems.RemoveRange(statusHistory);
 
+                // #84: friendships and requests, whichever side the user is on. Both FKs are
+                // Restrict, so this can't be skipped. Nobody is notified, as with a removed friend.
+                var friendships = await _dbContext.Friendships
+                    .Where(f => f.RequesterId == userId || f.AddresseeId == userId)
+                    .ToListAsync();
+                _dbContext.Friendships.RemoveRange(friendships);
+
                 // #83: the user's own books go with the account: a private shelf means nothing
                 // without its owner, and the borrower names on it are personal data. Loans and
                 // reservations are Restrict, so remove them first; history, reviews and

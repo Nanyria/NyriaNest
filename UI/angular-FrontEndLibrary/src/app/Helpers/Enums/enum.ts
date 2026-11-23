@@ -106,3 +106,10 @@ export enum NotificationType {
     BookLoanChangedByAdmin = 12,
     BookStatusChangedByAdmin = 13,
 }
+
+// Travels as a number: must match the backend's FriendshipStatus (#84).
+export enum FriendshipStatus {
+    Pending = 0,
+    Accepted = 1,
+    Declined = 2,
+}

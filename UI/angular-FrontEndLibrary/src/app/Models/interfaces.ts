@@ -4,7 +4,8 @@ import {
   BookStatusEnum,
   BookTypeEnums,
   LanguageEnums,
-  NotificationType
+  NotificationType,
+  FriendshipStatus
 } from '../Helpers/Enums/enum';
 
 // Book interfaces
@@ -318,4 +319,35 @@ export interface RatingItemDto {
 export interface INavlink {
   name: string;
   route: string;
+}
+
+// Friends (#84). Seen from the logged-in user's side: "friend" is the other person.
+export interface FriendshipItem {
+  id: number;
+  friendUserId: string;
+  friendUserName: string;
+  friendProfilePictureUrl: string | null; // null = show the default picture
+  status: FriendshipStatus;
+  sentByMe: boolean;
+  requestedAt: string;
+  acceptedAt: string | null; // "Friends since"; null until accepted
+  iSharePhysicalLibrary: boolean;
+  iShareEbooks: boolean;
+  friendSharesPhysicalLibrary: boolean;
+  friendSharesEbooks: boolean;
+}
+
+export interface FriendsOverview {
+  friends: FriendshipItem[];
+  sent: FriendshipItem[];     // requests I sent, waiting for an answer
+  received: FriendshipItem[]; // requests to me I haven't answered
+  physicalLibraryUsed: number;
+  physicalLibraryLimit: number;
+  ebooksUsed: number;
+  ebooksLimit: number;
+}
+
+export interface UserSearchResult {
+  userId: string;
+  userName: string;
 }

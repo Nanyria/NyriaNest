@@ -1,0 +1,1018 @@
+/* Reaches over the shell's side padding (and adds it back inside), so anything
+   sticking out is clipped at the edge of the main area instead of making the page
+   scroll sideways, as on Library and the admin pages. The bookshelves and the ⋮
+   menus are fixed to the window, so the clipping doesn't reach them. */
+:host {
+  display: block;
+  margin-inline: calc(-1 * var(--nn-space-6));
+  padding-inline: var(--nn-space-6);
+  overflow-x: clip;
+}
+
+@media (max-width: 991px) {
+  :host {
+    margin-inline: calc(-1 * var(--nn-space-4));
+    padding-inline: var(--nn-space-4);
+  }
+}
+
+/* As wide as the admin pages (Manage books, Add book: .admin-content, 1360px with
+   16px at the sides). The two sections are the theme's framed panels
+   (nn-panel--framed), titled like Manage books (nn-section-title with its rule). */
+.friends {
+  position: relative;
+  z-index: 1; /* above the bookshelves */
+  max-width: 1360px;
+  margin: 0 auto;
+  padding-inline: var(--nn-space-4);
+  padding-top: var(--nn-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-5);
+}
+
+/* ---------- Bookshelves at the window's edges ----------
+   Fixed down to the bottom of the window, so they stay put while the page scrolls.
+   The ivy at the top of the artwork is cut off at the image's edge, so they start
+   behind the topbar (which sits above them, z-index 20): the cut edge is hidden
+   by the bar and the ivy seems to grow out from under it.
+   Behind the page, so where the content is wider than the gap beside it, only the
+   parts reaching past the panels show (like the leaves on Manage books). Hidden on
+   narrower screens, where they'd hardly show. */
+.friends__deco {
+  --deco-top: 24px; /* inside the topbar's height, below its 8px margin */
+  display: none;
+  position: fixed;
+  top: var(--deco-top);
+  z-index: 0;
+  height: calc(100vh - var(--deco-top));
+  width: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.friends__deco--left {
+  left: 0;
+}
+
+.friends__deco--right {
+  right: 0;
+}
+
+@media (min-width: 1340px) {
+  .friends__deco {
+    display: block;
+  }
+}
+
+/* ---------- Loading and error ---------- */
+.friends__state {
+  padding: var(--nn-space-5) 0;
+  color: var(--nn-ink-muted);
+}
+
+.friends__state p {
+  margin: 0 0 var(--nn-space-3);
+}
+
+/* ---------- Top row: the two limit cards (left half), friend requests (right half) ---------- */
+.friends__top {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nn-space-4);
+}
+
+/* Side by side: the cards on the left, the requests on the right
+   (the requests come first in the markup, for the stacked order below) */
+@media (min-width: 1101px) {
+  .friends__limits {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .friends__requests-panel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+/* Below this everything stacks, requests first */
+@media (max-width: 1100px) {
+  .friends__top {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- The two limit cards, side by side: icon, label and sentence, the bar, faces and "1 / 100" ---------- */
+.friends__limits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nn-space-4);
+}
+
+.friends__limit {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'icon  label label'
+    'bar   bar   bar'
+    'faces faces count';
+  align-items: center;
+  align-content: center; /* stretched to the requests beside them: content stays together in the middle */
+  column-gap: var(--nn-space-3);
+  row-gap: var(--nn-space-3);
+  padding: var(--nn-space-4);
+}
+
+/* The icon in a soft gold circle */
+.friends__limit-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--nn-gold-soft) 45%, transparent);
+  color: var(--nn-gold-ink);
+  font-size: 1.15rem;
+}
+
+/* The small label, and "Shared with 2 friends" under it as the headline */
+.friends__limit-body {
+  grid-area: label;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.friends__limit-label {
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+}
+
+/* "Physical" instead of "Physical library": phones only */
+.friends__limit-label-short {
+  display: none;
+}
+
+.friends__limit-text {
+  font-family: var(--nn-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--nn-ink-strong);
+}
+
+.friends__bar {
+  grid-area: bar;
+  display: block;
+  height: 6px;
+  border-radius: var(--nn-radius-pill);
+  background-color: color-mix(in srgb, var(--nn-gold-soft) 55%, transparent);
+  overflow: hidden;
+}
+
+.friends__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--nn-primary);
+}
+
+/* The faces of the friends shared with, overlapping */
+.friends__faces {
+  grid-area: faces;
+  display: flex;
+}
+
+.friends__face {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--nn-surface);
+  box-shadow: 0 0 0 1px var(--nn-border-strong);
+}
+
+.friends__face + .friends__face {
+  margin-left: -8px;
+}
+
+.friends__face--more {
+  display: grid;
+  place-items: center;
+  background-color: var(--nn-surface-sunken);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nn-ink);
+}
+
+.friends__limit-count {
+  grid-area: count;
+  justify-self: end; /* on the right, with or without faces */
+  font-size: 1rem;
+  white-space: nowrap;
+  color: var(--nn-ink-strong);
+}
+
+/* ---------- Header logo: the Friends logo (two dragons) in the compass spot ---------- */
+.friends__logo {
+  width: 56px; /* the compass is 46px; aspect-ratio 1 from the theme keeps it square */
+  background-image: url('/assets/images/friend-page/decorations/friends-page-logo-5.webp');
+}
+
+/* ---------- Search for friends: in the header, results drop down under it ---------- */
+.friends__search {
+  position: relative;
+  z-index: 5; /* the dropdown lies over the limit cards */
+  margin-left: auto; /* to the right of the title, where Manage books has "Add e-book" */
+  width: min(360px, 100%);
+}
+
+.friends__search-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(440px, calc(100vw - 2 * var(--nn-space-4)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-3) var(--nn-space-4);
+  box-shadow: 0 12px 28px rgba(40, 25, 10, 0.18);
+}
+
+.friends__search-panel:focus {
+  outline: none; /* focusable only so a click inside keeps it open */
+}
+
+/* Below this the centred divider would run into the field: the field gets its own row */
+@media (max-width: 1100px) {
+  .friends__header {
+    flex-wrap: wrap;
+  }
+
+  .friends__header .nn-admin-header__divider {
+    display: none;
+  }
+
+  .friends__search {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .friends__search-panel {
+    left: 0;
+    width: auto;
+  }
+}
+
+.friends__find-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+}
+
+.friends__find-hint--error {
+  color: var(--nn-accent);
+}
+
+/* Search results: a short list under the field, scrolls if many match */
+.friends__results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-2);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.friends__result {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-2) var(--nn-space-3);
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius-sm);
+}
+
+.friends__result-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.friends__result-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+  overflow-wrap: anywhere;
+}
+
+/* Right side of a result: "Friends", "Request sent", or a button */
+.friends__result-action {
+  flex-shrink: 0;
+}
+
+.friends__result-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--nn-ink-muted);
+}
+
+.friends__result-status--friend {
+  color: var(--nn-gold-ink);
+  font-weight: 600;
+}
+
+.friends__result-btn {
+  padding: 4px 14px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Framed sections ---------- */
+.friends__panel {
+  padding: var(--nn-frame-pad); /* clears the frame (nn-panel--framed) */
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-4);
+}
+
+.friends__panel-title {
+  font-family: var(--nn-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.friends__panel-title--small {
+  font-size: 1.3rem;
+}
+
+/* Beside the limit cards: a little tighter than the big framed sections */
+.friends__requests-panel {
+  gap: var(--nn-space-3);
+}
+
+/* Title on the left, ‹ 1 / 4 › on the right */
+.friends__requests-head {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+}
+
+.friends__requests-head .friends__panel-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.friends__pager {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+}
+
+/* Round arrow buttons, like the one on the friend cards */
+.friends__pager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--nn-border-strong);
+  border-radius: 50%;
+  background-color: var(--nn-surface);
+  color: var(--nn-gold-ink);
+  cursor: pointer;
+}
+
+.friends__pager-btn:hover:not(:disabled) {
+  background-color: var(--nn-surface-hover);
+}
+
+.friends__pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.friends__pager-count {
+  min-width: 3ch;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--nn-ink-muted);
+  white-space: nowrap;
+}
+
+.friends__section-count {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--nn-ink-muted);
+}
+
+.friends__empty {
+  margin: 0;
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- Requests: received in a light box, sent as a dashed line ---------- */
+.friends__requests {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-2);
+}
+
+.friends__request {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--nn-space-2) var(--nn-space-3);
+  padding: var(--nn-space-2) var(--nn-space-3);
+  border-radius: var(--nn-radius);
+}
+
+.friends__avatar.friends__avatar--small {
+  width: 32px;
+  height: 32px;
+}
+
+.friends__request-btn {
+  padding: 4px 14px;
+  font-size: 0.9rem;
+}
+
+
+
+.friends__request--received {
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 45%);
+  border: 1px solid var(--nn-border);
+}
+
+.friends__request-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--nn-ink);
+  overflow-wrap: anywhere;
+}
+
+.friends__request-text strong {
+  font-weight: 600;
+  color: var(--nn-ink-strong);
+}
+
+.friends__request-actions {
+  display: flex;
+  gap: var(--nn-space-2);
+  margin-left: auto;
+}
+
+/* Sent: lighter than a received request, since there's nothing to answer */
+.friends__request--sent {
+  border: 1px dashed var(--nn-border-strong);
+  font-size: 0.95rem;
+}
+
+.friends__sent-icon {
+  color: var(--nn-ink-muted);
+}
+
+.friends__waiting {
+  color: var(--nn-ink-muted);
+}
+
+/* "Cancel request": a quiet underlined text button */
+.friends__link-button {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--nn-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.friends__link-button:hover:not(:disabled) {
+  color: var(--nn-primary-hover);
+}
+
+.friends__link-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* ---------- Chips above the friend cards: All friends / Shares with me / Sharing with them ---------- */
+.friends__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nn-space-2);
+  margin-bottom: var(--nn-space-4);
+}
+
+@media (max-width: 640px) {
+  .friends__filters .nn-chip {
+    padding: 4px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* ---------- Friend cards, two per row inside the framed panel ---------- */
+.friends__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start; /* an open card doesn't stretch the one beside it */
+  gap: var(--nn-space-5) var(--nn-space-4); /* taller row gap: the round arrow hangs over each card's bottom edge */
+  padding-bottom: var(--nn-space-3); /* room for the last row's arrows */
+}
+
+.friends__card {
+  position: relative; /* for the round arrow on the bottom edge */
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  padding: var(--nn-space-4) var(--nn-space-5);
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 30%);
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius-lg);
+  box-shadow: var(--nn-shadow);
+}
+
+/* Avatar, name, date, and the ⋮ menu on the right */
+.friends__who {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+}
+
+.friends__avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--nn-border-strong);
+}
+
+/* A gold ring, like the avatar in the topbar */
+.friends__avatar--large {
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--nn-gold);
+  box-shadow: 0 0 0 3px var(--nn-surface), 0 0 0 4px var(--nn-gold-soft);
+}
+
+.friends__who-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.friends__name {
+  font-family: var(--nn-font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--nn-ink-strong);
+  overflow-wrap: anywhere;
+}
+
+.friends__name--large {
+  font-size: 1.4rem;
+}
+
+.friends__since {
+  font-size: 0.95rem;
+  color: var(--nn-ink-muted);
+}
+
+/* ---------- The four icons on a card's top right: what I share (↑), then what they share (↓) ---------- */
+.friends__glance {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-4); /* more between the two groups than inside them */
+}
+
+.friends__glance-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Off: a muted outline. On: filled, in the same green as the switches and ✓ marks */
+.friends__glance-icon {
+  position: relative; /* for the arrow badge */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--nn-border);
+  color: color-mix(in srgb, var(--nn-ink-muted) 70%, transparent);
+  font-size: 0.95rem;
+  cursor: default;
+}
+
+.friends__glance-icon.is-on {
+  border-color: color-mix(in srgb, var(--nn-primary) 55%, #fff);
+  background-color: color-mix(in srgb, var(--nn-primary) 18%, #fff);
+  color: var(--nn-primary);
+}
+
+/* The direction, on the icon's top right corner: green ↑ for mine, gold ↓ for theirs */
+.friends__glance-badge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nn-surface); /* a little ring so it stands off the icon */
+  background-color: var(--nn-primary);
+  color: #fff;
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.friends__glance-badge--theirs {
+  background-color: var(--nn-gold-ink);
+}
+
+/* Off: the badge keeps its colour, faded, so the direction still shows */
+.friends__glance-icon:not(.is-on) .friends__glance-badge {
+  opacity: 0.55;
+}
+
+/* ---------- Open card: the two boxes, and an error if any ---------- */
+.friends__open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nn-space-3);
+  padding-top: var(--nn-space-3);
+  padding-bottom: var(--nn-space-3); /* clear of the round arrow */
+  border-top: 1px solid var(--nn-border);
+}
+
+/* ---------- The ⋮ menu, right of the icons: same popover as My owned books ---------- */
+.friends__menu-button {
+  flex-shrink: 0;
+}
+
+.friends__menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 6px;
+}
+
+/* display only while open, or it would override the popover's hidden state */
+.friends__menu:popover-open {
+  display: flex;
+}
+
+.friends__menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--nn-radius-sm);
+  background: none;
+  color: var(--nn-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.friends__menu button:hover {
+  background-color: var(--nn-surface-hover);
+}
+
+.friends__menu .is-danger {
+  color: var(--nn-accent);
+}
+
+/* ---------- The round arrow, centred at the bottom of every card ---------- */
+/* Half over the card's bottom border, like a tab */
+.friends__toggle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--nn-border-strong);
+  border-radius: 50%;
+  background-color: var(--nn-surface);
+  color: var(--nn-gold-ink);
+  cursor: pointer;
+}
+
+.friends__toggle:hover {
+  background-color: var(--nn-surface-hover);
+}
+
+.friends__toggle-icon {
+  transition: transform 0.15s ease;
+}
+
+.friends__toggle[aria-expanded='true'] .friends__toggle-icon {
+  transform: rotate(180deg);
+}
+
+/* One card per row once two would be too narrow for the boxes side by side */
+@media (max-width: 991px) {
+  .friends__list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- "{name} shares" and "You share", side by side ---------- */
+.friends__boxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--nn-space-4);
+}
+
+.friends__box {
+  border: 1px solid var(--nn-border);
+  border-radius: var(--nn-radius);
+  background-color: color-mix(in srgb, var(--nn-surface-sunken) 35%, transparent);
+  overflow: hidden;
+}
+
+/* Small caps title with a short gold rule and diamond, like the section titles */
+.friends__box-title {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  margin: 0;
+  padding: var(--nn-space-2) var(--nn-space-4);
+  font-family: var(--nn-font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nn-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.friends__box-rule {
+  position: relative;
+  flex: 0 1 90px;
+  height: 1px;
+  margin-left: 12px;
+  background-color: var(--nn-gold-soft);
+}
+
+.friends__box-rule::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--nn-gold);
+  background-color: var(--nn-gold-soft);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.friends__row {
+  display: flex;
+  align-items: center;
+  gap: var(--nn-space-3);
+  min-height: 52px;
+  padding: var(--nn-space-2) var(--nn-space-4);
+  border-top: 1px solid var(--nn-border);
+  background-color: color-mix(in srgb, var(--nn-surface), #fff 40%);
+}
+
+.friends__row-icon {
+  font-size: 1.15rem;
+  color: var(--nn-gold-ink);
+}
+
+.friends__row-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--nn-ink);
+}
+
+label.friends__row-label {
+  cursor: pointer;
+}
+
+/* The friend's side: ✓ in a green circle, ✗ in a grey one */
+.friends__mark {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--nn-border-strong);
+  background-color: var(--nn-surface-sunken);
+  color: var(--nn-ink-muted);
+  font-size: 0.95rem;
+}
+
+/* Mixed with white, not transparent, so it reads as green on the parchment */
+.friends__mark.is-on {
+  border-color: color-mix(in srgb, var(--nn-primary) 55%, #fff);
+  background-color: color-mix(in srgb, var(--nn-primary) 22%, #fff);
+  color: var(--nn-primary);
+  font-size: 1.1rem;
+}
+
+/* A refused change, e.g. over the limit: under the boxes, in the accent colour */
+.friends__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nn-space-2);
+  margin: var(--nn-space-3) 0 0;
+  padding: var(--nn-space-2) var(--nn-space-3);
+  border-left: 3px solid var(--nn-accent);
+  border-radius: var(--nn-radius-sm);
+  background-color: color-mix(in srgb, var(--nn-accent) 8%, transparent);
+  color: var(--nn-accent);
+}
+
+.friends__error .bi {
+  margin-top: 2px;
+}
+
+/* ---------- Bootstrap's switch in the site's colours ---------- */
+.friends__switch {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.friends__switch .form-check-input {
+  float: none;
+  margin: 0;
+  width: 2.8em;
+  height: 1.5em;
+  cursor: pointer;
+  background-color: var(--nn-surface-sunken);
+  border-color: var(--nn-border-strong);
+}
+
+.friends__switch .form-check-input:checked {
+  background-color: var(--nn-primary);
+  border-color: var(--nn-primary);
+}
+
+.friends__switch .form-check-input:focus {
+  border-color: var(--nn-gold);
+  box-shadow: var(--nn-focus);
+}
+
+/* Bootstrap draws the off knob in blue on focus; keep it the border colour */
+.friends__switch .form-check-input:focus:not(:checked) {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23c9ad7f'/%3e%3c/svg%3e");
+}
+
+.friends__switch .form-check-input:disabled {
+  cursor: progress;
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 640px) {
+  /* The two limit cards still side by side, in a smaller form: icon, short label and
+     "1 / 100", the bar underneath. The sentence stays for screen readers; the faces go. */
+  .friends__limits {
+    gap: var(--nn-space-3);
+  }
+
+  .friends__limit {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'icon label'
+      'icon count'
+      'bar  bar';
+    column-gap: var(--nn-space-2);
+    row-gap: 2px;
+    padding: var(--nn-space-3);
+  }
+
+  .friends__limit-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .friends__limit .friends__bar {
+    margin-top: var(--nn-space-2);
+  }
+
+  .friends__limit-count {
+    justify-self: start;
+    font-family: var(--nn-font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .friends__faces {
+    display: none;
+  }
+
+  .friends__limit-label-short {
+    display: inline;
+  }
+
+  /* Hidden on screen, still read out (same as Bootstrap's .visually-hidden) */
+  .friends__limit-label-full,
+  .friends__limit-text {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .friends__panel-title {
+    font-size: 1.35rem;
+  }
+
+  /* "Friend requests" and the pager on one line */
+  .friends__panel-title--small {
+    font-size: 1.2rem;
+  }
+
+  .friends__requests-head .nn-section-title__rule {
+    display: none;
+  }
+
+  .friends__card {
+    padding: var(--nn-space-3) var(--nn-space-3) var(--nn-space-4); /* clear of the round arrow */
+  }
+
+  .friends__avatar--large {
+    width: 48px;
+    height: 48px;
+  }
+
+  .friends__name--large {
+    font-size: 1.25rem;
+  }
+
+  .friends__boxes {
+    grid-template-columns: 1fr;
+    gap: var(--nn-space-3);
+  }
+
+  /* Four icons in a row don't fit beside the name: they go on a line of their own */
+  .friends__who {
+    flex-wrap: wrap;
+  }
+
+  .friends__glance {
+    order: 1; /* after the ⋮ button, so that one stays beside the name */
+    flex-basis: 100%;
+    padding-left: calc(48px + var(--nn-space-3)); /* lined up with the name */
+  }
+
+  /* A received request: Decline and Accept on their own line, sharing the width */
+  .friends__request-actions {
+    flex-basis: 100%;
+  }
+
+  .friends__request-actions .nn-btn {
+    flex: 1;
+  }
+}

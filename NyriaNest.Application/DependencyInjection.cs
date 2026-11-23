@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NyriaNest.Application.Accounts;
 using NyriaNest.Application.Books;
+using NyriaNest.Application.Friends;
 using NyriaNest.Application.Loans;
 using NyriaNest.Application.Mapping;
 using NyriaNest.Application.Notifications;
@@ -29,6 +30,10 @@ namespace NyriaNest.Application
             services.AddScoped<ILoanService, LoanService>();
             services.AddScoped<ILendingService, LendingService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IFriendshipService, FriendshipService>();
+
+            // #84: the 100 / 10 sharing limits (ADR 0005); the class holds the defaults
+            services.Configure<SharingLimitsOptions>(configuration.GetSection(SharingLimitsOptions.SectionName));
 
             services.AddAutoMapper(cfg =>
             {

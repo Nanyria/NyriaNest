@@ -97,16 +97,55 @@ public class DemoDataSeederTests
     }
 
     [Fact]
+    public async Task SeedsAFriendshipSharedOneWay_AndAPendingRequest()
+    {
+        // #84: alma and boris are friends and alma shares her physical library with boris, not the
+        // other way round (sharing is per direction). cleo has asked alma and is waiting.
+        using var factory = new ApiFactory();
+        var api = WithPassword(factory, DemoPassword);
+
+        await RunSeederAsync(api);
+
+        var rows = await WithDbAsync(api, db => db.Friendships
+            .Select(f => new
+            {
+                Requester = f.Requester.UserName,
+                Addressee = f.Addressee.UserName,
+                f.Status,
+                f.AcceptedAt,
+                f.RequesterSharesPhysicalLibrary,
+                f.RequesterSharesEbooks,
+                f.AddresseeSharesPhysicalLibrary,
+                f.AddresseeSharesEbooks,
+            })
+            .ToListAsync(Ct));
+        rows.Should().HaveCount(2);
+
+        var friends = rows.Should().ContainSingle(r => r.Status == FriendshipStatus.Accepted).Subject;
+        (friends.Requester, friends.Addressee).Should().Be(("alma.reads", "boris.books"));
+        friends.AcceptedAt.Should().NotBeNull();
+        friends.RequesterSharesPhysicalLibrary.Should().BeTrue();
+        friends.RequesterSharesEbooks.Should().BeFalse();
+        friends.AddresseeSharesPhysicalLibrary.Should().BeFalse();
+        friends.AddresseeSharesEbooks.Should().BeFalse();
+
+        var pending = rows.Should().ContainSingle(r => r.Status == FriendshipStatus.Pending).Subject;
+        (pending.Requester, pending.Addressee).Should().Be(("cleo.shelf", "alma.reads"));
+    }
+
+    [Fact]
     public async Task RunningTwice_AddsNothingTheSecondTime()
     {
         using var factory = new ApiFactory();
         var api = WithPassword(factory, DemoPassword);
         await RunSeederAsync(api);
         var before = await CountsAsync(api);
+        var friendshipsBefore = await WithDbAsync(api, db => db.Friendships.CountAsync(Ct));
 
         await RunSeederAsync(api);
 
         (await CountsAsync(api)).Should().Be(before);
+        (await WithDbAsync(api, db => db.Friendships.CountAsync(Ct))).Should().Be(friendshipsBefore);
     }
 
     [Fact]

@@ -3,7 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Services/auth.service';
 import { ILoggedInUser } from '../../Models/interfaces';
-import { ADMIN_NAV, MORE_LINKS, SETTINGS_NAV } from '../layout/nav-items';
+import { ADMIN_NAV, FRIENDS_NAV, MORE_LINKS, SETTINGS_NAV } from '../layout/nav-items';
 
 // The bottom bar's More tab on small screens: everything without its own tab
 @Component({
@@ -17,6 +17,7 @@ import { ADMIN_NAV, MORE_LINKS, SETTINGS_NAV } from '../layout/nav-items';
 export class MorePageComponent {
   readonly links = MORE_LINKS;
   readonly adminGroup = ADMIN_NAV;
+  readonly friends = FRIENDS_NAV;
   readonly settings = SETTINGS_NAV;
   currentUser: ILoggedInUser | null = null;
   adminOpen = false;

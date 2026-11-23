@@ -7,6 +7,7 @@ import {
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter } from 'rxjs';
 import {
+  FRIENDS_NAV,
   MAIN_NAV,
   NavGroup,
   NavItem,
@@ -57,7 +58,7 @@ export class BottomNavComponent {
       label: 'More',
       icon: 'bi-three-dots',
       route: '/more',
-      activeFor: ['/admin', SETTINGS_NAV.route!],
+      activeFor: ['/admin', FRIENDS_NAV.route!, SETTINGS_NAV.route!],
     },
   ];
 

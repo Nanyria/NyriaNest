@@ -26,6 +26,7 @@ namespace NyriaNest.Infrastructure.Data
         public DbSet<CheckedOutItem> CheckOutItems { get; set; }
         public DbSet<ReservationItem> ReservationItems { get; set; }
         public DbSet<NotificationItem> NotificationItems { get; set; }
+        public DbSet<Friendship> Friendships { get; set; }
 
         private const string IdentitySchema = "identity";
         private const string LibrarySchema = "library";
@@ -51,6 +52,7 @@ namespace NyriaNest.Infrastructure.Data
             modelBuilder.Entity<RatingItem>().ToTable("RatingItems", LibrarySchema);
             modelBuilder.Entity<FavoriteItem>().ToTable("FavoriteItems", LibrarySchema);
             modelBuilder.Entity<NotificationItem>().ToTable("NotificationItems", LibrarySchema);
+            modelBuilder.Entity<Friendship>().ToTable("Friendships", LibrarySchema);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -157,6 +159,38 @@ namespace NyriaNest.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(n => n.BookId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // #84: one row per pair of users. Both FKs are Restrict: SQL Server allows only one
+            // cascade path from a table to AspNetUsers, and the user delete removes friendships
+            // on purpose (from #78 on, accounts are anonymised, never deleted).
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.Requester)
+                .WithMany()
+                .HasForeignKey(f => f.RequesterId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.Addressee)
+                .WithMany()
+                .HasForeignKey(f => f.AddresseeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // The same pair once. The reverse pair (Anna → me when me → Anna exists)
+            // is blocked by FriendshipService, which accepts the existing request instead.
+            modelBuilder.Entity<Friendship>()
+                .HasIndex(f => new { f.RequesterId, f.AddresseeId })
+                .IsUnique();
+
+            // Lets "my friendships" find the rows where I'm the one who was asked
+            modelBuilder.Entity<Friendship>()
+                .HasIndex(f => f.AddresseeId);
+
+            modelBuilder.Entity<Friendship>().ToTable(t => t.HasCheckConstraint(
+                "CK_Friendships_NotWithYourself", "[RequesterId] <> [AddresseeId]"));
+
+            modelBuilder.Entity<Friendship>()
+                .Property(f => f.RequestedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
 
             modelBuilder.Entity<Book>()
                 .Property(b => b.BookId)

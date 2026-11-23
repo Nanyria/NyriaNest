@@ -1167,3 +1167,4 @@ body:has(.nn-theme) > app-root {
 .nn-icon-admin { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/admin.svg'); }
 .nn-icon-search { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/search.svg'); }
 .nn-icon-notification { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/notification.svg'); }
+.nn-icon-friends { --nn-icon: url('/assets/images/nav-bar/nav-bar-icons/friends/friends-simple.svg'); }

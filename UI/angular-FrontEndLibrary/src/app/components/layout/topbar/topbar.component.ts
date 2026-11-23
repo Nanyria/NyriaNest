@@ -13,8 +13,10 @@ import { NotificationService } from '../../../Services/notification.service';
 import { ToastService } from '../../../Services/toast.service';
 import { ILoggedInUser, NotificationItem } from '../../../Models/interfaces';
 import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
+import { notificationLink } from '../../../Helpers/notification-links';
 import {
   ADMIN_NAV,
+  FRIENDS_NAV,
   MAIN_NAV,
   NavGroup,
   NavItem,
@@ -110,6 +112,19 @@ export class TopbarComponent {
     });
   }
 
+  readonly notificationLink = notificationLink;
+
+  // A notification with a page (e.g. friend requests → Friends) opens it and closes the bell;
+  // the others stay in the list, shown as read
+  openNotification(item: NotificationItem): void {
+    this.markAsRead(item);
+    const link = notificationLink(item.type);
+    if (link) {
+      this.openMenu = null;
+      this.router.navigateByUrl(link.route);
+    }
+  }
+
   // Stays in the list, shown as read, so the list doesn't jump under the pointer
   markAsRead(item: NotificationItem): void {
     if (item.isRead) return;
@@ -141,9 +156,9 @@ export class TopbarComponent {
     );
   }
 
-  // The user menu too: its only page so far is Settings
+  // The user menu too: its pages so far are Friends and Settings
   get isUserMenuActive(): boolean {
-    return this.router.url.startsWith(SETTINGS_NAV.route!);
+    return [FRIENDS_NAV, SETTINGS_NAV].some((item) => this.router.url.startsWith(item.route!));
   }
 
   // Searching from anywhere opens the library filtered by the term
