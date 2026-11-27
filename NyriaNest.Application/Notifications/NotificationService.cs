@@ -43,6 +43,18 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the requester their friend request was accepted, and that nothing is shared yet (#84). Doesn't save.</summary>
         void NotifyFriendRequestAccepted(string requesterId, string accepterUserName);
 
+        /// <summary>Tells the owner a friend asks to borrow their book (#85). Doesn't save.</summary>
+        void NotifyBorrowRequested(Book book, string borrowerUserName);
+
+        /// <summary>Tells the friend the owner lent them the book, and when it's due (#85). Doesn't save.</summary>
+        void NotifyBorrowRequestAccepted(string borrowerId, Book book, string ownerUserName, DateTime dueDate);
+
+        /// <summary>Tells the friend the owner said no (#85). Doesn't save.</summary>
+        void NotifyBorrowRequestDeclined(string borrowerId, Book book, string ownerUserName);
+
+        /// <summary>Tells the friend the book went to someone else and they're now in the queue (#85). Doesn't save.</summary>
+        void NotifyBorrowRequestQueued(string borrowerId, Book book, string ownerUserName);
+
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
 
@@ -156,6 +168,36 @@ namespace NyriaNest.Application.Notifications
                 UserId = requesterId,
                 Message = $"{accepterUserName} accepted your friend request. Do you want to share your library or e-books with {accepterUserName}? You can turn it on in Friends.",
                 Type = NotificationType.FriendRequestAccepted,
+            });
+
+        // ---- Borrow requests (#85). Each points at the book. ----
+
+        public void NotifyBorrowRequested(Book book, string borrowerUserName) =>
+            NotifyOwner(book, $"{borrowerUserName} asks to borrow \"{book.Title}\". You can answer in My books.",
+                NotificationType.LoanRequested);
+
+        public void NotifyBorrowRequestAccepted(string borrowerId, Book book, string ownerUserName, DateTime dueDate) =>
+            AddBookNotification(borrowerId, book,
+                $"{ownerUserName} lent you \"{book.Title}\". It's due back on {dueDate:yyyy-MM-dd}.",
+                NotificationType.LoanRequestAnswered);
+
+        public void NotifyBorrowRequestDeclined(string borrowerId, Book book, string ownerUserName) =>
+            AddBookNotification(borrowerId, book,
+                $"{ownerUserName} can't lend you \"{book.Title}\" this time.",
+                NotificationType.LoanRequestAnswered);
+
+        public void NotifyBorrowRequestQueued(string borrowerId, Book book, string ownerUserName) =>
+            AddBookNotification(borrowerId, book,
+                $"{ownerUserName} lent \"{book.Title}\" to someone else. You're in the queue for it now, in the order you asked.",
+                NotificationType.LoanRequestAnswered);
+
+        private void AddBookNotification(string userId, Book book, string message, NotificationType type) =>
+            _dbContext.NotificationItems.Add(new NotificationItem
+            {
+                UserId = userId,
+                Message = message,
+                Type = type,
+                BookId = book.BookId,
             });
 
         // The book still exists here, so the notification points at it

@@ -21,5 +21,8 @@ namespace NyriaNest.Domain.Enums
 
         /// <summary>The owner didn't answer within RequestExpiryMonths; it passes to the next in the queue.</summary>
         Expired = 4,
+
+        /// <summary>The owner lent the book to another friend; this request became a reservation in the queue.</summary>
+        Queued = 5,
     }
 }
