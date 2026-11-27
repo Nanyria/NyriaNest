@@ -37,6 +37,9 @@ namespace NyriaNest.Application.DTOs.Books
         public bool IsMine { get; set; }
         // #85: who owns the book, for the owner tag on friends' books. Null for the shared library.
         public string? OwnerName { get; set; }
+        // #85: the owner's picture for the avatar on friends' books. Null when they have none
+        // (the page shows the default picture) or for the shared library.
+        public string? OwnerProfilePictureUrl { get; set; }
         public bool IsCheckedOutByMe { get; set; }
         public bool IsReservedByMe { get; set; }
         public DateTime? MyReservationAvailableDate { get; set; }

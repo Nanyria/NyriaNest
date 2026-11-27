@@ -86,6 +86,42 @@ public class FriendsBooksVisibilityTests(ApiFactory factory) : IClassFixture<Api
         book.GetProperty("ownerName").GetString().Should().Be(friend.UserName);
     }
 
+    // ---- #85 9d: the owner's picture, for the avatar on friends' books ----
+
+    [Fact]
+    public async Task AFriendsBook_CarriesTheOwnersProfilePicture()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var friend = await factory.CreateUserAsync();
+        await FriendsAsync(friend, me, friendShares: true);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Users.FindAsync([friend.Id], Ct))!.ProfilePictureUrl = "/assets/avatars/owl.png";
+            await db.SaveChangesAsync(Ct);
+        });
+        var bookId = await AddBookAsync(friend.Id, "Friend shares: with a picture");
+
+        var books = await LibraryAsync(client);
+
+        books[bookId].GetProperty("ownerProfilePictureUrl").GetString().Should().Be("/assets/avatars/owl.png");
+    }
+
+    [Fact]
+    public async Task AFriendWithoutAPicture_AndASharedLibraryBook_HaveNoOwnerPicture()
+    {
+        // The page shows the default picture for a friend without one
+        var (client, me) = await factory.LoginAsAsync();
+        var friend = await factory.CreateUserAsync();
+        await FriendsAsync(friend, me, friendShares: true);
+        var friendsBook = await AddBookAsync(friend.Id, "Friend shares: no picture");
+        var sharedBook = await AddBookAsync(null, "Shared library: no owner");
+
+        var books = await LibraryAsync(client);
+
+        books[friendsBook].GetProperty("ownerProfilePictureUrl").ValueKind.Should().Be(JsonValueKind.Null);
+        books[sharedBook].GetProperty("ownerProfilePictureUrl").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     [Fact]
     public async Task SharingWorks_WhicheverOfUsSentTheFriendRequest()
     {

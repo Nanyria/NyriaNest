@@ -123,8 +123,9 @@ namespace NyriaNest.Infrastructure.Repositories
                     AvailabilityDate = b.AvailabilityDate,
                     DateAdded = b.DateAdded,
                     IsMine = userId != null && b.OwnerId == userId,
-                    // #85: the owner tag for friends' books (null for the shared library)
+                    // #85: the owner's avatar on friends' books (null for the shared library)
                     OwnerName = b.Owner != null ? b.Owner.UserName : null,
+                    OwnerProfilePictureUrl = b.Owner != null ? b.Owner.ProfilePictureUrl : null,
 
                     ReviewCount = b.Reviews.Count,
                     AverageRating = b.Reviews
