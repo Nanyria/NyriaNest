@@ -131,6 +131,7 @@ namespace NyriaNest.Application.Books
             LentTo = book.CheckedOutBy == null ? null : book.CheckedOutBy.BorrowerName ?? book.CheckedOutBy.User?.UserName,
             LentOn = book.CheckedOutBy?.CheckOutDate,
             DueDate = book.CheckedOutBy?.ReturnDate,
+            ReportedReturnedDate = book.CheckedOutBy?.ReportedReturnedDate,
             DateAdded = book.DateAdded,
         }, book);
 

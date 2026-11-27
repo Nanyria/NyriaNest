@@ -32,6 +32,8 @@ namespace NyriaNest.Application.DTOs.Books
         public string? LentTo { get; set; }
         public DateTime? LentOn { get; set; }
         public DateTime? DueDate { get; set; }
+        // #85: the friend says they returned it on this date; the owner hasn't confirmed yet
+        public DateTime? ReportedReturnedDate { get; set; }
         // The "Added" column on My owned books
         public DateTime DateAdded { get; set; }
     }

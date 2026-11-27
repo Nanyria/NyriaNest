@@ -131,6 +131,30 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         books[1].GetProperty("dueDate").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
+    // #85 9a: a friend says they returned it; it's mine to confirm
+    [Fact]
+    public async Task List_And_Get_ShowAReturnAFriendReported()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var anna = await factory.CreateUserAsync();
+        var reported = new DateTime(2026, 11, 20, 0, 0, 0, DateTimeKind.Utc);
+        var reportedBook = await AddLentBookAsync(me.Id, "A reported", borrowerId: anna.Id, reportedReturned: reported);
+        var stillLent = await AddLentBookAsync(me.Id, "B still lent", borrowerName: "Sam");
+
+        var response = await client.GetAsync("api/my/books", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var books = (await ResultAsync(response)).EnumerateArray()
+            .ToDictionary(b => b.GetProperty("bookId").GetInt32());
+        books[reportedBook].GetProperty("lentTo").GetString().Should().Be(anna.UserName);
+        books[reportedBook].GetProperty("reportedReturnedDate").GetDateTime().Should().Be(reported);
+        books[stillLent].GetProperty("reportedReturnedDate").ValueKind.Should().Be(JsonValueKind.Null);
+
+        var one = await client.GetAsync($"api/my/books/{reportedBook}", Ct);
+        one.StatusCode.Should().Be(HttpStatusCode.OK, await one.Content.ReadAsStringAsync(Ct));
+        (await ResultAsync(one)).GetProperty("reportedReturnedDate").GetDateTime().Should().Be(reported);
+    }
+
     [Fact]
     public async Task Get_MyLentBook_ShowsTheLoan()
     {
@@ -404,16 +428,20 @@ public class MyBooksTests(ApiFactory factory) : IClassFixture<ApiFactory>
         return await AddBookAsync(owner, "Not mine");
     }
 
-    private Task<int> AddLentBookAsync(string ownerId, string borrowerName) => factory.WithDbAsync(async db =>
+    // Lent to a name, or to a member (borrowerId), who may have reported it returned
+    private Task<int> AddLentBookAsync(string ownerId, string title = "Lent out", string? borrowerName = null,
+        string? borrowerId = null, DateTime? reportedReturned = null) => factory.WithDbAsync(async db =>
     {
-        var book = TestData.Book("Lent out", status: BookStatusEnum.CheckedOut);
+        var book = TestData.Book(title, status: BookStatusEnum.CheckedOut);
         book.OwnerId = ownerId;
         db.Books.Add(book);
         await db.SaveChangesAsync(Ct);
         db.CheckOutItems.Add(new CheckedOutItem
         {
             BookId = book.BookId,
-            BorrowerName = borrowerName,
+            UserId = borrowerId,
+            BorrowerName = borrowerId == null ? borrowerName ?? "Someone" : null,
+            ReportedReturnedDate = reportedReturned,
             CheckOutDate = DateTime.UtcNow,
             ReturnDate = DateTime.UtcNow.AddDays(14),
         });
