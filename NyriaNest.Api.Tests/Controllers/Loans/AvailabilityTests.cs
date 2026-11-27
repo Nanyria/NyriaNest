@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Domain.Constants;
+using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using System.Net;
 
@@ -9,28 +10,48 @@ namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
 /// Pins down what a book's status, availability date and status history look like
-/// after each action that changes them (reserve, cancel, and an admin deleting a user;
-/// borrow and return were the old self-service flow, removed in #85), so #116 can move UpdateBookStatusAsync and
-/// RecalculateAvailabilityDates into AvailabilityService without changing them.
+/// after each action that changes them (reserve, cancel, and an admin deleting a user), so
+/// #116 could move UpdateBookStatusAsync and RecalculateAvailabilityDates into AvailabilityService
+/// without changing them. The old self-service borrow and return were removed in #85. Reserving
+/// needs a friend's lent book since #85; the other tests set up their loans and queues directly.
 /// </summary>
 public class AvailabilityTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
-
-    // ---- Borrowing ----
-
-    // ---- Returning ----
 
     // ---- The status history each action writes ----
 
     [Fact]
     public async Task Reserve_WritesAReservedEntry_InTheReadersName()
     {
+        // #85: the queue is for a friend's book that's lent out
         var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
+        var owner = await factory.CreateUserAsync();
+        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.Books.SingleAsync(b => b.BookId == bookId, Ct)).OwnerId = owner.Id;
+            db.Friendships.Add(new Friendship
+            {
+                RequesterId = owner.Id,
+                AddresseeId = me.Id,
+                Status = FriendshipStatus.Accepted,
+                AcceptedAt = DateTime.UtcNow,
+                RequesterSharesPhysicalLibrary = true,
+            });
+            db.CheckOutItems.Add(new CheckedOutItem
+            {
+                BookId = bookId,
+                BorrowerName = "Grandma",
+                CheckOutDate = DateTime.UtcNow,
+                ReturnDate = DateTime.UtcNow.AddDays(14),
+            });
+            await db.SaveChangesAsync(Ct);
+        });
 
-        await client.PutAsync($"api/UserActions/reserve/{bookId}", null, Ct);
+        var response = await client.PutAsync($"api/UserActions/reserve/{bookId}", null, Ct);
 
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await HistoryOf(bookId, me.Id)).Should().Equal((BookStatusEnum.Reserved, $"Book reserved by {me.UserName}"));
     }
 

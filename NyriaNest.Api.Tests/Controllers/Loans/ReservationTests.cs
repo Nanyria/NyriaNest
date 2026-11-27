@@ -9,10 +9,11 @@ using System.Text.Json;
 namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
-/// Pins down how reservations behave today, through GET api/UserActions/reserved,
-/// PUT reserve/{bookId} and PUT unreserve/{bookId}, so #116 can move the code into
-/// ReservationService without changing it. The queue rules for borrowing are in
-/// <see cref="LoanRulesTests"/>.
+/// How reservations behave, through GET api/UserActions/reserved, PUT reserve/{bookId} and
+/// PUT unreserve/{bookId} (#116 moved the code into ReservationService). Since #85 the queue is for
+/// friends' books that are lent out: a free book is asked for instead, and the shared library's
+/// e-books are read, not reserved. Who may reserve a friend's book, and what happens when it comes
+/// back, are in FriendQueueTests.
 /// </summary>
 public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
@@ -24,57 +25,30 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
     // ---- Reserving ----
 
     [Fact]
-    public async Task Reserve_AnAvailableBook_MakesItReserved_AndICanHaveItToday()
+    public async Task Reserve_BehindSomeoneElse_IWaitOneLoanPeriodLonger()
     {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
-
-        var response = await client.PutAsync(ReserveUrl(bookId), null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await StatusOf(bookId)).Should().Be(BookStatusEnum.Reserved);
-        (await ReservationOf(bookId, me.Id))!.AvailabilityDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
-        (await AvailabilityDateOf(bookId)).Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
-    }
-
-    [Fact]
-    public async Task Reserve_ABookOnLoan_KeepsItCheckedOut_AndIWaitUntilTheDueDate()
-    {
-        var holder = await factory.CreateUserAsync();
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, holder.Id, dueInDays: 10);
+        var owner = await factory.CreateUserAsync();
+        var first = await FriendOfAsync(owner);
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner, dueInDays: 10);
+        await AddReservationAsync(bookId, first.Id, daysAgo: 1);
+        var due = DateTime.UtcNow.AddDays(10);
 
         var response = await client.PutAsync(ReserveUrl(bookId), null, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await StatusOf(bookId)).Should().Be(BookStatusEnum.CheckedOut);
-        var dueDate = DateTime.UtcNow.AddDays(10);
-        (await ReservationOf(bookId, me.Id))!.AvailabilityDate.Should().BeCloseTo(dueDate, TimeSpan.FromMinutes(1));
-        (await AvailabilityDateOf(bookId)).Should().BeCloseTo(dueDate, TimeSpan.FromMinutes(1));
-    }
-
-    [Fact]
-    public async Task Reserve_BehindSomeoneElse_IWaitOneLoanPeriodLonger()
-    {
-        var first = await factory.CreateUserAsync();
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.Reserved);
-        await AddReservationAsync(bookId, first.Id, daysAgo: 1);
-
-        var response = await client.PutAsync(ReserveUrl(bookId), null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await ReservationOf(bookId, first.Id))!.AvailabilityDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
-        (await ReservationOf(bookId, me.Id))!.AvailabilityDate.Should().BeCloseTo(DateTime.UtcNow.AddMonths(1), TimeSpan.FromMinutes(1));
-        (await AvailabilityDateOf(bookId)).Should().BeCloseTo(DateTime.UtcNow.AddMonths(1), TimeSpan.FromMinutes(1));
+        (await ReservationOf(bookId, first.Id))!.AvailabilityDate.Should().BeCloseTo(due, TimeSpan.FromMinutes(1));
+        (await ReservationOf(bookId, me.Id))!.AvailabilityDate.Should().BeCloseTo(due.AddMonths(1), TimeSpan.FromMinutes(1));
+        (await AvailabilityDateOf(bookId)).Should().BeCloseTo(due.AddMonths(1), TimeSpan.FromMinutes(1));
     }
 
     [Fact]
     public async Task Reserve_TheSameBookTwice_Returns409_AndKeepsOneReservation()
     {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
+        var owner = await factory.CreateUserAsync();
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner);
         await client.PutAsync(ReserveUrl(bookId), null, Ct);
 
         var again = await client.PutAsync(ReserveUrl(bookId), null, Ct);
@@ -87,9 +61,9 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
     [Fact]
     public async Task Reserve_ABookIHave_Returns409()
     {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, me.Id);
+        var owner = await factory.CreateUserAsync();
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner, toUserId: me.Id);
 
         var response = await client.PutAsync(ReserveUrl(bookId), null, Ct);
 
@@ -98,20 +72,35 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
         (await ReservationCountOf(bookId, me.Id)).Should().Be(0);
     }
 
+    // #85: was 409 ("This book isn't available."). A friend's book an admin took down can't be
+    // seen any more, so it looks missing, as in the Library.
     [Theory]
     [InlineData(BookStatusEnum.Lost)]
     [InlineData(BookStatusEnum.Removed)]
-    public async Task Reserve_ABookMarkedLostOrRemoved_Returns409(BookStatusEnum adminStatus)
+    public async Task Reserve_AFriendsBookMarkedLostOrRemoved_Returns404(BookStatusEnum adminStatus)
     {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(adminStatus, adminStatus);
+        var owner = await factory.CreateUserAsync();
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner, adminStatus: adminStatus);
 
         var response = await client.PutAsync(ReserveUrl(bookId), null, Ct);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("This book isn't available.");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await ReservationCountOf(bookId, me.Id)).Should().Be(0);
-        (await StatusOf(bookId)).Should().Be(adminStatus);
+    }
+
+    [Fact]
+    public async Task Reserve_ASharedLibraryBook_Returns400_TheyAreReadNotReserved()
+    {
+        // #85: the shared library holds e-books (ADR 0004), and an e-book is read without waiting
+        var (client, me) = await factory.LoginAsAsync();
+        var bookId = await SharedEbookAsync();
+
+        var response = await client.PutAsync(ReserveUrl(bookId), null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("read, not reserved");
+        (await ReservationCountOf(bookId, me.Id)).Should().Be(0);
     }
 
     [Fact]
@@ -128,31 +117,56 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
     // ---- Cancelling ----
 
     [Fact]
-    public async Task Unreserve_MovesTheNextInLineUp_SoTheyCanHaveItToday()
+    public async Task Unreserve_MovesTheNextInLineUp_SoTheyExpectItWhenTheLoanIsDue()
     {
-        var (client, me) = await factory.LoginAsAsync();
-        var next = await factory.CreateUserAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.Reserved);
-        await AddReservationAsync(bookId, me.Id, daysAgo: 2, availableInDays: 0);
-        await AddReservationAsync(bookId, next.Id, daysAgo: 1, availableInDays: 30);
+        var owner = await factory.CreateUserAsync();
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var next = await FriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner, dueInDays: 10);
+        await AddReservationAsync(bookId, me.Id, daysAgo: 2, availableInDays: 10);
+        await AddReservationAsync(bookId, next.Id, daysAgo: 1, availableInDays: 40);
 
         var response = await client.PutAsync(UnreserveUrl(bookId), null, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await ReservationOf(bookId, next.Id))!.AvailabilityDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        (await ReservationOf(bookId, next.Id))!.AvailabilityDate.Should().BeCloseTo(DateTime.UtcNow.AddDays(10), TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task Unreserve_WhileAFriendHasTheBook_KeepsItCheckedOut_AndTheRestOfTheQueue()
+    {
+        // From LoanRulesTests (#39): cancelling sends "Returned" to GetBookStatus, which only looks
+        // at the queue, so the book might show as free while on loan
+        var owner = await factory.CreateUserAsync();
+        var holder = await FriendOfAsync(owner);
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var other = await FriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner, toUserId: holder.Id);
+        await AddReservationAsync(bookId, me.Id, daysAgo: 2);
+        await AddReservationAsync(bookId, other.Id, daysAgo: 1);
+
+        var response = await client.PutAsync(UnreserveUrl(bookId), null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        (await ReservationOf(bookId, me.Id)).Should().BeNull();
+        (await ReservationOf(bookId, other.Id)).Should().NotBeNull();
+        (await factory.WithDbAsync(db => db.CheckOutItems.Where(c => c.BookId == bookId).Select(c => c.UserId).SingleAsync(Ct)))
+            .Should().Be(holder.Id);
+        (await StatusOf(bookId)).Should().Be(BookStatusEnum.CheckedOut);
     }
 
     [Fact]
     public async Task Unreserve_ABookINeverReserved_Returns409()
     {
-        var (client, _) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
+        var owner = await factory.CreateUserAsync();
+        var (client, _) = await LoggedInFriendOfAsync(owner);
+        var bookId = await LentBookAsync(owner);
 
         var response = await client.PutAsync(UnreserveUrl(bookId), null, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("Book not reserved by user.");
-        (await StatusOf(bookId)).Should().Be(BookStatusEnum.Available);
+        (await StatusOf(bookId)).Should().Be(BookStatusEnum.CheckedOut);
     }
 
     [Fact]
@@ -171,11 +185,12 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
     [Fact]
     public async Task List_ShowsOnlyMyReservations_NewestFirst_WithTheBooks()
     {
-        var (client, me) = await factory.LoginAsAsync();
-        var other = await factory.CreateUserAsync();
-        var older = await AddBookAsync(title: "Older");
-        var newer = await AddBookAsync(title: "Newer");
-        var theirs = await AddBookAsync(title: "Theirs");
+        var owner = await factory.CreateUserAsync();
+        var (client, me) = await LoggedInFriendOfAsync(owner);
+        var other = await FriendOfAsync(owner);
+        var older = await LentBookAsync(owner, title: "Older");
+        var newer = await LentBookAsync(owner, title: "Newer");
+        var theirs = await LentBookAsync(owner, title: "Theirs");
         await AddReservationAsync(older, me.Id, daysAgo: 3);
         await AddReservationAsync(newer, me.Id, daysAgo: 1);
         await AddReservationAsync(theirs, other.Id, daysAgo: 2);
@@ -202,20 +217,62 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     // ---- Helpers ----
 
-    private Task<int> AddBookAsync(BookStatusEnum status = BookStatusEnum.Available, BookStatusEnum? adminStatus = null, string title = "Test book") =>
-        factory.WithDbAsync(async db =>
-        {
-            var book = TestData.Book(title: title, status: status);
-            book.AdminStatus = adminStatus;
-            db.Books.Add(book);
-            await db.SaveChangesAsync(Ct);
-            return book.BookId;
-        });
-
-    private Task AddLoanAsync(int bookId, string userId, int dueInDays = 14) => factory.WithDbAsync(async db =>
+    /// <summary>A user the owner shares their physical library with.</summary>
+    private async Task<User> FriendOfAsync(User owner)
     {
-        db.CheckOutItems.Add(new() { BookId = bookId, UserId = userId, CheckOutDate = DateTime.UtcNow, ReturnDate = DateTime.UtcNow.AddDays(dueInDays) });
+        var friend = await factory.CreateUserAsync();
+        await ShareWithAsync(owner, friend);
+        return friend;
+    }
+
+    private async Task<(HttpClient, User)> LoggedInFriendOfAsync(User owner)
+    {
+        var (client, friend) = await factory.LoginAsAsync();
+        await ShareWithAsync(owner, friend);
+        return (client, friend);
+    }
+
+    private Task ShareWithAsync(User owner, User friend) => factory.WithDbAsync(async db =>
+    {
+        db.Friendships.Add(new Friendship
+        {
+            RequesterId = owner.Id,
+            AddresseeId = friend.Id,
+            Status = FriendshipStatus.Accepted,
+            AcceptedAt = DateTime.UtcNow,
+            RequesterSharesPhysicalLibrary = true,
+        });
         await db.SaveChangesAsync(Ct);
+    });
+
+    /// <summary>The owner's paperback, lent out (to a name, or to <paramref name="toUserId"/>) and due in some days.</summary>
+    private Task<int> LentBookAsync(User owner, int dueInDays = 14, string? toUserId = null,
+        BookStatusEnum? adminStatus = null, string title = "A friend's paperback") => factory.WithDbAsync(async db =>
+    {
+        var book = TestData.Book(title: title, status: adminStatus ?? BookStatusEnum.CheckedOut);
+        book.OwnerId = owner.Id;
+        book.AdminStatus = adminStatus;
+        book.AvailabilityDate = DateTime.UtcNow.AddDays(dueInDays);
+        db.Books.Add(book);
+        await db.SaveChangesAsync(Ct);
+        db.CheckOutItems.Add(new CheckedOutItem
+        {
+            BookId = book.BookId,
+            UserId = toUserId,
+            BorrowerName = toUserId == null ? "Grandma" : null,
+            CheckOutDate = DateTime.UtcNow,
+            ReturnDate = DateTime.UtcNow.AddDays(dueInDays),
+        });
+        await db.SaveChangesAsync(Ct);
+        return book.BookId;
+    });
+
+    private Task<int> SharedEbookAsync() => factory.WithDbAsync(async db =>
+    {
+        var book = TestData.Ebook("A shared e-book");
+        db.Books.Add(book);
+        await db.SaveChangesAsync(Ct);
+        return book.BookId;
     });
 
     private Task AddReservationAsync(int bookId, string userId, int daysAgo, int? availableInDays = null) => factory.WithDbAsync(async db =>

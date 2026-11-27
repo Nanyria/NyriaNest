@@ -21,9 +21,10 @@ namespace NyriaNest.Application.Loans
     }
 
     /// <summary>
-    /// The reservation queue: the user's reservations (list, reserve, cancel) and a
-    /// book's whole queue for admins. Moved out of UserActionsService and BookService
-    /// unchanged (#116).
+    /// The reservation queue: the user's reservations (list, reserve, cancel) and a book's whole
+    /// queue for admins (#116). Since #85 the queue is for friends' physical books that are lent
+    /// out; a free book is asked for (BorrowRequestService), and when it comes back the queue
+    /// opens as requests. The shared library's e-books are read, not reserved.
     /// </summary>
     public class ReservationService : IReservationService
     {
@@ -95,16 +96,13 @@ namespace NyriaNest.Application.Loans
                 return response;
             }
 
-            // A book an admin has marked Lost or Removed can't be reserved
-            if (book.OwnerId == null && book.AdminStatus != null)
-            {
-                response.ErrorMessages.Add("This book isn't available.");
-                response.StatusCode = HttpStatusCode.Conflict;
-                return response;
-            }
+            // #85: the queue is for friends' physical books. The shared library holds e-books
+            // (ADR 0004), which are read without a loan, so there's nothing to wait for.
+            if (book.OwnerId == null)
+                return Refused(HttpStatusCode.BadRequest, "Books in the shared library are read, not reserved.");
 
-            // #85: a friend's book has its own rules; null means they all pass
-            if (book.OwnerId != null && await FriendsBookRefusalAsync(book, userId) is { } refusal)
+            // A friend's book has its own rules; null means they all pass
+            if (await FriendsBookRefusalAsync(book, userId) is { } refusal)
                 return refusal;
 
             if (user != null && book != null)
