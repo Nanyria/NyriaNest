@@ -71,7 +71,7 @@ namespace NyriaNest.Application.Loans
             _mapper = mapper;
         }
 
-        // Moved here from the old LoanService unchanged (#85)
+        // My loans (#65): with the owner, for a friend's book, and a return I reported (#85 step 9a)
         public async Task<APIResponse<List<CheckedOutItemDto>>> GetCheckedOutBooksAsync(string userId)
         {
             var response = new APIResponse<List<CheckedOutItemDto>>
@@ -88,7 +88,7 @@ namespace NyriaNest.Application.Loans
             }
             var checkedOutBooks = await _dbContext.CheckOutItems
                 .Where(r => r.UserId == userId)
-                .Include(r => r.Book)
+                .Include(r => r.Book).ThenInclude(b => b.Owner)
                 .OrderByDescending(r => r.CheckOutDate)
                 .ToListAsync();
 
