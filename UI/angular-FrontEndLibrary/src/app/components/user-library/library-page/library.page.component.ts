@@ -56,13 +56,6 @@ const byNewest = (a: LibraryBook, b: LibraryBook) =>
   (Number(b.publicationYear) || 0) - (Number(a.publicationYear) || 0);
 const byMostReviewed = (a: LibraryBook, b: LibraryBook) => b.reviewCount - a.reviewCount;
 
-// 2 → "2nd", 11 → "11th", 23 → "23rd": a place in a reservation queue
-function ordinal(n: number): string {
-  const teen = n % 100 >= 11 && n % 100 <= 13;
-  const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
-  return `${n}${suffix}`;
-}
-
 @Component({
   selector: 'app-library',
   templateUrl: './library-page.component.html',
@@ -556,27 +549,27 @@ export class LibraryComponent implements AfterViewInit {
     }
   }
 
-  // A friend's physical book (#85), by where I stand with it. Asking is for a free
-  // book (the owner chooses between everyone who asked); a lent one is reserved.
+  // A friend's physical book (#85), by where I stand with it. To the friend it's
+  // always a request: free or lent, the owner chooses between everyone who asked
+  // (a lent book's reservations all become requests when it's back). The API
+  // still has two kinds, so requestBook/withdrawRequest pick the endpoint.
   // A book I have is returned from My loans, where I report it.
   private friendsBookAction(book: LibraryBook): BookAction | null {
     if (book.isCheckedOutByMe) {
       return { label: 'Open My loans', icon: 'bi-journal-bookmark', action: () => this.openMyLoans() };
     }
-    if (book.myRequestId != null) {
-      const requestId = book.myRequestId;
-      return { label: 'Withdraw request', icon: 'bi-x-circle', action: () => this.withdrawRequest(book, requestId) };
+    if (this.hasRequested(book)) {
+      return { label: 'Withdraw request', icon: 'bi-x-circle', action: () => this.withdrawRequest(book) };
     }
-    if (book.isReservedByMe) {
-      return { label: 'Cancel reservation', icon: 'bi-calendar-x', action: () => this.cancelReservation(book) };
-    }
-    if (this.isLent(book)) {
-      return { label: 'Reserve', icon: 'bi-calendar-plus', action: () => this.reserve(book) };
-    }
-    if (book.bookStatus === BookStatusEnum.Available || book.bookStatus === BookStatusEnum.Returned) {
-      return { label: 'Ask to borrow', icon: 'bi-send', action: () => this.askToBorrow(book) };
+    if (this.isLent(book) || book.bookStatus === BookStatusEnum.Available || book.bookStatus === BookStatusEnum.Returned) {
+      return { label: 'Request', icon: 'bi-send', action: () => this.requestBook(book) };
     }
     return null; // e.g. Lost or Removed: nothing to ask for
+  }
+
+  // An open request (free book) or a reservation (lent book): both are "Requested"
+  private hasRequested(book: LibraryBook): boolean {
+    return book.myRequestId != null || book.isReservedByMe;
   }
 
   private isLent(book: LibraryBook): boolean {
@@ -664,21 +657,21 @@ export class LibraryComponent implements AfterViewInit {
       };
     }
     if (book.myRequestId != null) {
-      return { text: 'You asked to borrow it', detail: `waiting for ${owner} to answer`, tone: 'muted' };
+      return { text: 'Requested', detail: `waiting for ${owner} to answer`, tone: 'muted' };
     }
+    // No place in line: when it's back, the owner chooses between everyone who asked
     if (book.isReservedByMe) {
-      const place = book.myQueuePosition;
       return {
-        text: place == null ? 'Reserved' : place === 1 ? 'Reserved · next in line' : `Reserved · ${ordinal(place)} in line`,
-        detail: book.myReservationAvailableDate ? `expected ${formatDay(book.myReservationAvailableDate)}` : undefined,
-        tone: 'out',
+        text: 'Requested',
+        detail: `lent out, expected back ${formatDay(book.availabilityDate)} · ${owner} chooses when it's back`,
+        tone: 'muted',
       };
     }
     if (lent) {
-      const queue = book.reservationCount;
+      const waiting = book.reservationCount;
       return {
         text: 'Lent out',
-        detail: `expected back ${formatDay(book.availabilityDate)}${queue > 0 ? ` · ${queue} in the queue` : ''}`,
+        detail: `expected back ${formatDay(book.availabilityDate)}${waiting > 0 ? ` · ${waiting} waiting` : ''}`,
         tone: 'out',
       };
     }
@@ -686,20 +679,28 @@ export class LibraryComponent implements AfterViewInit {
   }
 
   // Friends' books (#85). After each one the list reloads: the server works out
-  // myRequestId, isReservedByMe and myQueuePosition, and getAllBooks refreshes the
-  // open popup. Asking and reserving are one click; giving something up asks first.
-  askToBorrow(book: LibraryBook) {
+  // myRequestId and isReservedByMe, and getAllBooks refreshes the open popup.
+  // Requesting is one click; withdrawing asks first.
+  // A free book gets a borrow request, a lent one a reservation (the API's rule).
+  requestBook(book: LibraryBook) {
+    const lent = this.isLent(book);
     this.runAction(
-      this.borrowRequests.create(book.bookId),
-      { message: `You asked ${book.ownerName} to lend you "${book.title}".`, icon: 'send' },
-      `Couldn't ask to borrow "${book.title}".`,
+      lent ? this.userActionsService.reserveBook(book.bookId) : this.borrowRequests.create(book.bookId),
+      {
+        message: lent
+          ? `You asked for "${book.title}". ${book.ownerName} chooses when it's back.`
+          : `You asked ${book.ownerName} to lend you "${book.title}".`,
+        icon: 'send',
+      },
+      `Couldn't request "${book.title}".`,
     );
   }
 
-  async withdrawRequest(book: LibraryBook, requestId: number) {
+  // Withdrawing gives up the time waited ("waiting since"), so it asks first
+  async withdrawRequest(book: LibraryBook) {
     const confirmed = await this.confirmDialog.confirm({
       title: 'Withdraw your request?',
-      message: `${book.ownerName} won't be asked to lend you "${book.title}". You can ask again later.`,
+      message: `${book.ownerName} won't be asked to lend you "${book.title}", and the time you've waited is lost. You can ask again later.`,
       confirmLabel: 'Withdraw request',
       cancelLabel: 'Keep request',
       danger: true,
@@ -707,35 +708,11 @@ export class LibraryComponent implements AfterViewInit {
     });
     if (!confirmed) return;
     this.runAction(
-      this.borrowRequests.cancel(requestId),
+      book.myRequestId != null
+        ? this.borrowRequests.cancel(book.myRequestId)
+        : this.userActionsService.unreserveBook(book.bookId),
       { message: `Your request for "${book.title}" was withdrawn.`, icon: 'x-circle' },
       `Couldn't withdraw your request for "${book.title}".`,
-    );
-  }
-
-  reserve(book: LibraryBook) {
-    this.runAction(
-      this.userActionsService.reserveBook(book.bookId),
-      { message: `You reserved "${book.title}".`, icon: 'calendar-check' },
-      `Couldn't reserve "${book.title}".`,
-    );
-  }
-
-  // Cancelling gives up the place in the queue, so it asks first
-  async cancelReservation(book: LibraryBook) {
-    const confirmed = await this.confirmDialog.confirm({
-      title: 'Cancel your reservation?',
-      message: `You'll lose your place in the queue for "${book.title}".`,
-      confirmLabel: 'Cancel reservation',
-      cancelLabel: 'Keep reservation',
-      danger: true,
-      icon: 'calendar-x',
-    });
-    if (!confirmed) return;
-    this.runAction(
-      this.userActionsService.unreserveBook(book.bookId),
-      { message: `Your reservation for "${book.title}" was cancelled.`, icon: 'calendar-x' },
-      `Couldn't cancel the reservation for "${book.title}".`,
     );
   }
 

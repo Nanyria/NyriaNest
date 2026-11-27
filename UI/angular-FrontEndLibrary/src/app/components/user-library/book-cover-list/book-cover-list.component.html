@@ -14,17 +14,25 @@
           [alt]="''"
           loading="lazy"
         />
-        <!-- Shelves have no tags, so my own books get a badge on the cover and
-             friends' books their owner's picture -->
-        @if (shelf && book.isMine) {
+        <!-- Whose book it is goes on the cover wherever the cover is big enough
+             (shelves and grid): "Mine", or a friend's picture. The list's small
+             cover has it in the tags instead. -->
+        @if (book.isMine && (shelf || viewMode === 'grid')) {
           <span class="book__mine-badge">Mine</span>
-        } @else if (shelf && book.ownerName) {
+        } @else if (!book.isMine && book.ownerName && (shelf || viewMode === 'grid')) {
           <img
             class="book__owner-avatar book__owner-avatar--cover"
             [src]="book.ownerProfilePictureUrl || defaultPicture"
             [alt]="'Owned by ' + book.ownerName"
             [title]="'Owned by ' + book.ownerName"
           />
+        }
+        <!-- Can I get it? An icon in the bottom-left corner, the words on hover;
+             none when it's free. The list shows it as a tag instead. -->
+        @if ((shelf || viewMode === 'grid') && status(book); as s) {
+          <span class="book__status-icon {{ s.cls }}" role="img" [attr.aria-label]="s.text" [title]="s.text">
+            <i class="bi {{ s.icon }}" aria-hidden="true"></i>
+          </span>
         }
         <button
           type="button"
@@ -46,9 +54,9 @@
         <!-- Shelves show just cover, title and author, like a book on display -->
         @if (!shelf) {
           <div class="book__tags">
-            @if (book.isMine) {
+            @if (book.isMine && viewMode === 'list') {
               <span class="nn-tag book__mine-tag">Mine</span>
-            } @else if (book.ownerName) {
+            } @else if (book.ownerName && viewMode === 'list') {
               <img
                 class="book__owner-avatar"
                 [src]="book.ownerProfilePictureUrl || defaultPicture"
@@ -57,8 +65,8 @@
               />
             }
             <span class="nn-tag">{{ genreOptions.displayNames[book.genre] }}</span>
-            @if (statusBadge(book); as status) {
-              <span class="nn-tag" [class]="statusClass(book)">{{ status }}</span>
+            @if (viewMode === 'list' && status(book); as s) {
+              <span class="nn-tag {{ s.cls }}">{{ s.text }}</span>
             }
           </div>
           <p class="book__reviews">
