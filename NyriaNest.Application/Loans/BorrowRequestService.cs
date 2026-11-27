@@ -34,6 +34,15 @@ namespace NyriaNest.Application.Loans
         /// owner loaded. Doesn't save: the caller saves it together with the return.
         /// </summary>
         Task OpenQueueAsync(Book book);
+
+        /// <summary>
+        /// Support (#50): an admin cancels an open request, with a reason. Recorded in the book's
+        /// history (the admin and the reason), and the friend and the owner are both told why.
+        /// </summary>
+        Task<APIResponse<BorrowRequestDto>> AdminCancelAsync(string adminId, int requestId, string? reason);
+
+        /// <summary>Support (#50): every request for a book, finished ones too, newest first (admins only).</summary>
+        Task<APIResponse<List<BorrowRequestDto>>> GetBookRequestsAsync(int bookId);
     }
 
     public class BorrowRequestService : IBorrowRequestService
@@ -210,6 +219,67 @@ namespace NyriaNest.Application.Loans
 
             var saved = await SaveAsync(request.BookId, "withdrawn", AlreadyAnswered);
             return saved ?? Ok(ToDto(request, request.Book, request.Borrower.UserName ?? ""));
+        }
+
+        public async Task<APIResponse<BorrowRequestDto>> AdminCancelAsync(string adminId, int requestId, string? reason)
+        {
+            // Support always says why: both the friend and the owner are told
+            var why = reason?.Trim();
+            if (string.IsNullOrEmpty(why))
+                return Failure(HttpStatusCode.BadRequest, "Give a reason: the friend and the owner are told why.");
+
+            var request = await Requests().FirstOrDefaultAsync(r => r.Id == requestId);
+            if (request == null)
+                return NotFound(requestId);
+            if (request.Status != BorrowRequestStatus.Requested)
+                return Failure(HttpStatusCode.Conflict, AlreadyAnswered);
+
+            var now = Now;
+            var book = request.Book;
+            var borrowerName = request.Borrower.UserName ?? "";
+            request.Status = BorrowRequestStatus.Cancelled;
+            request.AnsweredAt = now;
+
+            // Recorded where the admin's other actions on a book are; the book's status doesn't change
+            _db.StatusHistoryItems.Add(new StatusHistoryItem
+            {
+                BookId = book.BookId,
+                UserId = adminId,
+                BookStatus = book.BookStatus,
+                Timestamp = now,
+                Notes = $"Request from {borrowerName} cancelled by an admin: {why}",
+            });
+            _notifications.NotifyRequestCancelledByAdmin(request.BorrowerId, book, why);
+            _notifications.NotifyOwnerOfAdminRequestCancel(book, borrowerName, why);
+
+            var saved = await SaveAsync(book.BookId, "cancelled by an admin", AlreadyAnswered);
+            return saved ?? Ok(ToDto(request, book, borrowerName));
+        }
+
+        public async Task<APIResponse<List<BorrowRequestDto>>> GetBookRequestsAsync(int bookId)
+        {
+            if (!await _db.Books.AnyAsync(b => b.BookId == bookId))
+                return new APIResponse<List<BorrowRequestDto>>
+                {
+                    IsSuccess = false,
+                    StatusCode = HttpStatusCode.NotFound,
+                    ErrorMessages = { $"Book {bookId} was not found." },
+                };
+
+            var requests = await _db.BorrowRequests
+                .AsNoTracking()
+                .Include(r => r.Borrower)
+                .Include(r => r.Book).ThenInclude(b => b.Owner)
+                .Where(r => r.BookId == bookId)
+                .OrderByDescending(r => r.RequestedAt)
+                .ToListAsync();
+
+            return new APIResponse<List<BorrowRequestDto>>
+            {
+                IsSuccess = true,
+                StatusCode = HttpStatusCode.OK,
+                Result = requests.Select(r => ToDto(r, r.Book, r.Borrower.UserName ?? "")).ToList(),
+            };
         }
 
         // Was QueueHandOver until #85 step 5c: the other half of AcceptAsync's "join the queue"

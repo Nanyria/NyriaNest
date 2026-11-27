@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using NyriaNest.Api.Auth;
 using NyriaNest.Application.DTOs.Loans;
 using NyriaNest.Application.Loans;
+using NyriaNest.Domain.Constants;
 
 namespace NyriaNest.Api.Controllers.Loans
 {
@@ -49,6 +50,15 @@ namespace NyriaNest.Api.Controllers.Loans
         public async Task<IActionResult> Cancel([FromRoute] int id)
         {
             var response = await _requests.CancelAsync(User.GetUserId(), id);
+            return StatusCode((int)response.StatusCode, response);
+        }
+
+        // Support (#50): an admin cancels a request, with a reason both the friend and the owner see
+        [HttpPut("{id:int}/admin-cancel")]
+        [Authorize(Roles = Roles.SuperAdmin + "," + Roles.Admin)]
+        public async Task<IActionResult> AdminCancel([FromRoute] int id, [FromBody] AdminCancelBorrowRequestDto body)
+        {
+            var response = await _requests.AdminCancelAsync(User.GetUserId(), id, body.Reason);
             return StatusCode((int)response.StatusCode, response);
         }
     }

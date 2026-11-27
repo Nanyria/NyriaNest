@@ -76,6 +76,12 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Reminds the owner to confirm a return a friend reported (#85, the daily job). Doesn't save.</summary>
         void NotifyReturnReminder(Book book, string borrowerUserName);
 
+        /// <summary>Tells the friend an admin cancelled their request, and why (#85, support). Doesn't save.</summary>
+        void NotifyRequestCancelledByAdmin(string borrowerId, Book book, string reason);
+
+        /// <summary>Tells the owner an admin cancelled a friend's request for their book, and why (#85, support). Doesn't save.</summary>
+        void NotifyOwnerOfAdminRequestCancel(Book book, string borrowerUserName, string reason);
+
         /// <summary>Tells a friend their requests and reservations for the owner's books were cancelled, once (#85). Doesn't save.</summary>
         void NotifySharingEnded(string friendId, string ownerUserName);
 
@@ -256,6 +262,15 @@ namespace NyriaNest.Application.Notifications
         public void NotifyReturnReminder(Book book, string borrowerUserName) =>
             NotifyOwner(book, $"{borrowerUserName} said they returned \"{book.Title}\". Please confirm it in My books once you have it.",
                 NotificationType.ReturnMarked);
+
+        public void NotifyRequestCancelledByAdmin(string borrowerId, Book book, string reason) =>
+            AddBookNotification(borrowerId, book,
+                $"An admin cancelled your request to borrow \"{book.Title}\". Reason: {reason}",
+                NotificationType.LoanRequestAnswered);
+
+        public void NotifyOwnerOfAdminRequestCancel(Book book, string borrowerUserName, string reason) =>
+            NotifyOwner(book, $"An admin cancelled {borrowerUserName}'s request to borrow your book \"{book.Title}\". Reason: {reason}",
+                NotificationType.BookLoanChangedByAdmin);
 
         // About several books, so it points at none
         public void NotifySharingEnded(string friendId, string ownerUserName) =>

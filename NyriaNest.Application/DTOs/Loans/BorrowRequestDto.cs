@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using NyriaNest.Application.DTOs.Books;
 using NyriaNest.Domain.Enums;
 
 namespace NyriaNest.Application.DTOs.Loans
@@ -24,4 +26,7 @@ namespace NyriaNest.Application.DTOs.Loans
     {
         public int BookId { get; set; }
     }
+
+    /// <summary>The body of PUT api/borrow-requests/{id}/admin-cancel: the reason the friend and the owner are told (#50).</summary>
+    public record AdminCancelBorrowRequestDto([MaxLength(BookChangeReason.MaxLength)] string? Reason);
 }
