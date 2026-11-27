@@ -14,7 +14,7 @@ namespace NyriaNest.Application.Loans
         /// </summary>
         public int RequestReminderDays { get; set; } = 14;
 
-        /// <summary>A request the owner hasn't answered expires after this many months and passes to the next in the queue.</summary>
+        /// <summary>A request the owner hasn't answered expires after this many months; the friend may ask again.</summary>
         public int RequestExpiryMonths { get; set; } = 1;
     }
 }

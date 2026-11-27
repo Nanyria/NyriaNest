@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using NyriaNest.Api.Auth;
 using NyriaNest.Api.Controllers.Accounts;
+using NyriaNest.Api.Jobs;
 using NyriaNest.Application;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Infrastructure;
@@ -51,6 +52,10 @@ namespace NyriaNest.Api
             // Each layer registers its own classes (see DependencyInjection.cs in each project)
             builder.Services.AddApplication(builder.Configuration);
             builder.Services.AddInfrastructure(builder.Configuration);
+
+            // #85: runs every IDailyJob (the lending reminders and expiry) once a day; off in tests
+            builder.Services.Configure<DailyJobsOptions>(builder.Configuration.GetSection(DailyJobsOptions.SectionName));
+            builder.Services.AddHostedService<DailyJobsService>();
 
             // The app normally calls the API from its own origin (the dev proxy, or the
             // Angular build served from wwwroot), which needs no CORS. Only the origins

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NyriaNest.Application.Accounts;
 using NyriaNest.Application.Books;
+using NyriaNest.Application.Common;
 using NyriaNest.Application.Friends;
 using NyriaNest.Application.Loans;
 using NyriaNest.Application.Mapping;
@@ -29,6 +30,8 @@ namespace NyriaNest.Application
             services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<ILoanService, LoanService>();
             services.AddScoped<IBorrowRequestService, BorrowRequestService>();
+            // #85: once-a-day work; DailyJobsService in the API runs every IDailyJob
+            services.AddScoped<IDailyJob, LendingJob>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFriendshipService, FriendshipService>();
 

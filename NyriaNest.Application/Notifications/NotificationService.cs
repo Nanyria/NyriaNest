@@ -67,6 +67,15 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the friend the owner confirmed the book is back (#85). Doesn't save.</summary>
         void NotifyReturnConfirmed(string borrowerId, Book book, string ownerUserName);
 
+        /// <summary>Reminds the owner a friend is still waiting for an answer (#85, the daily job). Doesn't save.</summary>
+        void NotifyRequestReminder(Book book, string borrowerUserName);
+
+        /// <summary>Tells the friend their request expired unanswered, and that they can ask again (#85, the daily job). Doesn't save.</summary>
+        void NotifyRequestExpired(string borrowerId, Book book, string ownerUserName);
+
+        /// <summary>Reminds the owner to confirm a return a friend reported (#85, the daily job). Doesn't save.</summary>
+        void NotifyReturnReminder(Book book, string borrowerUserName);
+
         /// <summary>Tells a friend their requests and reservations for the owner's books were cancelled, once (#85). Doesn't save.</summary>
         void NotifySharingEnded(string friendId, string ownerUserName);
 
@@ -225,6 +234,19 @@ namespace NyriaNest.Application.Notifications
             AddBookNotification(borrowerId, book,
                 $"{ownerUserName} confirmed that \"{book.Title}\" is back. Thanks for returning it!",
                 NotificationType.ReturnConfirmed);
+
+        public void NotifyRequestReminder(Book book, string borrowerUserName) =>
+            NotifyOwner(book, $"{borrowerUserName} is still waiting to borrow \"{book.Title}\". You can answer in My books.",
+                NotificationType.LoanRequested);
+
+        public void NotifyRequestExpired(string borrowerId, Book book, string ownerUserName) =>
+            AddBookNotification(borrowerId, book,
+                $"Your request to borrow \"{book.Title}\" expired because {ownerUserName} didn't answer. You can ask again.",
+                NotificationType.LoanRequestAnswered);
+
+        public void NotifyReturnReminder(Book book, string borrowerUserName) =>
+            NotifyOwner(book, $"{borrowerUserName} said they returned \"{book.Title}\". Please confirm it in My books once you have it.",
+                NotificationType.ReturnMarked);
 
         // About several books, so it points at none
         public void NotifySharingEnded(string friendId, string ownerUserName) =>

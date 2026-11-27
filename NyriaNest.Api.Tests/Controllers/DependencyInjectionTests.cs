@@ -1,7 +1,10 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using NyriaNest.Api.Jobs;
 using NyriaNest.Api.Tests.TestSupport;
+using NyriaNest.Application.Common;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Application.Loans;
 using NyriaNest.Infrastructure.Data;
@@ -39,5 +42,22 @@ public class DependencyInjectionTests(ApiFactory factory) : IClassFixture<ApiFac
 
         options.RequestReminderDays.Should().Be(14);
         options.RequestExpiryMonths.Should().Be(1);
+    }
+
+    [Fact]
+    public void TheDailyJobs_AreOnByDefault_AndOffInTests()
+    {
+        // #85: so the jobs don't add notifications in the middle of other tests (ApiFactory)
+        new DailyJobsOptions().Enabled.Should().BeTrue();
+        factory.Services.GetRequiredService<IOptions<DailyJobsOptions>>().Value.Enabled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TheDailyJobs_AreRunByAHostedService_AndTheLendingJobIsOneOfThem()
+    {
+        factory.Services.GetServices<IHostedService>().Should().Contain(s => s is DailyJobsService);
+
+        using var scope = factory.Services.CreateScope();
+        scope.ServiceProvider.GetServices<IDailyJob>().Should().ContainSingle(j => j is LendingJob);
     }
 }

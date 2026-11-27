@@ -53,6 +53,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Frontend:BaseUrl", FrontendBaseUrl);
         // High, so tests sharing a server never hit it; PasswordResetTests lowers it to test it
         builder.UseSetting("RateLimiting:PasswordResetPermitLimit", "1000");
+        // #85: the daily jobs would add notifications in the middle of tests; LendingJobTests run theirs directly
+        builder.UseSetting("DailyJobs:Enabled", "false");
 
         builder.ConfigureServices(services =>
         {
