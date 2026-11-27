@@ -7,6 +7,7 @@ using NyriaNest.Application.Notifications;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
 using NyriaNest.Domain.Rules;
+using System.Linq.Expressions;
 using System.Net;
 
 namespace NyriaNest.Application.Loans
@@ -43,6 +44,12 @@ namespace NyriaNest.Application.Loans
 
         /// <summary>Support (#50): every request for a book, finished ones too, newest first (admins only).</summary>
         Task<APIResponse<List<BorrowRequestDto>>> GetBookRequestsAsync(int bookId);
+
+        /// <summary>The open requests for the owner's books, to accept or decline, longest waiting first (#85).</summary>
+        Task<APIResponse<List<BorrowRequestDto>>> GetIncomingAsync(string ownerId);
+
+        /// <summary>The friend's own open requests, waiting for an answer, longest waiting first (#85). Finished ones show elsewhere.</summary>
+        Task<APIResponse<List<BorrowRequestDto>>> GetMineAsync(string borrowerId);
     }
 
     public class BorrowRequestService : IBorrowRequestService
@@ -282,6 +289,32 @@ namespace NyriaNest.Application.Loans
             };
         }
 
+        public Task<APIResponse<List<BorrowRequestDto>>> GetIncomingAsync(string ownerId) =>
+            OpenRequestsAsync(r => r.Book.OwnerId == ownerId);
+
+        // Lent shows in My loans, Queued in My reservations, the rest in notifications (option A)
+        public Task<APIResponse<List<BorrowRequestDto>>> GetMineAsync(string borrowerId) =>
+            OpenRequestsAsync(r => r.BorrowerId == borrowerId);
+
+        private async Task<APIResponse<List<BorrowRequestDto>>> OpenRequestsAsync(Expression<Func<BorrowRequest, bool>> whose)
+        {
+            var requests = await _db.BorrowRequests
+                .AsNoTracking()
+                .Include(r => r.Borrower)
+                .Include(r => r.Book).ThenInclude(b => b.Owner)
+                .Where(r => r.Status == BorrowRequestStatus.Requested)
+                .Where(whose)
+                .OrderBy(r => r.RequestedAt) // "waiting since"
+                .ToListAsync();
+
+            return new APIResponse<List<BorrowRequestDto>>
+            {
+                IsSuccess = true,
+                StatusCode = HttpStatusCode.OK,
+                Result = requests.Select(r => ToDto(r, r.Book, r.Borrower.UserName ?? "")).ToList(),
+            };
+        }
+
         // Was QueueHandOver until #85 step 5c: the other half of AcceptAsync's "join the queue"
         public async Task OpenQueueAsync(Book book)
         {
@@ -364,6 +397,7 @@ namespace NyriaNest.Application.Loans
             Id = r.Id,
             BookId = book.BookId,
             BookTitle = book.Title,
+            CoverImagePath = book.CoverImagePath,
             OwnerUserName = book.Owner?.UserName ?? "",
             BorrowerId = r.BorrowerId,
             BorrowerUserName = borrowerName,

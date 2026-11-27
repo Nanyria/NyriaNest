@@ -10,6 +10,7 @@ namespace NyriaNest.Application.DTOs.Loans
         public int Id { get; set; }
         public int BookId { get; set; }
         public string BookTitle { get; set; } = "";
+        public string? CoverImagePath { get; set; }
         public string OwnerUserName { get; set; } = "";
         public string BorrowerId { get; set; } = "";
         public string BorrowerUserName { get; set; } = "";

@@ -22,6 +22,22 @@ namespace NyriaNest.Api.Controllers.Loans
             _requests = requests;
         }
 
+        // The owner: open requests for my books, to accept or decline
+        [HttpGet("incoming")]
+        public async Task<IActionResult> Incoming()
+        {
+            var response = await _requests.GetIncomingAsync(User.GetUserId());
+            return StatusCode((int)response.StatusCode, response);
+        }
+
+        // The friend: my own requests, still waiting for an answer
+        [HttpGet("mine")]
+        public async Task<IActionResult> Mine()
+        {
+            var response = await _requests.GetMineAsync(User.GetUserId());
+            return StatusCode((int)response.StatusCode, response);
+        }
+
         // The friend asks to borrow a book
         [HttpPost]
         public async Task<IActionResult> Ask([FromBody] CreateBorrowRequestDto body)
