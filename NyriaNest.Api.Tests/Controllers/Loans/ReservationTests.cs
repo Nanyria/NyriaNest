@@ -203,6 +203,37 @@ public class ReservationTests(ApiFactory factory) : IClassFixture<ApiFactory>
         items.Select(i => i.GetProperty("book").GetProperty("title").GetString()).Should().Equal("Newer", "Older");
     }
 
+    // #85 9a: My reservations (#66) shows whose book it is and my place in its queue
+    [Fact]
+    public async Task List_ShowsTheOwner_AndMyPlaceInTheQueue()
+    {
+        var anna = await factory.CreateUserAsync();
+        var bo = await factory.CreateUserAsync();
+        var (client, me) = await LoggedInFriendOfAsync(anna);
+        await ShareWithAsync(bo, me);
+        var ahead = await FriendOfAsync(anna);
+        var behind = await FriendOfAsync(anna);
+        var annasBook = await LentBookAsync(anna, title: "Anna's");
+        var bosBook = await LentBookAsync(bo, title: "Bo's");
+        // On Anna's book I'm second: one reserved before me, one after
+        await AddReservationAsync(annasBook, ahead.Id, daysAgo: 5);
+        await AddReservationAsync(annasBook, me.Id, daysAgo: 3);
+        await AddReservationAsync(annasBook, behind.Id, daysAgo: 1);
+        // On Bo's book I'm the only one
+        await AddReservationAsync(bosBook, me.Id, daysAgo: 2);
+
+        var response = await client.GetAsync(ListUrl, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        var items = (await ResultOf(response)).EnumerateArray()
+            .ToDictionary(i => i.GetProperty("bookId").GetInt32());
+        items.Keys.Should().BeEquivalentTo([annasBook, bosBook]);
+        items[annasBook].GetProperty("ownerUserName").GetString().Should().Be(anna.UserName);
+        items[annasBook].GetProperty("queuePosition").GetInt32().Should().Be(2);
+        items[bosBook].GetProperty("ownerUserName").GetString().Should().Be(bo.UserName);
+        items[bosBook].GetProperty("queuePosition").GetInt32().Should().Be(1);
+    }
+
     // Unlike the reading list, an empty list here is an empty 200
     [Fact]
     public async Task List_WhenEmpty_IsAnEmpty200()

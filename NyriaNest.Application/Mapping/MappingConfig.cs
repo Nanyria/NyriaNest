@@ -47,6 +47,8 @@ namespace NyriaNest.Application.Mapping
             CreateMap<StatusHistoryItem, StatusHistoryItemDto>().ReverseMap();
             CreateMap<ReservationItem, ReservationItemDto>()
                 .ForMember(dest => dest.Book, opt => opt.MapFrom(src => src.Book))
+                .ForMember(dest => dest.OwnerUserName, opt => opt.MapFrom(src => src.Book.Owner == null ? null : src.Book.Owner.UserName))
+                .ForMember(dest => dest.QueuePosition, opt => opt.Ignore()) // set by ReservationService
                 .ReverseMap()
                 .ForMember(dest => dest.User, opt => opt.Ignore());
             CreateMap<CheckedOutItem, CheckedOutItemDto>()

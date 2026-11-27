@@ -66,12 +66,17 @@ namespace NyriaNest.Application.Loans
             // Query ReservationItems directly and include the Book
             var reservations = await _dbContext.ReservationItems
                 .Where(r => r.UserId == userId)
-                .Include(r => r.Book)
+                .Include(r => r.Book).ThenInclude(b => b.Owner)
+                .Include(r => r.Book).ThenInclude(b => b.Reservations)
                 .OrderByDescending(r => r.ReservationDate)
                 .ToListAsync();
 
             // Map to DTOs
             var reservationDtos = _mapper.Map<List<ReservationItemDto>>(reservations);
+
+            // The queue is oldest reservation first: my place is the number made before mine, plus one
+            foreach (var (reservation, dto) in reservations.Zip(reservationDtos))
+                dto.QueuePosition = reservation.Book.Reservations.Count(r => r.ReservationDate < reservation.ReservationDate) + 1;
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
