@@ -7,10 +7,12 @@ using System.Net;
 namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
-/// #83 step 4b: the old borrow flow (checkout and reservations) stays for the shared library
-/// until friend loans (#85), but refuses books someone owns, even for the owner: an owner
-/// lends through api/my/books. Return and unreserve aren't guarded: they only end what
-/// someone already has, and blocking them would trap leftover data.
+/// #83 step 4b: the old borrow flow (checkout) stays for the shared library, but refuses books
+/// someone owns, even for the owner: an owner lends through api/my/books, and a friend asks
+/// through api/borrow-requests (#85). Reserving a book someone owns is open to friends since
+/// #85 (FriendQueueTests); for anyone else it looks missing, and the owner can't queue for
+/// their own book. Return and unreserve aren't guarded: they only end what someone already
+/// has, and blocking them would trap leftover data.
 /// </summary>
 public class OwnedBookBorrowGuardTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
@@ -33,10 +35,12 @@ public class OwnedBookBorrowGuardTests(ApiFactory factory) : IClassFixture<ApiFa
         (await factory.WithDbAsync(db => db.StatusHistoryItems.AnyAsync(h => h.BookId == bookId, Ct))).Should().BeFalse();
     }
 
+    // #85: was 409 for both. A book you can't see looks missing (404), as everywhere else;
+    // your own book is a plain no (400). Friends who are shared with may reserve (FriendQueueTests).
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Reserve_ABookSomeoneOwns_Returns409_AndChangesNothing(bool asTheOwner)
+    [InlineData(false, HttpStatusCode.NotFound)]   // someone who isn't shared with
+    [InlineData(true, HttpStatusCode.BadRequest)]  // the owner themselves
+    public async Task Reserve_ABookSomeoneOwns_IsRefused_AndChangesNothing(bool asTheOwner, HttpStatusCode expected)
     {
         var (client, me) = await factory.LoginAsAsync();
         var ownerId = asTheOwner ? me.Id : (await factory.CreateUserAsync()).Id;
@@ -44,7 +48,7 @@ public class OwnedBookBorrowGuardTests(ApiFactory factory) : IClassFixture<ApiFa
 
         var response = await client.PutAsync($"api/UserActions/reserve/{bookId}", null, Ct);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.StatusCode.Should().Be(expected);
         (await factory.WithDbAsync(db => db.ReservationItems.AnyAsync(r => r.BookId == bookId, Ct))).Should().BeFalse();
         (await StatusOf(bookId)).Should().Be(BookStatusEnum.Available);
     }

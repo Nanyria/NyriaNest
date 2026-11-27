@@ -262,6 +262,9 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Property<DateTime?>("AnsweredAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("AvailableAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("BookId")
                         .HasColumnType("int");
 

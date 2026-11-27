@@ -30,6 +30,33 @@ public class BorrowRequestModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ARequest_KeepsBothWhenTheFriendStartedWaiting_AndWhenTheBookBecameFree()
+    {
+        // From the queue: waiting since they reserved, free for them since it came back.
+        // The owner sees the first; the reminder and the expiry count from the later one.
+        var (book, friend) = await FriendsBookAsync();
+        var reservedAt = new DateTime(2026, 1, 5, 9, 0, 0, DateTimeKind.Utc);
+        var cameBackAt = new DateTime(2026, 2, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        await using (var context = _db.CreateContext())
+        {
+            context.BorrowRequests.Add(new BorrowRequest
+            {
+                BookId = book.BookId,
+                BorrowerId = friend.Id,
+                RequestedAt = reservedAt,
+                AvailableAt = cameBackAt,
+            });
+            await context.SaveChangesAsync(Ct);
+        }
+
+        await using var assert = _db.CreateContext();
+        var row = await assert.BorrowRequests.SingleAsync(Ct);
+        row.RequestedAt.Should().Be(reservedAt);
+        row.AvailableAt.Should().Be(cameBackAt);
+    }
+
+    [Fact]
     public async Task TwoOpenRequests_FromTheSameFriendForTheSameBook_AreRejectedByTheDatabase()
     {
         var (book, friend) = await FriendsBookAsync();
@@ -138,6 +165,7 @@ public class BorrowRequestModelTests : IDisposable
             BorrowerId = borrowerId,
             Status = status,
             RequestedAt = DateTime.UtcNow,
+            AvailableAt = DateTime.UtcNow,
         });
         await context.SaveChangesAsync(Ct);
     }

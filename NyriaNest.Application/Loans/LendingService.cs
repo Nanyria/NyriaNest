@@ -40,10 +40,12 @@ namespace NyriaNest.Application.Loans
         private readonly IAppDbContext _dbContext;
         private readonly INotificationService _notifications;
         private readonly ILogger<LendingService> _logger;
+        private readonly IQueueHandOver _queue;
 
         public LendingService(IBookRepo bookRepo, IAppDbContext dbContext,
-            INotificationService notifications, ILogger<LendingService> logger)
+            INotificationService notifications, ILogger<LendingService> logger, IQueueHandOver queue)
         {
+            _queue = queue;
             _bookRepo = bookRepo;
             _dbContext = dbContext;
             _notifications = notifications;
@@ -154,8 +156,12 @@ namespace NyriaNest.Application.Loans
 
             var now = DateTime.UtcNow;
             _dbContext.CheckOutItems.Remove(loan);
+            book.CheckedOutBy = null;
             book.BookStatus = BookStatusEnum.Available;
             book.AvailabilityDate = now; // available from now, as when a book is added
+
+            // #85: friends waiting for it: the first in line is asked for (and the book is Reserved)
+            await _queue.HandOnAsync(book);
 
             // One row: "Returned" already says it's back on the shelf
             var notes = $"Returned by {loan.BorrowerName}" + OnDate(returnedOn) + ByAnAdmin(someoneElses, reason);

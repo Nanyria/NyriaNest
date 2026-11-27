@@ -71,6 +71,7 @@ public class BorrowRequestServiceTests : IDisposable
         request.BorrowerId.Should().Be(_friend.Id);
         request.Status.Should().Be(BorrowRequestStatus.Requested);
         request.RequestedAt.Should().Be(FakeClock.Start);
+        request.AvailableAt.Should().Be(FakeClock.Start, "a free book is available from the moment they ask");
 
         var told = await db.NotificationItems.SingleAsync(n => n.UserId == _owner.Id, Ct);
         told.Type.Should().Be(NotificationType.LoanRequested);
@@ -352,6 +353,61 @@ public class BorrowRequestServiceTests : IDisposable
         request.AnsweredAt.Should().Be(_clock.UtcNow);
     }
 
+    // ---- Requests the queue opened (#85 step 4) ----
+    // When a lent book comes back, everyone in the queue gets an open request, keeping the date
+    // they started waiting, and the owner chooses, as for any other requests.
+
+    [Fact]
+    public async Task Declining_one_of_the_queues_requests_leaves_the_others_open_and_tells_nobody_else()
+    {
+        var third = await ThirdFriendAsync();
+        var (first, second) = await OpenedByTheQueueAsync(_otherFriend, third);
+        _clock.Advance(TimeSpan.FromDays(3));
+
+        var result = await DeclineAsync(_owner, first);
+
+        result.IsSuccess.Should().BeTrue(string.Join(", ", result.ErrorMessages));
+        using var db = _db.CreateContext();
+        (await db.BorrowRequests.SingleAsync(r => r.Id == first, Ct)).Status.Should().Be(BorrowRequestStatus.Declined);
+        var other = await db.BorrowRequests.SingleAsync(r => r.Id == second, Ct);
+        other.Status.Should().Be(BorrowRequestStatus.Requested);
+        other.AvailableAt.Should().Be(FakeClock.Start, "nothing is handed on: it was already open");
+        (await db.NotificationItems.AnyAsync(n => n.UserId == third.Id, Ct)).Should().BeFalse();
+        (await db.Books.SingleAsync(b => b.BookId == _bookId, Ct)).BookStatus.Should().Be(BookStatusEnum.Available);
+    }
+
+    [Fact]
+    public async Task Accepting_one_of_the_queues_requests_puts_the_others_back_in_the_queue_with_the_date_they_started_waiting()
+    {
+        // The owner picks third, who started waiting after otherFriend
+        var third = await ThirdFriendAsync();
+        var (firstId, thirdsRequest) = await OpenedByTheQueueAsync(_otherFriend, third);
+
+        var result = await AcceptAsync(_owner, thirdsRequest);
+
+        result.IsSuccess.Should().BeTrue(string.Join(", ", result.ErrorMessages));
+        using var assert = _db.CreateContext();
+        (await assert.CheckOutItems.SingleAsync(l => l.BookId == _bookId, Ct)).UserId.Should().Be(third.Id);
+        (await assert.BorrowRequests.SingleAsync(r => r.Id == firstId, Ct)).Status.Should().Be(BorrowRequestStatus.Queued);
+        var queue = await assert.ReservationItems.Where(r => r.BookId == _bookId).ToListAsync(Ct);
+        queue.Should().ContainSingle().Which.UserId.Should().Be(_otherFriend.Id);
+        queue[0].ReservationDate.Should().Be(WaitingSince(0), "they keep the date they first reserved");
+        queue[0].AvailabilityDate.Should().Be(_clock.UtcNow.AddMonths(1));
+    }
+
+    [Fact]
+    public async Task A_friend_can_ask_for_a_free_book_while_the_queues_requests_are_open()
+    {
+        // Nothing to jump ahead of: the owner sees everyone's "waiting since" and chooses
+        await OpenedByTheQueueAsync(_otherFriend);
+
+        var result = await RequestAsync(_friend, _bookId);
+
+        result.IsSuccess.Should().BeTrue(string.Join(", ", result.ErrorMessages));
+        using var db = _db.CreateContext();
+        (await db.BorrowRequests.CountAsync(r => r.Status == BorrowRequestStatus.Requested, Ct)).Should().Be(2);
+    }
+
     // ---- Only the right person, only an open request ----
 
     public enum Answer { Accept, Decline }
@@ -416,9 +472,13 @@ public class BorrowRequestServiceTests : IDisposable
 
     // ---- Helpers ----
 
-    private BorrowRequestService Service(AppDbContext db) =>
-        new(db, new UserRepo(db), new NotificationService(db), new AvailabilityService(new UserRepo(db), new BookRepo(db), db),
-            _clock, NullLogger<BorrowRequestService>.Instance);
+    private BorrowRequestService Service(AppDbContext db)
+    {
+        var users = new UserRepo(db);
+        var notifications = new NotificationService(db);
+        var availability = new AvailabilityService(users, new BookRepo(db), db);
+        return new(db, users, notifications, availability, _clock, NullLogger<BorrowRequestService>.Instance);
+    }
 
     private async Task<APIResponse<BorrowRequestDto>> RequestAsync(User who, int bookId)
     {
@@ -442,6 +502,40 @@ public class BorrowRequestServiceTests : IDisposable
     {
         using var db = _db.CreateContext();
         return await Service(db).CancelAsync(who.Id, requestId);
+    }
+
+    private async Task<User> ThirdFriendAsync()
+    {
+        var third = TestData.User("third");
+        using var db = _db.CreateContext();
+        db.Users.Add(third);
+        db.Friendships.Add(Friends(_owner, third, ownerShares: true));
+        await db.SaveChangesAsync(Ct);
+        return third;
+    }
+
+    /// <summary>When the n:th in the queue (0 = first) started waiting: days before the book came back.</summary>
+    private static DateTime WaitingSince(int place) => FakeClock.Start.AddDays(-20 + place);
+
+    /// <summary>
+    /// The (free) book as it looks right after it came back to a queue of these friends, in this
+    /// order: each has an open request, waiting since they reserved, available since now (Start).
+    /// No reservations are left. Returns the first two requests' ids (0 when there's only one).
+    /// </summary>
+    private async Task<(int First, int Second)> OpenedByTheQueueAsync(params User[] inLine)
+    {
+        using var db = _db.CreateContext();
+        var requests = inLine.Select((friend, place) => new BorrowRequest
+        {
+            BookId = _bookId,
+            BorrowerId = friend.Id,
+            Status = BorrowRequestStatus.Requested,
+            RequestedAt = WaitingSince(place),
+            AvailableAt = FakeClock.Start,
+        }).ToList();
+        db.BorrowRequests.AddRange(requests);
+        await db.SaveChangesAsync(Ct);
+        return (requests[0].Id, requests.Count > 1 ? requests[1].Id : 0);
     }
 
     private async Task NothingSavedAsync()

@@ -7,6 +7,7 @@ using NyriaNest.Application.DTOs.Users;
 using NyriaNest.Application.Interfaces;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
+using NyriaNest.Domain.Rules;
 using System.Net;
 
 namespace NyriaNest.Application.Loans
@@ -97,14 +98,17 @@ namespace NyriaNest.Application.Loans
                 return response;
             }
 
-            // A book an admin has marked Lost or Removed can't be reserved, and neither can a book
-            // someone owns (#83): owners lend through api/my/books until friend loans (#85)
-            if (book.AdminStatus != null || book.OwnerId != null)
+            // A book an admin has marked Lost or Removed can't be reserved
+            if (book.OwnerId == null && book.AdminStatus != null)
             {
                 response.ErrorMessages.Add("This book isn't available.");
                 response.StatusCode = HttpStatusCode.Conflict;
                 return response;
             }
+
+            // #85: a friend's book has its own rules; null means they all pass
+            if (book.OwnerId != null && await FriendsBookRefusalAsync(book, userId) is { } refusal)
+                return refusal;
 
             if (user != null && book != null)
             {
@@ -140,6 +144,38 @@ namespace NyriaNest.Application.Loans
 
             return response;
         }
+        /// <summary>
+        /// #85: who may queue for a friend's book. A book you can't see (not shared with you, or taken
+        /// down) looks missing, as in the Library. The queue is for a book someone has; a free book is
+        /// asked for instead (when it comes back, the queue's reservations become requests).
+        /// </summary>
+        private async Task<APIResponse<UserDto>?> FriendsBookRefusalAsync(Book book, string userId)
+        {
+            var visible = await _dbContext.Books
+                .Where(BookVisibility.VisibleTo(userId, _dbContext.Friendships))
+                .AnyAsync(b => b.BookId == book.BookId);
+            if (!visible)
+                return Refused(HttpStatusCode.NotFound, $"Book {book.BookId} was not found.");
+            if (book.OwnerId == userId)
+                return Refused(HttpStatusCode.BadRequest, "This is your own book.");
+            if (book.CheckedOutBy == null)
+                return Refused(HttpStatusCode.Conflict, "This book is free right now. You can ask to borrow it instead.");
+
+            // Asking and reserving are one place in line, not two
+            var asked = await _dbContext.BorrowRequests.AnyAsync(r =>
+                r.BookId == book.BookId && r.BorrowerId == userId && r.Status == BorrowRequestStatus.Requested);
+            if (asked)
+                return Refused(HttpStatusCode.Conflict, "You've already asked to borrow this book.");
+            return null;
+        }
+
+        private static APIResponse<UserDto> Refused(HttpStatusCode status, string message) => new()
+        {
+            IsSuccess = false,
+            StatusCode = status,
+            ErrorMessages = { message },
+        };
+
         private void AddReservation(User user, Book book)
         {
             var reservation = new ReservationItem
@@ -199,6 +235,7 @@ namespace NyriaNest.Application.Loans
                 // Use the refactored RemoveReservation method
                 if (RemoveReservation(user, book))
                 {
+
                     // Returned means "recalculate": Reserved if others are still queued, otherwise Available
                     await _availability.UpdateBookStatusAsync(book, user.Id, BookStatusEnum.Returned, $"Reservation cancelled by {user.UserName}");
 

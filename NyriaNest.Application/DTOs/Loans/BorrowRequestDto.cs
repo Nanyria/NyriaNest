@@ -12,7 +12,10 @@ namespace NyriaNest.Application.DTOs.Loans
         public string BorrowerId { get; set; } = "";
         public string BorrowerUserName { get; set; } = "";
         public BorrowRequestStatus Status { get; set; }
+        /// <summary>Waiting since: when they asked, or reserved, if the queue opened it.</summary>
         public DateTime RequestedAt { get; set; }
+        /// <summary>When the book became free for this request.</summary>
+        public DateTime AvailableAt { get; set; }
         public DateTime? AnsweredAt { get; set; }
     }
 

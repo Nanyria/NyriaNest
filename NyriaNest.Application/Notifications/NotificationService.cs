@@ -55,6 +55,12 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the friend the book went to someone else and they're now in the queue (#85). Doesn't save.</summary>
         void NotifyBorrowRequestQueued(string borrowerId, Book book, string ownerUserName);
 
+        /// <summary>Tells a friend in the queue that the book is back and the owner has been asked (#85). Doesn't save.</summary>
+        void NotifyQueueTurn(string borrowerId, Book book, string ownerUserName);
+
+        /// <summary>Tells the owner their book's queue opened, naming everyone waiting (#85). Doesn't save.</summary>
+        void NotifyQueueOpened(Book book, IReadOnlyList<string> waitingUserNames);
+
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
 
@@ -190,6 +196,17 @@ namespace NyriaNest.Application.Notifications
             AddBookNotification(borrowerId, book,
                 $"{ownerUserName} lent \"{book.Title}\" to someone else. You're in the queue for it now, in the order you asked.",
                 NotificationType.LoanRequestAnswered);
+
+        public void NotifyQueueTurn(string borrowerId, Book book, string ownerUserName) =>
+            AddBookNotification(borrowerId, book,
+                $"\"{book.Title}\" is back. {ownerUserName} has been asked to lend it to you.",
+                NotificationType.ReservationAvailable);
+
+        public void NotifyQueueOpened(Book book, IReadOnlyList<string> waitingUserNames) =>
+            NotifyOwner(book, waitingUserNames.Count == 1
+                    ? $"\"{book.Title}\" is back, and {waitingUserNames[0]} is waiting to borrow it. You can answer in My books."
+                    : $"\"{book.Title}\" is back, and {waitingUserNames.Count} friends are waiting to borrow it: {string.Join(", ", waitingUserNames)}. You can choose in My books.",
+                NotificationType.LoanRequested);
 
         private void AddBookNotification(string userId, Book book, string message, NotificationType type) =>
             _dbContext.NotificationItems.Add(new NotificationItem

@@ -33,10 +33,16 @@ namespace NyriaNest.Domain.Entities
         public BorrowRequestStatus Status { get; set; } = BorrowRequestStatus.Requested;
 
         /// <summary>
-        /// When the friend asked, or when the queue handed it to them. A request is only made
-        /// while the book is free, so the reminder and the expiry count from here.
+        /// When the friend started waiting: when they asked, or, for a request the queue opened, when
+        /// they reserved. It carries through every round in the queue, so the owner sees "waiting since".
         /// </summary>
         public DateTime RequestedAt { get; set; }
+
+        /// <summary>
+        /// When the book became free for this request: when they asked (a free book), or when it came
+        /// back to the queue. The reminder and the expiry count from here, the later of the two dates.
+        /// </summary>
+        public DateTime AvailableAt { get; set; }
 
         /// <summary>When it stopped being Requested, whatever the reason (lent, declined, cancelled, expired).</summary>
         public DateTime? AnsweredAt { get; set; }

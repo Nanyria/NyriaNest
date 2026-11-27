@@ -66,17 +66,20 @@ namespace NyriaNest.Application.Loans
                 return Failure(HttpStatusCode.BadRequest, "This is your own book.");
             if (book.CheckedOutBy != null)
                 return Failure(HttpStatusCode.Conflict, "This book is lent out right now. You can reserve it instead.");
+            // A free book can always be asked for: the owner sees everyone's "waiting since" and chooses
             if (await _db.BorrowRequests.AnyAsync(r =>
                     r.BookId == bookId && r.BorrowerId == borrowerId && r.Status == BorrowRequestStatus.Requested))
                 return Failure(HttpStatusCode.Conflict, "You've already asked to borrow this book.");
 
             var borrowerName = await UserNameOfAsync(borrowerId);
+            var now = Now;
             var request = new BorrowRequest
             {
                 BookId = book.BookId,
                 BorrowerId = borrowerId,
                 Status = BorrowRequestStatus.Requested,
-                RequestedAt = Now,
+                RequestedAt = now,
+                AvailableAt = now, // the book is free, so it's available from the moment they ask
             };
             _db.BorrowRequests.Add(request);
             _notifications.NotifyBorrowRequested(book, borrowerName);
@@ -239,6 +242,7 @@ namespace NyriaNest.Application.Loans
             BorrowerUserName = borrowerName,
             Status = r.Status,
             RequestedAt = r.RequestedAt,
+            AvailableAt = r.AvailableAt,
             AnsweredAt = r.AnsweredAt,
         };
 
