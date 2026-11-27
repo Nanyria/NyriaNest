@@ -8,7 +8,7 @@ namespace NyriaNest.Api.Tests.Data;
 
 /// <summary>
 /// #85: the rules the BorrowRequests table and the loan's return columns enforce by themselves,
-/// checked against SQLite (unique indexes, foreign keys). Who may request is LendingService's job.
+/// checked against SQLite (unique indexes, foreign keys). Who may request is LoanService's job.
 /// </summary>
 public class BorrowRequestModelTests : IDisposable
 {

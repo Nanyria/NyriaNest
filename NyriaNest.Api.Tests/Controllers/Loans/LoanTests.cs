@@ -7,26 +7,13 @@ using System.Net;
 namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
-/// Security finding 1 (#48): borrowing and listing loans act only as the logged-in user
-/// (taken from the token, not the URL or body).
+/// Security finding 1 (#48): listing loans acts only as the logged-in user (taken from the
+/// token, not the URL or body). The self-service borrow went with the shared library's
+/// physical books (ADR 0004, removed in #85); friends ask through api/borrow-requests.
 /// </summary>
 public class LoanTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
-
-    [Fact]
-    public async Task Borrow_LendsTheBookToTheTokensUser()
-    {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
-
-        var response = await client.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var borrower = await factory.WithDbAsync(db =>
-            db.CheckOutItems.Where(c => c.BookId == bookId).Select(c => c.UserId).SingleAsync(Ct));
-        borrower.Should().Be(me.Id);
-    }
 
     [Fact]
     public async Task CheckedOut_ListsOnlyMyLoans()

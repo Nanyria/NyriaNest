@@ -19,8 +19,7 @@ public class AccountTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         { "GET", "api/UserActions/me" },
         { "GET", "api/UserActions/checkedout" },
-        { "PUT", "api/UserActions/borrow/1001" },
-        { "PUT", "api/UserActions/return/1001" },
+        { "PUT", "api/UserActions/report-returned/1001" },
         { "GET", "api/UserActions/reserved" },
         { "PUT", "api/UserActions/reserve/1001" },
         { "PUT", "api/UserActions/unreserve/1001" },

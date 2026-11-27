@@ -9,8 +9,8 @@ namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
 /// Pins down what a book's status, availability date and status history look like
-/// after each action that changes them (borrow, return, reserve, cancel, and an admin
-/// deleting a user), so #116 can move UpdateBookStatusAsync and
+/// after each action that changes them (reserve, cancel, and an admin deleting a user;
+/// borrow and return were the old self-service flow, removed in #85), so #116 can move UpdateBookStatusAsync and
 /// RecalculateAvailabilityDates into AvailabilityService without changing them.
 /// </summary>
 public class AvailabilityTests(ApiFactory factory) : IClassFixture<ApiFactory>
@@ -19,90 +19,9 @@ public class AvailabilityTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     // ---- Borrowing ----
 
-    [Fact]
-    public async Task Borrow_AnAvailableBook_ChecksItOut_ForOneLoanPeriod()
-    {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
-
-        var response = await client.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await StatusOf(bookId)).Should().Be(BookStatusEnum.CheckedOut);
-        var dueDate = await DueDateOf(bookId);
-        dueDate.Should().BeCloseTo(DateTime.UtcNow.AddMonths(1), TimeSpan.FromMinutes(1));
-        (await AvailabilityDateOf(bookId)).Should().BeCloseTo(dueDate, TimeSpan.FromSeconds(1));
-    }
-
-    [Theory]
-    [InlineData(BookStatusEnum.Lost)]
-    [InlineData(BookStatusEnum.Removed)]
-    public async Task Borrow_ABookMarkedLostOrRemoved_Returns409_AndWritesNoHistory(BookStatusEnum adminStatus)
-    {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(adminStatus, adminStatus);
-
-        var response = await client.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("This book isn't available.");
-        (await StatusOf(bookId)).Should().Be(adminStatus);
-        (await HistoryOf(bookId, me.Id)).Should().BeEmpty();
-    }
-
-    [Theory]
-    [InlineData("borrow")]
-    [InlineData("return")]
-    public async Task BorrowOrReturn_ABookThatDoesntExist_Returns404(string action)
-    {
-        var (client, _) = await factory.LoginAsAsync();
-
-        var response = await client.PutAsync($"api/UserActions/{action}/999999", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("User or Book not found.");
-    }
-
     // ---- Returning ----
 
-    [Fact]
-    public async Task Return_WithNoQueue_MakesTheBookAvailableToday()
-    {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, me.Id, dueInDays: 20);
-
-        var response = await client.PutAsync($"api/UserActions/return/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await StatusOf(bookId)).Should().Be(BookStatusEnum.Available);
-        (await AvailabilityDateOf(bookId)).Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
-    }
-
     // ---- The status history each action writes ----
-
-    [Fact]
-    public async Task Borrow_WritesACheckedOutEntry_InTheBorrowersName()
-    {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync();
-
-        await client.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        (await HistoryOf(bookId, me.Id)).Should().Equal((BookStatusEnum.CheckedOut, $"Checked out by {me.UserName}"));
-    }
-
-    [Fact]
-    public async Task Return_WritesAReturnedEntry_InTheBorrowersName()
-    {
-        var (client, me) = await factory.LoginAsAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, me.Id);
-
-        await client.PutAsync($"api/UserActions/return/{bookId}", null, Ct);
-
-        (await HistoryOf(bookId, me.Id)).Should().Equal((BookStatusEnum.Returned, $"Returned by {me.UserName}"));
-    }
 
     [Fact]
     public async Task Reserve_WritesAReservedEntry_InTheReadersName()

@@ -8,40 +8,25 @@ using NyriaNest.Application.Loans;
 namespace NyriaNest.Api.Controllers.Loans
 {
     // The logged-in user's own loans, taken from the token – never from the URL or the body.
+    // Friends borrow by asking (api/borrow-requests, #85); the owner lends and confirms returns
+    // through api/my/books. The old self-service borrow and return went with the shared library's
+    // physical books (ADR 0004).
     [Authorize]
     [ApiController]
     [Route("api/UserActions")]
     public class LoanController : ControllerBase
     {
         private readonly ILoanService _loans;
-        private readonly ILendingService _lending;
 
-        public LoanController(ILoanService loans, ILendingService lending)
+        public LoanController(ILoanService loans)
         {
             _loans = loans;
-            _lending = lending;
         }
-
-        // Borrow methods
 
         [HttpGet("checkedout")]
         public async Task<IActionResult> GetCheckedOutBooks()
         {
             var response = await _loans.GetCheckedOutBooksAsync(User.GetUserId());
-            return StatusCode((int)response.StatusCode, response);
-        }
-
-        [HttpPut("borrow/{bookId}")]
-        public async Task<IActionResult> BorrowBook([FromRoute] int bookId)
-        {
-            var response = await _loans.CheckOutBookAsync(User.GetUserId(), bookId);
-            return StatusCode((int)response.StatusCode, response);
-        }
-
-        [HttpPut("return/{bookId}")]
-        public async Task<IActionResult> ReturnBook([FromRoute] int bookId)
-        {
-            var response = await _loans.ReturnBookAsync(User.GetUserId(), bookId);
             return StatusCode((int)response.StatusCode, response);
         }
 
@@ -52,7 +37,7 @@ namespace NyriaNest.Api.Controllers.Loans
         public async Task<IActionResult> ReportReturned([FromRoute] int bookId,
             [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ReturnBookRequest? body)
         {
-            var response = await _lending.ReportReturnedAsync(bookId, User.GetUserId(), body ?? new ReturnBookRequest(null));
+            var response = await _loans.ReportReturnedAsync(bookId, User.GetUserId(), body ?? new ReturnBookRequest(null));
             return StatusCode((int)response.StatusCode, response);
         }
     }

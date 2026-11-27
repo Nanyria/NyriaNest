@@ -16,12 +16,12 @@ namespace NyriaNest.Api.Controllers.Books;
 public class MyBooksController : ControllerBase
 {
     private readonly IBookService _bookService;
-    private readonly ILendingService _lendingService;
+    private readonly ILoanService _loanService;
 
-    public MyBooksController(IBookService bookService, ILendingService lendingService)
+    public MyBooksController(IBookService bookService, ILoanService loanService)
     {
         _bookService = bookService;
-        _lendingService = lendingService;
+        _loanService = loanService;
     }
 
     [HttpGet]
@@ -73,7 +73,7 @@ public class MyBooksController : ControllerBase
     [HttpPost("{bookId:int}/lend")]
     public async Task<IActionResult> LendMyBook(int bookId, [FromBody] LendBookRequest body)
     {
-        var response = await _lendingService.LendOwnBookAsync(bookId, User.GetUserId(), body);
+        var response = await _loanService.LendOwnBookAsync(bookId, User.GetUserId(), body);
         return StatusCode((int)response.StatusCode, response);
     }
 
@@ -82,7 +82,7 @@ public class MyBooksController : ControllerBase
     public async Task<IActionResult> ReturnMyBook(int bookId,
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] ReturnBookRequest? body)
     {
-        var response = await _lendingService.ReturnOwnBookAsync(bookId, User.GetUserId(), body ?? new ReturnBookRequest(null));
+        var response = await _loanService.ReturnOwnBookAsync(bookId, User.GetUserId(), body ?? new ReturnBookRequest(null));
         return StatusCode((int)response.StatusCode, response);
     }
 

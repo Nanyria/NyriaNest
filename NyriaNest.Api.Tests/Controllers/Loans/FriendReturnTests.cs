@@ -13,14 +13,12 @@ namespace NyriaNest.Api.Tests.Controllers.Loans;
 /// it back (api/UserActions/report-returned/{bookId}, PUT); that isn't a return yet, the book is still lent.
 /// The owner confirms (api/my/books/{id}/return, as for any of their loans), with or without the
 /// friend's report, and may change the date. Only then is it Returned: the confirmed date goes in
-/// the history, and the queue opens from the moment the owner confirms. The old borrow flow's
-/// return (api/UserActions/return) is for the shared library only.
+/// the history, and the queue opens from the moment the owner confirms.
 /// </summary>
 public class FriendReturnTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private static string ReportUrl(int bookId) => $"api/UserActions/report-returned/{bookId}";
     private static string ConfirmUrl(int bookId) => $"api/my/books/{bookId}/return";
-    private static string OldReturnUrl(int bookId) => $"api/UserActions/return/{bookId}";
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
@@ -190,21 +188,6 @@ public class FriendReturnTests(ApiFactory factory) : IClassFixture<ApiFactory>
         request.Status.Should().Be(BorrowRequestStatus.Requested);
         request.RequestedAt.Should().Be(reservedAt);
         request.AvailableAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
-    }
-
-    // ---- The old borrow flow's return ----
-
-    [Fact]
-    public async Task The_old_return_refuses_a_friends_book_and_the_loan_stays()
-    {
-        var (_, _, friend, friendClient, bookId) = await LentToAFriendAsync();
-
-        var response = await friendClient.PutAsync(OldReturnUrl(bookId), null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().ContainEquivalentOf("report it returned");
-        (await LoanOf(bookId))!.UserId.Should().Be(friend.Id);
-        (await HistoryOf(bookId)).Should().BeEmpty();
     }
 
     // ---- Helpers ----

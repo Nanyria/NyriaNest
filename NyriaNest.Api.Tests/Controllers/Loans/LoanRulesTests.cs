@@ -9,9 +9,10 @@ using System.Net;
 namespace NyriaNest.Api.Tests.Controllers.Loans;
 
 /// <summary>
-/// #39 part A: the rules for borrowing, returning and reservations, through
-/// PUT api/UserActions/borrow|return|unreserve/{bookId}. The queue is first
-/// come, first served: the oldest reservation is next in line.
+/// #39 part A: the rules for reservations, through PUT api/UserActions/unreserve/{bookId}.
+/// The queue is first come, first served: the oldest reservation is next in line. The borrow
+/// and return rules went with the old self-service flow (removed in #85); friends' loans
+/// are in BorrowRequestServiceTests and FriendReturnTests.
 /// </summary>
 public class LoanRulesTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
@@ -19,103 +20,7 @@ public class LoanRulesTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     // ---- Borrowing ----
 
-    [Fact]
-    public async Task Borrow_ABookSomeoneElseHas_Returns409_AndTheirLoanIsUnchanged()
-    {
-        var holder = await factory.CreateUserAsync();
-        var (reader, me) = await factory.LoginAsAsync(Roles.User);
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, holder.Id);
-        await AddReservationAsync(bookId, me.Id, daysAgo: 1);
-
-        var response = await reader.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("This book is checked out by someone else.");
-        (await BorrowerOf(bookId)).Should().Be(holder.Id);
-    }
-
-    [Fact]
-    public async Task Borrow_WhenSomeoneIsAheadInTheQueue_Returns409()
-    {
-        var first = await factory.CreateUserAsync();
-        var (reader, me) = await factory.LoginAsAsync(Roles.User);
-        var bookId = await AddBookAsync(BookStatusEnum.Reserved);
-        await AddReservationAsync(bookId, first.Id, daysAgo: 2);
-        await AddReservationAsync(bookId, me.Id, daysAgo: 1);
-
-        var response = await reader.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("This book is reserved for someone else.");
-        (await BorrowerOf(bookId)).Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Borrow_AtTheFrontOfTheQueue_Works_AndTheRestOfTheQueueWaitsForTheNewDueDate()
-    {
-        var (reader, me) = await factory.LoginAsAsync(Roles.User);
-        var next = await factory.CreateUserAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.Reserved);
-        await AddReservationAsync(bookId, me.Id, daysAgo: 2);
-        await AddReservationAsync(bookId, next.Id, daysAgo: 1);
-
-        var response = await reader.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await BorrowerOf(bookId)).Should().Be(me.Id);
-        (await ReservationOf(bookId, me.Id)).Should().BeNull("my reservation is used up by the loan");
-        var dueDate = await DueDateOf(bookId);
-        (await ReservationOf(bookId, next.Id))!.AvailabilityDate.Should().BeCloseTo(dueDate, TimeSpan.FromSeconds(1));
-    }
-
-    [Fact]
-    public async Task Borrow_ABookIAlreadyHave_Returns409()
-    {
-        var (reader, me) = await factory.LoginAsAsync(Roles.User);
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, me.Id);
-
-        var response = await reader.PutAsync($"api/UserActions/borrow/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("You already have this book.");
-    }
-
     // ---- Returning ----
-
-    [Fact]
-    public async Task Return_Early_TheNextReaderCanHaveItToday_NotAtTheOldDueDate()
-    {
-        var (reader, me) = await factory.LoginAsAsync(Roles.User);
-        var next = await factory.CreateUserAsync();
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, me.Id, dueInDays: 20);
-        await AddReservationAsync(bookId, next.Id, daysAgo: 1, availableInDays: 20);
-
-        var response = await reader.PutAsync($"api/UserActions/return/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        (await BorrowerOf(bookId)).Should().BeNull();
-        (await ReservationOf(bookId, next.Id))!.AvailabilityDate.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
-        (await StatusOf(bookId)).Should().Be(BookStatusEnum.Reserved);
-    }
-
-    [Fact]
-    public async Task Return_ABookIDontHave_Returns409_AndWritesNoHistory()
-    {
-        var holder = await factory.CreateUserAsync();
-        var (reader, me) = await factory.LoginAsAsync(Roles.User);
-        var bookId = await AddBookAsync(BookStatusEnum.CheckedOut);
-        await AddLoanAsync(bookId, holder.Id);
-
-        var response = await reader.PutAsync($"api/UserActions/return/{bookId}", null, Ct);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("You don't have this book checked out.");
-        (await BorrowerOf(bookId)).Should().Be(holder.Id);
-        (await HistoryCountOf(bookId, me.Id)).Should().Be(0, "a refused return mustn't log \"Returned by …\"");
-    }
 
     // ---- Cancelling a reservation ----
 

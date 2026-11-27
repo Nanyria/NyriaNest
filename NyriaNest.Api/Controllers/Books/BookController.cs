@@ -18,11 +18,11 @@ namespace NyriaNest.Api.Controllers.Books;
 public class BookController : ControllerBase
 {
     private readonly IBookService _bookService;
-    private readonly ILendingService _lendingService;
-    public BookController(IBookService bookService, ILendingService lendingService)
+    private readonly ILoanService _loanService;
+    public BookController(IBookService bookService, ILoanService loanService)
     {
         _bookService = bookService;
-        _lendingService = lendingService;
+        _loanService = loanService;
     }
 
     /// <summary>Admin catalogue with search, filters, sorting and paging.</summary>
@@ -80,14 +80,14 @@ public class BookController : ControllerBase
     [HttpPost("{bookId:int}/lend")]
     public async Task<IActionResult> LendBook(int bookId, [FromBody] AdminLendBookRequest body)
     {
-        var response = await _lendingService.LendAsAdminAsync(bookId, User.GetUserId(), body);
+        var response = await _loanService.LendAsAdminAsync(bookId, User.GetUserId(), body);
         return StatusCode((int)response.StatusCode, response);
     }
 
     [HttpPost("{bookId:int}/return")]
     public async Task<IActionResult> ReturnBook(int bookId, [FromBody] AdminReturnBookRequest body)
     {
-        var response = await _lendingService.ReturnAsAdminAsync(bookId, User.GetUserId(), body);
+        var response = await _loanService.ReturnAsAdminAsync(bookId, User.GetUserId(), body);
         return StatusCode((int)response.StatusCode, response);
     }
 
