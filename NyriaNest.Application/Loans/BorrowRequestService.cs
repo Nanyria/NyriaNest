@@ -15,7 +15,9 @@ namespace NyriaNest.Application.Loans
     /// A friend asks to borrow a physical book, and the owner chooses (#85). Who may ask is the
     /// Library's rule (BookVisibility): a book you can't see looks missing. Several friends may ask
     /// while the book is free, one open request each; once it's lent, they reserve instead.
-    /// Accepting one lends the book as a normal loan; the other open requests join the queue.
+    /// Accepting one lends the book as a normal loan; the other open requests join the queue, and
+    /// when the book comes back the queue opens again as requests (OpenQueueAsync). Both ways keep
+    /// the date each friend started waiting.
     /// A request that isn't yours to answer or withdraw looks missing (404).
     /// </summary>
     public interface IBorrowRequestService
@@ -24,6 +26,14 @@ namespace NyriaNest.Application.Loans
         Task<APIResponse<BorrowRequestDto>> AcceptAsync(string ownerId, int requestId);
         Task<APIResponse<BorrowRequestDto>> DeclineAsync(string ownerId, int requestId);
         Task<APIResponse<BorrowRequestDto>> CancelAsync(string borrowerId, int requestId);
+
+        /// <summary>
+        /// A friend's book came back: if it's free, each reservation becomes an open request (waiting
+        /// since the reservation, available from now) and the owner chooses. Tells each friend, and
+        /// the owner once. Sets the book's status and date. Needs the book's loan, reservations and
+        /// owner loaded. Doesn't save: the caller saves it together with the return.
+        /// </summary>
+        Task OpenQueueAsync(Book book);
     }
 
     public class BorrowRequestService : IBorrowRequestService
@@ -200,6 +210,53 @@ namespace NyriaNest.Application.Loans
 
             var saved = await SaveAsync(request.BookId, "withdrawn", AlreadyAnswered);
             return saved ?? Ok(ToDto(request, request.Book, request.Borrower.UserName ?? ""));
+        }
+
+        // Was QueueHandOver until #85 step 5c: the other half of AcceptAsync's "join the queue"
+        public async Task OpenQueueAsync(Book book)
+        {
+            // Only friends' books have a queue to open, and only when nobody has them
+            if (book.OwnerId == null || book.AdminStatus != null || book.CheckedOutBy != null)
+                return;
+
+            var now = Now;
+            var queue = book.Reservations.OrderBy(r => r.ReservationDate).ToList();
+            var waitingIds = queue.Select(r => r.UserId).ToList();
+            var names = await _userRepo.FindByCondition<User>(u => waitingIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.UserName ?? "");
+            var ownerName = book.Owner?.UserName ?? "";
+
+            var asked = new List<string>();
+            foreach (var reservation in queue)
+            {
+                book.Reservations.Remove(reservation);
+                _db.ReservationItems.Remove(reservation);
+
+                // Reserving is refused while you have an open request, but never ask twice
+                var alreadyAsked = await _db.BorrowRequests.AnyAsync(r =>
+                    r.BookId == book.BookId && r.BorrowerId == reservation.UserId && r.Status == BorrowRequestStatus.Requested);
+                if (alreadyAsked)
+                    continue;
+
+                _db.BorrowRequests.Add(new BorrowRequest
+                {
+                    BookId = book.BookId,
+                    BorrowerId = reservation.UserId,
+                    Status = BorrowRequestStatus.Requested,
+                    RequestedAt = reservation.ReservationDate, // waiting since they reserved
+                    AvailableAt = now,                         // the reminder and expiry count from here
+                });
+                _notifications.NotifyQueueTurn(reservation.UserId, book, ownerName);
+                asked.Add(names.GetValueOrDefault(reservation.UserId, ""));
+            }
+
+            // One message to the owner, naming everyone waiting, in the order they started
+            if (asked.Count > 0)
+                _notifications.NotifyQueueOpened(book, asked);
+
+            // Free, with no queue left: available from now
+            book.BookStatus = BookStatusEnum.Available;
+            _availability.RecalculateAvailabilityDates(book);
         }
 
         // ---- Helpers ----

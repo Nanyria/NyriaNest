@@ -54,15 +54,15 @@ namespace NyriaNest.Application.Loans
         private readonly IAppDbContext _dbContext;
         private readonly INotificationService _notifications;
         private readonly ILogger<LoanService> _logger;
-        private readonly IQueueHandOver _queue;
+        private readonly IBorrowRequestService _requests;
         private readonly IUserRepo _userRepo;
         private readonly IMapper _mapper;
 
         public LoanService(IBookRepo bookRepo, IAppDbContext dbContext,
-            INotificationService notifications, ILogger<LoanService> logger, IQueueHandOver queue,
+            INotificationService notifications, ILogger<LoanService> logger, IBorrowRequestService requests,
             IUserRepo userRepo, IMapper mapper)
         {
-            _queue = queue;
+            _requests = requests;
             _bookRepo = bookRepo;
             _dbContext = dbContext;
             _notifications = notifications;
@@ -231,7 +231,7 @@ namespace NyriaNest.Application.Loans
             book.AvailabilityDate = now; // available from now, as when a book is added
 
             // #85: friends waiting for it: the queue opens from now, when the owner knows it's back
-            await _queue.HandOnAsync(book);
+            await _requests.OpenQueueAsync(book);
 
             // One row: "Returned" already says it's back on the shelf. A friend's loan is recorded
             // on the confirmed date (#85); a name loan keeps the time it was marked, as in #83.

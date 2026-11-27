@@ -29,7 +29,6 @@ namespace NyriaNest.Application
             services.AddScoped<IReservationService, ReservationService>();
             services.AddScoped<ILoanService, LoanService>();
             services.AddScoped<IBorrowRequestService, BorrowRequestService>();
-            services.AddScoped<IQueueHandOver, QueueHandOver>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IFriendshipService, FriendshipService>();
 

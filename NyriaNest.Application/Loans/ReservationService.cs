@@ -17,9 +17,6 @@ namespace NyriaNest.Application.Loans
         Task<APIResponse<List<ReservationItemDto>>> GetReservedBooksAsync(string userId);
         Task<APIResponse<UserDto>> ReserveBookAsync(string userId, int bookId);
         Task<APIResponse<UserDto>> CancelReservationAsync(string userId, int bookId);
-        // Takes the user's reservation off the book and moves the queue up, without
-        // saving. Borrowing uses it too: a loan uses up the borrower's reservation.
-        bool RemoveReservation(User user, Book book);
         Task<APIResponse<List<BookReservationDto>>> GetBookReservationsAsync(int bookId);
     }
 
@@ -196,7 +193,8 @@ namespace NyriaNest.Application.Loans
             _availability.RecalculateAvailabilityDates(book);
         }
 
-        public bool RemoveReservation(User user, Book book)
+        // Takes the user's reservation off the book and moves the queue up, without saving
+        private bool RemoveReservation(User user, Book book)
         {
             // Find the reservation item for the given book
             var reservationItem = user.ReservedBooks.FirstOrDefault(r => r.BookId == book.BookId);
@@ -232,7 +230,6 @@ namespace NyriaNest.Application.Loans
 
             if (user != null && book != null)
             {
-                // Use the refactored RemoveReservation method
                 if (RemoveReservation(user, book))
                 {
 
