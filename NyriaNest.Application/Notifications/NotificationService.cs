@@ -142,21 +142,30 @@ namespace NyriaNest.Application.Notifications
         /// <summary>One message to each person with a current interaction with the book, the owner excluded.</summary>
         private async Task NotifyOthersAsync(Book book, string whatHappened)
         {
-            // Everyone with a current interaction (#83): a reservation or a favorite. Past reviews
-            // and ratings don't count. Favorites go with the book, so they're read before the delete.
+            // Everyone with a current interaction (#83): a reservation or a favorite, and since #85 a
+            // friend who has the book and an open request. Past reviews, ratings and finished requests
+            // don't count. Favorites and requests go with the book, so they're read before the delete.
+            var borrower = book.CheckedOutBy?.UserId; // a friend's loan; a loan to a name has no user
             var reservers = book.Reservations.Select(r => r.UserId).ToHashSet();
+            var requesters = (await _dbContext.BorrowRequests
+                .Where(r => r.BookId == book.BookId && r.Status == BorrowRequestStatus.Requested)
+                .Select(r => r.BorrowerId)
+                .ToListAsync()).ToHashSet();
             var favoriters = await _dbContext.FavoriteItems
                 .Where(f => f.BookId == book.BookId)
                 .Select(f => f.UserId)
                 .ToListAsync();
 
-            // A set: one person can hold two reservations, or a reservation and a favorite. One message each.
-            var others = reservers.Union(favoriters).Where(userId => userId != book.OwnerId);
+            // A set: one person can be in several of these. One message each.
+            var others = (borrower is null ? Enumerable.Empty<string>() : [borrower])
+                .Union(reservers).Union(requesters).Union(favoriters)
+                .Where(userId => userId != book.OwnerId);
             foreach (var userId in others)
             {
-                // The reservation is the bigger loss, so it's the one that's named
-                var consequence = reservers.Contains(userId)
-                    ? "so your reservation was cancelled."
+                // The biggest loss is the one that's named: the loan, the queue, the request, the favorite
+                var consequence = userId == borrower ? "so your loan of it ended."
+                    : reservers.Contains(userId) ? "so your reservation was cancelled."
+                    : requesters.Contains(userId) ? "so your request to borrow it was cancelled."
                     : "so it's no longer in your favorites.";
                 AddRemovedNotification(userId, $"{whatHappened}, {consequence}");
             }

@@ -8,8 +8,8 @@ using System.Net;
 namespace NyriaNest.Api.Tests.Controllers.Books;
 
 /// <summary>
-/// #39 part B: DELETE api/Book/{bookId}. A book someone has borrowed can't be
-/// deleted; a book with only reservations can, and its reservations go with it
+/// #39 part B: DELETE api/Book/{bookId}. A book someone has borrowed is deleted only after a
+/// confirm (#85); a book with only reservations can be, and its reservations go with it
 /// (decided in #39). Who is told, and what they're told, is tested in
 /// BookRemovedNotificationTests (#75, #83).
 /// </summary>
@@ -51,9 +51,10 @@ public class BookDeleteTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Delete_ACheckedOutBook_Returns409_AndKeepsEverything()
+    public async Task Delete_ACheckedOutBook_WithoutConfirming_Returns409_AndKeepsEverything()
     {
-        // Deleting it would wipe out someone's loan
+        // Deleting it would end someone's loan, so it asks first (#85: was "Return this book before
+        // deleting it."). Deleting after the confirm is in FriendBookDeleteTests.
         var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
         var holder = await factory.CreateUserAsync();
         var reader = await factory.CreateUserAsync();
@@ -68,7 +69,7 @@ public class BookDeleteTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var response = await admin.DeleteAsync($"api/Book/{bookId}", Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("Return this book before deleting it.");
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain(holder.UserName).And.Contain("Delete it anyway?");
         (await factory.WithDbAsync(db => db.Books.AnyAsync(b => b.BookId == bookId, Ct))).Should().BeTrue();
         (await ReservationCountOf(bookId)).Should().Be(1);
     }

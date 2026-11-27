@@ -360,21 +360,16 @@ namespace NyriaNest.Application.Books
             if (someoneElses && string.IsNullOrWhiteSpace(reason))
                 return Failure<bool>(HttpStatusCode.BadRequest, ReasonMessage);
 
+            // Lent out: it may be deleted anyway (it came back unmarked, or it's lost or given away),
+            // so the client asks and sends confirmLent. #85: a friend's loan too; the friend is told
+            // their loan ended (RemoveBookAsync removes the loan after the notifications).
             var loan = book.CheckedOutBy;
-            if (loan != null)
+            if (loan != null && !confirmLent)
             {
-                // Lent to a member: deleting would wipe out their loan (and the loan's FK is
-                // Restrict, so the delete would fail anyway). Friend loans decide more in #85.
-                if (loan.BorrowerName == null)
-                    return Failure<bool>(HttpStatusCode.Conflict, "Return this book before deleting it.");
-
-                // Lent to a name: it may be deleted anyway (it came back unmarked,
-                // or it's lost or given away), so the client asks and sends confirmLent
-                if (!confirmLent)
-                    return Failure<bool>(HttpStatusCode.Conflict,
-                        $"This book is marked as lent to {loan.BorrowerName}. Delete it anyway? The loan is removed too.");
-
-                _dbContext.CheckOutItems.Remove(loan);
+                var borrower = loan.BorrowerName ?? loan.User?.UserName;
+                return Failure<bool>(HttpStatusCode.Conflict, loan.BorrowerName != null
+                    ? $"This book is marked as lent to {borrower}. Delete it anyway? The loan is removed too."
+                    : $"This book is lent to {borrower}. Delete it anyway? The loan ends, and {borrower} is told.");
             }
 
             var removedReason = book.OwnerId == null ? BookRemovedReason.RemovedFromSharedLibrary
@@ -387,7 +382,7 @@ namespace NyriaNest.Application.Books
 
         /// <summary>
         /// Deletes a book that has passed its caller's checks, telling whoever the reason says.
-        /// A loan still on the book has to be removed by the caller first, in the same save.
+        /// A loan still on the book is removed here (the caller has had it confirmed), after the notifications.
         /// </summary>
         private async Task<APIResponse<bool>> RemoveBookAsync(Book bookToDelete, BookRemovedReason reason, string? details)
         {
@@ -397,9 +392,13 @@ namespace NyriaNest.Application.Books
             {
                 // Reservations go with the book (decided in #39). Their FK is Restrict,
                 // so they have to be removed explicitly, in the same save as the book.
-                // The readers are told in the same save (#75).
+                // The readers are told in the same save (#75), before anything is removed, so the
+                // borrower, the queue and the open requests (#85) can still be read.
                 await _notifications.NotifyBookRemovedAsync(bookToDelete, reason, details);
+                if (bookToDelete.CheckedOutBy is { } loan)
+                    _dbContext.CheckOutItems.Remove(loan); // Restrict too; the caller has confirmed it
                 _dbContext.ReservationItems.RemoveRange(bookToDelete.Reservations);
+                // The requests go by cascade with the book
                 await _bookRepo.DeleteAsync(bookToDelete);
                 await _bookRepo.SaveAsync();
 
@@ -719,7 +718,8 @@ namespace NyriaNest.Application.Books
                 response.ErrorMessages.Add(ReasonMessage);
                 return response;
             }
-            // Lent to a member: they'd lose a book they still hold (friend loans decide more in #85).
+            // Lent to a friend: they still hold it, so the return is confirmed first, by the owner or an
+            // admin on their behalf (#85); taking it down isn't a way to end a loan.
             // Lent to a name: the loan is only the owner's note of who has it, so it stays and
             // the book is lent as before after a restore (#83).
             if (book.CheckedOutBy is { BorrowerName: null })
@@ -742,6 +742,16 @@ namespace NyriaNest.Application.Books
             _dbContext.ReservationItems.RemoveRange(book.Reservations);
             _dbContext.FavoriteItems.RemoveRange(
                 await _dbContext.FavoriteItems.Where(f => f.BookId == book.BookId).ToListAsync());
+
+            // #85: open requests are cancelled too (the friends were just told); finished ones stay as the record
+            var openRequests = await _dbContext.BorrowRequests
+                .Where(r => r.BookId == book.BookId && r.Status == BorrowRequestStatus.Requested)
+                .ToListAsync();
+            foreach (var request in openRequests)
+            {
+                request.Status = BorrowRequestStatus.Cancelled;
+                request.AnsweredAt = DateTime.UtcNow;
+            }
 
             await _bookRepo.UpdateAsync(book);
             await _bookRepo.SaveAsync();
