@@ -20,7 +20,7 @@ public class SchemaTests
     [
         "Books", "CheckOutItems", "ReservationItems", "StatusHistoryItems",
         "ReviewItems", "RatingItems", "FavoriteItems", "NotificationItems",
-        "Friendships",
+        "Friendships", "BorrowRequests",
     ];
 
     public static TheoryData<string> IdentityTableNames => new(IdentityTables);

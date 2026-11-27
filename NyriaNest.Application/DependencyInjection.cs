@@ -35,6 +35,12 @@ namespace NyriaNest.Application
             // #84: the 100 / 10 sharing limits (ADR 0005); the class holds the defaults
             services.Configure<SharingLimitsOptions>(configuration.GetSection(SharingLimitsOptions.SectionName));
 
+            // #85: reminder and expiry timings; the class holds the defaults
+            services.Configure<LendingOptions>(configuration.GetSection(LendingOptions.SectionName));
+
+            // #85: new code asks this for the time, so tests can use a fake clock
+            services.AddSingleton(TimeProvider.System);
+
             services.AddAutoMapper(cfg =>
             {
                 cfg.LicenseKey = configuration["AutoMapper:LicenseKey"];

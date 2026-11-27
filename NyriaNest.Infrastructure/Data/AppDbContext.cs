@@ -27,6 +27,7 @@ namespace NyriaNest.Infrastructure.Data
         public DbSet<ReservationItem> ReservationItems { get; set; }
         public DbSet<NotificationItem> NotificationItems { get; set; }
         public DbSet<Friendship> Friendships { get; set; }
+        public DbSet<BorrowRequest> BorrowRequests { get; set; }
 
         private const string IdentitySchema = "identity";
         private const string LibrarySchema = "library";
@@ -53,6 +54,7 @@ namespace NyriaNest.Infrastructure.Data
             modelBuilder.Entity<FavoriteItem>().ToTable("FavoriteItems", LibrarySchema);
             modelBuilder.Entity<NotificationItem>().ToTable("NotificationItems", LibrarySchema);
             modelBuilder.Entity<Friendship>().ToTable("Friendships", LibrarySchema);
+            modelBuilder.Entity<BorrowRequest>().ToTable("BorrowRequests", LibrarySchema);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -159,6 +161,30 @@ namespace NyriaNest.Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(n => n.BookId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // #85: a request is part of the book's history, so it goes with the book (Cascade).
+            // The borrower is Restrict, as for friendships: accounts are dealt with on purpose.
+            modelBuilder.Entity<BorrowRequest>()
+                .HasOne(r => r.Book)
+                .WithMany()
+                .HasForeignKey(r => r.BookId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BorrowRequest>()
+                .HasOne(r => r.Borrower)
+                .WithMany()
+                .HasForeignKey(r => r.BorrowerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // One open request per friend and book; finished ones (Status <> 0) stay as the record
+            modelBuilder.Entity<BorrowRequest>()
+                .HasIndex(r => new { r.BookId, r.BorrowerId })
+                .IsUnique()
+                .HasFilter($"[Status] = {(int)BorrowRequestStatus.Requested}");
+
+            // Lets "my requests" (the friend's side) find their rows
+            modelBuilder.Entity<BorrowRequest>()
+                .HasIndex(r => r.BorrowerId);
 
             // #84: one row per pair of users. Both FKs are Restrict: SQL Server allows only one
             // cascade path from a table to AspNetUsers, and the user delete removes friendships

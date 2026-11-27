@@ -251,6 +251,44 @@ namespace NyriaNest.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("NyriaNest.Domain.Entities.BorrowRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AnsweredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BorrowerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("LastReminderAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BorrowerId");
+
+                    b.HasIndex("BookId", "BorrowerId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 0");
+
+                    b.ToTable("BorrowRequests", "library");
+                });
+
             modelBuilder.Entity("NyriaNest.Domain.Entities.CheckedOutItem", b =>
                 {
                     b.Property<int>("Id")
@@ -272,7 +310,13 @@ namespace NyriaNest.Infrastructure.Migrations
                     b.Property<DateTime?>("ReminderEmailSent")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ReportedReturnedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReturnReminderSentAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
@@ -689,6 +733,25 @@ namespace NyriaNest.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("NyriaNest.Domain.Entities.BorrowRequest", b =>
+                {
+                    b.HasOne("NyriaNest.Domain.Entities.Book", "Book")
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NyriaNest.Domain.Entities.User", "Borrower")
+                        .WithMany()
+                        .HasForeignKey("BorrowerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("Borrower");
                 });
 
             modelBuilder.Entity("NyriaNest.Domain.Entities.CheckedOutItem", b =>

@@ -23,5 +23,12 @@ namespace NyriaNest.Domain.Entities
         public DateTime CheckOutDate { get; set; }
         public DateTime ReturnDate { get; set; }
         public DateTime? ReminderEmailSent { get; set; }
+
+        // #85: a friend reports the book returned, with the date they gave it back. It isn't a
+        // return until the owner confirms (and may change the date); then the loan is removed.
+        public DateTime? ReportedReturnedDate { get; set; }
+
+        // #85: when the owner was last reminded about an unconfirmed return (every 14 days)
+        public DateTime? ReturnReminderSentAt { get; set; }
     }
 }
