@@ -42,5 +42,7 @@ namespace NyriaNest.Application.DTOs.Books
         public DateTime? MyReservationAvailableDate { get; set; }
         // 1 = next in line; null when I haven't reserved the book
         public int? MyQueuePosition { get; set; }
+        // #85: my open request to borrow it (to withdraw it); null when I haven't asked or it was answered
+        public int? MyRequestId { get; set; }
     }
 }

@@ -143,6 +143,11 @@ namespace NyriaNest.Infrastructure.Repositories
                     MyQueuePosition = b.Reservations
                         .Where(r => r.UserId == userId)
                         .Select(mine => (int?)(b.Reservations.Count(other => other.ReservationDate < mine.ReservationDate) + 1))
+                        .FirstOrDefault(),
+                    // Only an open request: a finished one is history, and I can ask again
+                    MyRequestId = _db.BorrowRequests
+                        .Where(r => r.BookId == b.BookId && r.BorrowerId == userId && r.Status == BorrowRequestStatus.Requested)
+                        .Select(r => (int?)r.Id)
                         .FirstOrDefault()
                 })
                 .ToListAsync();

@@ -23,6 +23,51 @@ public class FriendsBooksVisibilityTests(ApiFactory factory) : IClassFixture<Api
     private static string BookReviewsUrl(int bookId) => $"api/Library/review/{bookId}";
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    // ---- #85 9b: my open request, so the popup shows "Withdraw" instead of "Ask to borrow" ----
+
+    [Fact]
+    public async Task AfterIAsk_TheBookCarriesMyRequestId()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var friend = await factory.CreateUserAsync();
+        await FriendsAsync(friend, me, friendShares: true);
+        var bookId = await AddBookAsync(friend.Id, "Friend shares: asked for");
+
+        (await LibraryAsync(client))[bookId].GetProperty("myRequestId").ValueKind.Should().Be(JsonValueKind.Null);
+
+        var asked = await client.PostAsJsonAsync("api/borrow-requests", new { bookId }, Ct);
+        asked.StatusCode.Should().Be(HttpStatusCode.OK, await asked.Content.ReadAsStringAsync(Ct));
+        using var doc = JsonDocument.Parse(await asked.Content.ReadAsStringAsync(Ct));
+        var requestId = doc.RootElement.GetProperty("result").GetProperty("id").GetInt32();
+
+        (await LibraryAsync(client))[bookId].GetProperty("myRequestId").GetInt32().Should().Be(requestId);
+    }
+
+    [Fact]
+    public async Task OnlyMyOpenRequestCounts_NotAFinishedOne_NorSomeoneElses()
+    {
+        var (client, me) = await factory.LoginAsAsync();
+        var friend = await factory.CreateUserAsync();
+        var other = await factory.CreateUserAsync();
+        await FriendsAsync(friend, me, friendShares: true);
+        var declinedBook = await AddBookAsync(friend.Id, "Friend shares: declined");
+        var othersBook = await AddBookAsync(friend.Id, "Friend shares: someone else asked");
+        await factory.WithDbAsync(async db =>
+        {
+            db.BorrowRequests.AddRange(
+                new BorrowRequest { BookId = declinedBook, BorrowerId = me.Id, Status = BorrowRequestStatus.Declined,
+                    RequestedAt = DateTime.UtcNow.AddDays(-3), AvailableAt = DateTime.UtcNow.AddDays(-3), AnsweredAt = DateTime.UtcNow },
+                new BorrowRequest { BookId = othersBook, BorrowerId = other.Id, Status = BorrowRequestStatus.Requested,
+                    RequestedAt = DateTime.UtcNow, AvailableAt = DateTime.UtcNow });
+            await db.SaveChangesAsync(Ct);
+        });
+
+        var books = await LibraryAsync(client);
+
+        books[declinedBook].GetProperty("myRequestId").ValueKind.Should().Be(JsonValueKind.Null);
+        books[othersBook].GetProperty("myRequestId").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     // ---- The Library list ----
 
     [Fact]
