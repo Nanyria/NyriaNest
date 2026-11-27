@@ -17,11 +17,6 @@ private apiUrl = 'api/UserActions'; // Base URL for the User API
   addUser(user: CreateUserDto): Observable<any> {
     return this.http.post<any>(this.apiUrl, user);
   }
-  // Borrow a book
-  borrowBook(bookId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/borrow/${bookId}`, {});
-  }
-
   // Reserve a book
   reserveBook(bookId: string): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/reserve/${bookId}`, {});
@@ -30,11 +25,6 @@ private apiUrl = 'api/UserActions'; // Base URL for the User API
   // Unreserve a book
   unreserveBook(bookId: string): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/unreserve/${bookId}`, {});
-  }
-
-  // Return a book
-  returnBook(bookId: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/return/${bookId}`, {});
   }
 
   // To add - list of borrowed books

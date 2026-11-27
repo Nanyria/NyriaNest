@@ -113,3 +113,14 @@ export enum FriendshipStatus {
     Accepted = 1,
     Declined = 2,
 }
+
+// Travels as a number: must match the backend's BorrowRequestStatus (#85).
+// Only Requested is open; the others are finished.
+export enum BorrowRequestStatus {
+    Requested = 0,
+    Lent = 1,       // accepted: a normal loan
+    Declined = 2,
+    Cancelled = 3,  // withdrawn by the friend, or cancelled by an admin
+    Expired = 4,    // the owner didn't answer within a month
+    Queued = 5,     // lent to another friend; this one became a reservation
+}

@@ -19,7 +19,7 @@ namespace NyriaNest.Domain.Enums
         /// <summary>The friend withdrew it, or an admin cancelled it for support (#50).</summary>
         Cancelled = 3,
 
-        /// <summary>The owner didn't answer within RequestExpiryMonths; it passes to the next in the queue.</summary>
+        /// <summary>The owner didn't answer within RequestExpiryMonths. The friend is told and can ask again.</summary>
         Expired = 4,
 
         /// <summary>The owner lent the book to another friend; this request became a reservation in the queue.</summary>

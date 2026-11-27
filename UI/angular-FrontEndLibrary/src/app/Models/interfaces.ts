@@ -5,7 +5,8 @@ import {
   BookTypeEnums,
   LanguageEnums,
   NotificationType,
-  FriendshipStatus
+  FriendshipStatus,
+  BorrowRequestStatus
 } from '../Helpers/Enums/enum';
 
 // Book interfaces
@@ -114,6 +115,27 @@ export interface LibraryBook {
   isCheckedOutByMe: boolean;
   isReservedByMe: boolean;
   myReservationAvailableDate: string | null;
+
+  // Friends' books (#85)
+  ownerName: string | null;        // whose book it is; null for the shared library
+  myQueuePosition: number | null;  // 1 = next in line; null when I haven't reserved it
+  myRequestId: number | null;      // my open request to borrow it; null when I haven't asked or it was answered
+}
+
+// A friend's request to borrow a book (#85), as GET api/borrow-requests/incoming
+// (the owner's side) and /mine (the friend's side) list them, longest waiting first
+export interface BorrowRequest {
+  id: number;
+  bookId: number;
+  bookTitle: string;
+  coverImagePath: string | null;
+  ownerUserName: string;
+  borrowerId: string;
+  borrowerUserName: string;
+  status: BorrowRequestStatus;
+  requestedAt: string; // "waiting since": when they asked, or reserved if the queue opened it
+  availableAt: string; // when the book became free for this request
+  answeredAt: string | null;
 }
 
 // A review as the Library popup shows it (GET api/review/{bookId})

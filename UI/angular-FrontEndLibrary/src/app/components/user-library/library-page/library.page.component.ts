@@ -609,46 +609,6 @@ export class LibraryComponent implements AfterViewInit {
     }
     return lent ? { text: 'Checked out', tone: 'out' } : { text: 'Available', tone: 'ok' };
   }
-  isBorrowDisabled(book: LibraryBook): boolean {
-    const isCheckedOutBySomeoneElse =
-      book.bookStatus === BookStatusEnum.CheckedOut && !book.isCheckedOutByMe;
-
-    // If the book is not checked out, but there are prior reservations (not by this user)
-    const hasPriorReservations =
-      book.bookStatus !== BookStatusEnum.CheckedOut &&
-      book.reservationCount > 0 &&
-      !book.isReservedByMe;
-
-    return isCheckedOutBySomeoneElse || hasPriorReservations;
-  }
-
-  // Not offered in the popup until #85 (friend loans); kept until then.
-  // After borrowing, returning or (un)reserving, reload the list: the server
-  // works out the new "…ByMe" flags and getAllBooks refreshes the open popup.
-  // Returning asks first; borrowing is one click, like on Manage books.
-  async toggleBorrow(book: LibraryBook) {
-    if (book.isCheckedOutByMe) {
-      const confirmed = await this.confirmDialog.confirm({
-        title: `Return "${book.title}"?`,
-        message: 'Someone else may borrow or reserve it once it is back.',
-        confirmLabel: 'Return book',
-        cancelLabel: 'Keep it',
-        icon: 'arrow-return-left',
-      });
-      if (!confirmed) return;
-      this.runAction(
-        this.userActionsService.returnBook(book.bookId),
-        { message: `You returned "${book.title}".`, icon: 'arrow-return-left' },
-        `Couldn't return "${book.title}".`,
-      );
-    } else {
-      this.runAction(
-        this.userActionsService.borrowBook(book.bookId),
-        { message: `You borrowed "${book.title}".`, icon: 'book' },
-        `Couldn't borrow "${book.title}".`,
-      );
-    }
-  }
 
   // Cancelling gives up the place in the queue, so it asks first
   async toggleReservation(book: LibraryBook) {
