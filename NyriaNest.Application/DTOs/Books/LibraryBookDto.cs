@@ -35,6 +35,8 @@ namespace NyriaNest.Application.DTOs.Books
 
         // Only about the logged-in user (false/null when not logged in)
         public bool IsMine { get; set; }
+        // #85: who owns the book, for the owner tag on friends' books. Null for the shared library.
+        public string? OwnerName { get; set; }
         public bool IsCheckedOutByMe { get; set; }
         public bool IsReservedByMe { get; set; }
         public DateTime? MyReservationAvailableDate { get; set; }

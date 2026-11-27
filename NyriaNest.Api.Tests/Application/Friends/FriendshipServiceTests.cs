@@ -117,6 +117,32 @@ public class FriendshipServiceTests : IDisposable
         (await service.SharesWithAsync(_me.Id, _anna.Id, SharingSetting.PhysicalLibrary)).Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(FriendshipStatus.Pending)]
+    [InlineData(FriendshipStatus.Declined)]
+    public async Task A_request_that_isnt_accepted_shares_nothing_even_with_the_settings_on(FriendshipStatus status)
+    {
+        // #85: the rule moved to Domain (FriendSharing) and the Library uses it too;
+        // it mustn't rely on the UI never turning a setting on before accepting
+        using (var db = _db.CreateContext())
+        {
+            db.Friendships.Add(new Friendship
+            {
+                RequesterId = _me.Id,
+                AddresseeId = _anna.Id,
+                Status = status,
+                RequesterSharesPhysicalLibrary = true,
+                RequesterSharesEbooks = true,
+            });
+            db.SaveChanges();
+        }
+
+        using var assert = _db.CreateContext();
+        var service = Service(assert);
+        (await service.SharesWithAsync(_me.Id, _anna.Id, SharingSetting.PhysicalLibrary)).Should().BeFalse();
+        (await service.SharesWithAsync(_me.Id, _anna.Id, SharingSetting.Ebooks)).Should().BeFalse();
+    }
+
     [Fact]
     public async Task Turning_on_one_more_than_the_limit_is_refused_with_a_message_naming_the_limit()
     {

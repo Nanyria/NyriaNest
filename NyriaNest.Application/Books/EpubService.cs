@@ -127,7 +127,7 @@ namespace NyriaNest.Application.Books
             // book (e.g. to check an uploaded file); revisit once owners have private e-books (#80/#87).
             var books = _db.Books.AsNoTracking().Where(b => b.BookId == bookId);
             if (!isAdmin)
-                books = books.Where(BookVisibility.VisibleTo(userId));
+                books = books.Where(BookVisibility.VisibleTo(userId, _db.Friendships));
 
             var book = await books.FirstOrDefaultAsync(ct);
             if (book?.EpubFileKey is null)

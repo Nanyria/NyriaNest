@@ -39,7 +39,7 @@ namespace NyriaNest.Infrastructure.Repositories
 
         public async Task<Book?> GetVisibleByIdAsync(int id, string? userId)
         {
-            return await WithDetails(_db.Books.Where(BookVisibility.VisibleTo(userId)))
+            return await WithDetails(_db.Books.Where(BookVisibility.VisibleTo(userId, _db.Friendships)))
                 .FirstOrDefaultAsync(b => b.BookId == id);
         }
 
@@ -104,8 +104,8 @@ namespace NyriaNest.Infrastructure.Repositories
         {
             return await _db.Books
                 .AsNoTracking()
-                // The shared library and my own books, none marked Lost or Removed
-                .Where(BookVisibility.VisibleTo(userId))
+                // The shared library, my own books and shared friends' books, none marked Lost or Removed
+                .Where(BookVisibility.VisibleTo(userId, _db.Friendships))
                 .OrderBy(b => b.Title)
                 .Select(b => new LibraryBookDto
                 {
@@ -123,6 +123,8 @@ namespace NyriaNest.Infrastructure.Repositories
                     AvailabilityDate = b.AvailabilityDate,
                     DateAdded = b.DateAdded,
                     IsMine = userId != null && b.OwnerId == userId,
+                    // #85: the owner tag for friends' books (null for the shared library)
+                    OwnerName = b.Owner != null ? b.Owner.UserName : null,
 
                     ReviewCount = b.Reviews.Count,
                     AverageRating = b.Reviews

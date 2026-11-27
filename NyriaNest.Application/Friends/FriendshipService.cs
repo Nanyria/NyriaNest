@@ -1,5 +1,4 @@
-﻿using System.Linq.Expressions;
-using System.Net;
+﻿using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NyriaNest.Application.Common;
@@ -8,6 +7,7 @@ using NyriaNest.Application.Interfaces;
 using NyriaNest.Application.Notifications;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
+using static NyriaNest.Domain.Rules.FriendSharing;
 
 namespace NyriaNest.Application.Friends
 {
@@ -296,17 +296,7 @@ namespace NyriaNest.Application.Friends
         private int LimitFor(SharingSetting setting) =>
             setting == SharingSetting.Ebooks ? _limits.Ebooks : _limits.PhysicalLibrary;
 
-        /// <summary>The row between two users, whichever of them asked.</summary>
-        private static Expression<Func<Friendship, bool>> Between(string a, string b) =>
-            f => (f.RequesterId == a && f.AddresseeId == b) || (f.RequesterId == b && f.AddresseeId == a);
-
-        /// <summary>Accepted rows where <paramref name="userId"/> has turned this setting on, for the limit count.</summary>
-        private static Expression<Func<Friendship, bool>> SharedBy(string userId, SharingSetting setting) =>
-            setting == SharingSetting.Ebooks
-                ? f => f.Status == FriendshipStatus.Accepted
-                    && ((f.RequesterId == userId && f.RequesterSharesEbooks) || (f.AddresseeId == userId && f.AddresseeSharesEbooks))
-                : f => f.Status == FriendshipStatus.Accepted
-                    && ((f.RequesterId == userId && f.RequesterSharesPhysicalLibrary) || (f.AddresseeId == userId && f.AddresseeSharesPhysicalLibrary));
+        // Between and SharedBy live in Domain (FriendSharing) since #85, shared with BookVisibility
 
         private static bool IShare(Friendship f, string userId, SharingSetting setting) =>
             (setting, f.RequesterId == userId) switch
