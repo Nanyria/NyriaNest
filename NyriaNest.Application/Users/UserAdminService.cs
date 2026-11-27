@@ -144,6 +144,11 @@ namespace NyriaNest.Application.Users
                     .ToListAsync();
                 _dbContext.Friendships.RemoveRange(friendships);
 
+                // #85: the user's requests to borrow friends' books, open or finished. BorrowerId is
+                // Restrict, so this can't be skipped. Requests for the user's own books go with those books.
+                var borrowRequests = await _dbContext.BorrowRequests.Where(r => r.BorrowerId == userId).ToListAsync();
+                _dbContext.BorrowRequests.RemoveRange(borrowRequests);
+
                 // #83: the user's own books go with the account: a private shelf means nothing
                 // without its owner, and the borrower names on it are personal data. Loans and
                 // reservations are Restrict, so remove them first; history, reviews and

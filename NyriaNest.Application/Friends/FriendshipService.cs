@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using NyriaNest.Application.Common;
 using NyriaNest.Application.DTOs.Friends;
 using NyriaNest.Application.Interfaces;
+using NyriaNest.Application.Loans;
 using NyriaNest.Application.Notifications;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
@@ -57,14 +58,17 @@ namespace NyriaNest.Application.Friends
         private readonly IUserRepo _userRepo;
         private readonly INotificationService _notifications;
         private readonly SharingLimitsOptions _limits;
+        private readonly IAvailabilityService _availability;
 
         public FriendshipService(IAppDbContext dbContext, IUserRepo userRepo,
-            INotificationService notifications, IOptions<SharingLimitsOptions> limits)
+            INotificationService notifications, IOptions<SharingLimitsOptions> limits,
+            IAvailabilityService availability)
         {
             _dbContext = dbContext;
             _userRepo = userRepo;
             _notifications = notifications;
             _limits = limits.Value;
+            _availability = availability;
         }
 
         public async Task<APIResponse<FriendshipDto>> SendRequestAsync(string userId, string userName)
@@ -153,13 +157,19 @@ namespace NyriaNest.Application.Friends
 
         public async Task<APIResponse<bool>> RemoveAsync(string userId, int friendshipId)
         {
-            var row = await _dbContext.Friendships.FirstOrDefaultAsync(f =>
-                f.Id == friendshipId && (f.RequesterId == userId || f.AddresseeId == userId)
-                && f.Status == FriendshipStatus.Accepted);
+            var row = await _dbContext.Friendships
+                .Include(f => f.Requester)
+                .Include(f => f.Addressee)
+                .FirstOrDefaultAsync(f =>
+                    f.Id == friendshipId && (f.RequesterId == userId || f.AddresseeId == userId)
+                    && f.Status == FriendshipStatus.Accepted);
             if (row is null)
                 return Fail<bool>(HttpStatusCode.NotFound, "That friend wasn't found.");
 
-            // Deleting the row turns off all four settings and frees the places at once (ADR 0005)
+            // Deleting the row turns off all four settings and frees the places at once (ADR 0005).
+            // #85: neither can see the other's books any more, so what each had open for them goes.
+            await EndAccessToBooksAsync(row.Requester, row.AddresseeId);
+            await EndAccessToBooksAsync(row.Addressee, row.RequesterId);
             _dbContext.Friendships.Remove(row);
             await _dbContext.SaveChangesAsync();
             return Ok(true);
@@ -198,6 +208,11 @@ namespace NyriaNest.Application.Friends
                 case (SharingSetting.PhysicalLibrary, false): row.AddresseeSharesPhysicalLibrary = on; break;
                 case (SharingSetting.Ebooks, false): row.AddresseeSharesEbooks = on; break;
             }
+
+            // #85: the friend can't see my physical books any more, so their requests and reservations go
+            if (setting == SharingSetting.PhysicalLibrary && !on)
+                await EndAccessToBooksAsync(iAmRequester ? row.Requester : row.Addressee,
+                    iAmRequester ? row.AddresseeId : row.RequesterId);
 
             await _dbContext.SaveChangesAsync();
             return Ok(ToDto(row, userId, friendUserName));
@@ -295,6 +310,42 @@ namespace NyriaNest.Application.Friends
 
         private int LimitFor(SharingSetting setting) =>
             setting == SharingSetting.Ebooks ? _limits.Ebooks : _limits.PhysicalLibrary;
+
+        /// <summary>
+        /// #85: the friend can no longer see the owner's physical books. Their open requests for them
+        /// are cancelled and their reservations removed (the rest of each queue moves up); a loan they
+        /// already have stays until it's returned. The friend is told once, if anything went. Doesn't save.
+        /// </summary>
+        private async Task EndAccessToBooksAsync(User owner, string friendId)
+        {
+            var requests = await _dbContext.BorrowRequests
+                .Where(r => r.BorrowerId == friendId && r.Book.OwnerId == owner.Id && r.Status == BorrowRequestStatus.Requested)
+                .ToListAsync();
+            var now = DateTime.UtcNow;
+            foreach (var request in requests)
+            {
+                request.Status = BorrowRequestStatus.Cancelled;
+                request.AnsweredAt = now;
+            }
+
+            var queuedBooks = await _dbContext.Books
+                .Include(b => b.Reservations)
+                .Include(b => b.CheckedOutBy)
+                .Where(b => b.OwnerId == owner.Id && b.Reservations.Any(r => r.UserId == friendId))
+                .ToListAsync();
+            foreach (var book in queuedBooks)
+            {
+                foreach (var reservation in book.Reservations.Where(r => r.UserId == friendId).ToList())
+                {
+                    book.Reservations.Remove(reservation);
+                    _dbContext.ReservationItems.Remove(reservation);
+                }
+                _availability.RecalculateAvailabilityDates(book);
+            }
+
+            if (requests.Count > 0 || queuedBooks.Count > 0)
+                _notifications.NotifySharingEnded(friendId, owner.UserName ?? "");
+        }
 
         // Between and SharedBy live in Domain (FriendSharing) since #85, shared with BookVisibility
 

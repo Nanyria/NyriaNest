@@ -317,6 +317,52 @@ public class UserControllerTests(ApiFactory factory) : IClassFixture<ApiFactory>
         });
     }
 
+    [Fact]
+    public async Task DeleteUser_DeletesTheirBorrowRequests_AndThoseForTheirBooks_AndLeavesOthersAlone()
+    {
+        // #85: BorrowRequests.BorrowerId is Restrict, so the delete must remove the user's requests on
+        // purpose. Requests for the user's own books go with those books (Cascade).
+        var (admin, _) = await factory.LoginAsAsync(Roles.Admin);
+        var target = await factory.CreateUserAsync(Roles.User);
+        var anna = await factory.CreateUserAsync(Roles.User);
+        var erik = await factory.CreateUserAsync(Roles.User);
+        var (annasBook, targetsBook) = await factory.WithDbAsync(async db =>
+        {
+            var annas = TestData.Book("Anna's book");
+            annas.OwnerId = anna.Id;
+            var targets = TestData.Book("Target's book");
+            targets.OwnerId = target.Id;
+            db.Books.AddRange(annas, targets);
+            await db.SaveChangesAsync(Ct);
+            db.BorrowRequests.AddRange(
+                BorrowRequestFor(annas.BookId, target.Id, BorrowRequestStatus.Requested),
+                BorrowRequestFor(annas.BookId, target.Id, BorrowRequestStatus.Declined),
+                BorrowRequestFor(targets.BookId, anna.Id, BorrowRequestStatus.Requested),
+                BorrowRequestFor(annas.BookId, erik.Id, BorrowRequestStatus.Requested));
+            await db.SaveChangesAsync(Ct);
+            return (annas.BookId, targets.BookId);
+        });
+
+        var response = await admin.DeleteAsync($"api/User/{target.Id}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        await factory.WithDbAsync(async db =>
+        {
+            (await db.BorrowRequests.AnyAsync(r => r.BorrowerId == target.Id, Ct)).Should().BeFalse();
+            (await db.BorrowRequests.AnyAsync(r => r.BookId == targetsBook, Ct)).Should().BeFalse();
+            (await db.BorrowRequests.AnyAsync(r => r.BookId == annasBook && r.BorrowerId == erik.Id, Ct)).Should().BeTrue();
+        });
+    }
+
+    private static BorrowRequest BorrowRequestFor(int bookId, string borrowerId, BorrowRequestStatus status) => new()
+    {
+        BookId = bookId,
+        BorrowerId = borrowerId,
+        Status = status,
+        RequestedAt = DateTime.UtcNow,
+        AvailableAt = DateTime.UtcNow,
+    };
+
     private static void AssertNoIdentityInternals(string body)
     {
         foreach (var field in new[] { "passwordHash", "securityStamp", "concurrencyStamp", "\"password\"" })

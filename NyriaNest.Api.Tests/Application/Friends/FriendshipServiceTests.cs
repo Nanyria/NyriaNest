@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using NyriaNest.Api.Tests.TestSupport;
 using NyriaNest.Application.Friends;
+using NyriaNest.Application.Loans;
 using NyriaNest.Application.Notifications;
 using NyriaNest.Domain.Entities;
 using NyriaNest.Domain.Enums;
@@ -41,7 +42,8 @@ public class FriendshipServiceTests : IDisposable
 
     private FriendshipService Service(AppDbContext db) =>
         new(db, new UserRepo(db), new NotificationService(db),
-            Options.Create(new SharingLimitsOptions { PhysicalLibrary = PhysicalLimit, Ebooks = EbookLimit }));
+            Options.Create(new SharingLimitsOptions { PhysicalLibrary = PhysicalLimit, Ebooks = EbookLimit }),
+            new AvailabilityService(new UserRepo(db), new BookRepo(db), db));
 
     /// <summary>Sends a request from <paramref name="from"/> and lets <paramref name="to"/> accept it.</summary>
     private async Task<int> BecomeFriendsAsync(User from, User to)

@@ -49,5 +49,8 @@
 
         /// <summary>An admin marked the user's own book as lost or removed, or restored it, with a reason (#83).</summary>
         BookStatusChangedByAdmin = 13,
+
+        /// <summary>A friend stopped sharing their physical library (or the friendship ended), so the user's requests and reservations for their books were cancelled (#85).</summary>
+        SharingEnded = 14,
     }
 }

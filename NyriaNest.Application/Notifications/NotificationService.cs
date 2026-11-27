@@ -61,6 +61,9 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the owner their book's queue opened, naming everyone waiting (#85). Doesn't save.</summary>
         void NotifyQueueOpened(Book book, IReadOnlyList<string> waitingUserNames);
 
+        /// <summary>Tells a friend their requests and reservations for the owner's books were cancelled, once (#85). Doesn't save.</summary>
+        void NotifySharingEnded(string friendId, string ownerUserName);
+
         /// <summary>The user's notifications, newest first, one page at a time; optionally unread only.</summary>
         Task<APIResponse<PagedResult<NotificationItemDto>>> GetMyNotificationsAsync(string userId, bool unreadOnly, int page, int pageSize);
 
@@ -207,6 +210,15 @@ namespace NyriaNest.Application.Notifications
                     ? $"\"{book.Title}\" is back, and {waitingUserNames[0]} is waiting to borrow it. You can answer in My books."
                     : $"\"{book.Title}\" is back, and {waitingUserNames.Count} friends are waiting to borrow it: {string.Join(", ", waitingUserNames)}. You can choose in My books.",
                 NotificationType.LoanRequested);
+
+        // About several books, so it points at none
+        public void NotifySharingEnded(string friendId, string ownerUserName) =>
+            _dbContext.NotificationItems.Add(new NotificationItem
+            {
+                UserId = friendId,
+                Message = $"{ownerUserName} no longer shares their physical library with you, so your requests and reservations for {ownerUserName}'s books were cancelled.",
+                Type = NotificationType.SharingEnded,
+            });
 
         private void AddBookNotification(string userId, Book book, string message, NotificationType type) =>
             _dbContext.NotificationItems.Add(new NotificationItem
