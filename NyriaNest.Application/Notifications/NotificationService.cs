@@ -61,6 +61,12 @@ namespace NyriaNest.Application.Notifications
         /// <summary>Tells the owner their book's queue opened, naming everyone waiting (#85). Doesn't save.</summary>
         void NotifyQueueOpened(Book book, IReadOnlyList<string> waitingUserNames);
 
+        /// <summary>Tells the owner a friend says they returned the book, and when; the owner confirms (#85). Doesn't save.</summary>
+        void NotifyReturnReported(Book book, string borrowerUserName, DateOnly returnedOn);
+
+        /// <summary>Tells the friend the owner confirmed the book is back (#85). Doesn't save.</summary>
+        void NotifyReturnConfirmed(string borrowerId, Book book, string ownerUserName);
+
         /// <summary>Tells a friend their requests and reservations for the owner's books were cancelled, once (#85). Doesn't save.</summary>
         void NotifySharingEnded(string friendId, string ownerUserName);
 
@@ -210,6 +216,15 @@ namespace NyriaNest.Application.Notifications
                     ? $"\"{book.Title}\" is back, and {waitingUserNames[0]} is waiting to borrow it. You can answer in My books."
                     : $"\"{book.Title}\" is back, and {waitingUserNames.Count} friends are waiting to borrow it: {string.Join(", ", waitingUserNames)}. You can choose in My books.",
                 NotificationType.LoanRequested);
+
+        public void NotifyReturnReported(Book book, string borrowerUserName, DateOnly returnedOn) =>
+            NotifyOwner(book, $"{borrowerUserName} says they returned \"{book.Title}\" on {returnedOn:yyyy-MM-dd}. Confirm it in My books once you have it.",
+                NotificationType.ReturnMarked);
+
+        public void NotifyReturnConfirmed(string borrowerId, Book book, string ownerUserName) =>
+            AddBookNotification(borrowerId, book,
+                $"{ownerUserName} confirmed that \"{book.Title}\" is back. Thanks for returning it!",
+                NotificationType.ReturnConfirmed);
 
         // About several books, so it points at none
         public void NotifySharingEnded(string friendId, string ownerUserName) =>

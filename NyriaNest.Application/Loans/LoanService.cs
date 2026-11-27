@@ -185,6 +185,14 @@ namespace NyriaNest.Application.Loans
 
             if (user != null && book != null)
             {
+                // #85: a friend's book isn't returned here: the friend reports it and the owner confirms
+                if (book.OwnerId != null)
+                {
+                    response.ErrorMessages.Add("This is a friend's book. Report it returned instead, and the owner confirms it.");
+                    response.StatusCode = HttpStatusCode.Conflict;
+                    return response;
+                }
+
                 // Only the borrower can return a book. Without this check, a return of a
                 // book you don't have would still log "Returned by ..." and report success.
                 if (!RemoveFromCheckedOutList(user, book))

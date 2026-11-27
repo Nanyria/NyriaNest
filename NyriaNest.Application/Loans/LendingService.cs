@@ -10,12 +10,19 @@ using System.Net;
 namespace NyriaNest.Application.Loans
 {
     /// <summary>
-    /// Lending a user's own book and marking it returned (#83). In #83 a book is lent to a name
-    /// (someone without an account); lending to members comes with friends (#85), which will
-    /// build on this. The old borrow flow (LoanService) stays for the shared library until then.
+    /// Lending a user's own book and marking it returned (#83). The owner lends to a name (someone
+    /// without an account); friends borrow through requests (#85, BorrowRequestService). A friend
+    /// reports their loan returned, and the owner confirms it here, as for any of their loans.
+    /// The old borrow flow (LoanService) is for the shared library.
     /// </summary>
     public interface ILendingService
     {
+        /// <summary>
+        /// The friend who has the book says they returned it, and when (#85). It isn't a return until
+        /// the owner confirms. Anyone else, or a book not lent to them, looks missing (404).
+        /// </summary>
+        Task<APIResponse<bool>> ReportReturnedAsync(int bookId, string borrowerId, ReturnBookRequest request);
+
         /// <summary>The owner lends their book. Someone else's book or a shared-library book looks missing (404).</summary>
         Task<APIResponse<bool>> LendOwnBookAsync(int bookId, string ownerId, LendBookRequest request);
 
@@ -83,6 +90,27 @@ namespace NyriaNest.Application.Loans
             return failure ?? await ReturnAsActorAsync(book!, adminId, request.ReturnedOn, request.Reason);
         }
 
+        public async Task<APIResponse<bool>> ReportReturnedAsync(int bookId, string borrowerId, ReturnBookRequest request)
+        {
+            var book = await _bookRepo.GetByIdAsync(bookId);
+            var loan = book?.CheckedOutBy;
+            if (book == null || loan == null || loan.UserId != borrowerId)
+                return NotFound(bookId);
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var returnedOn = request.ReturnedOn ?? today;
+            if (returnedOn > today)
+                return Failure(HttpStatusCode.BadRequest, "The return date can't be in the future.");
+            if (returnedOn < DateOnly.FromDateTime(loan.CheckOutDate))
+                return Failure(HttpStatusCode.BadRequest, "The return date can't be before you borrowed it.");
+
+            // Reporting again just changes the date; the book stays lent until the owner confirms
+            loan.ReportedReturnedDate = returnedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            _notifications.NotifyReturnReported(book, loan.User?.UserName ?? "", returnedOn);
+
+            return await SaveAsync(book, "reported returned");
+        }
+
         // ---- The checks every lend and return goes through, whoever asks ----
 
         private async Task<APIResponse<bool>> LendAsActorAsync(Book book, string actorId,
@@ -141,13 +169,14 @@ namespace NyriaNest.Application.Loans
             if (loan == null)
                 return Failure(HttpStatusCode.Conflict, "This book isn't lent out.");
 
-            // Member loans only come from the old borrow flow; #85 decides how they end
-            if (loan.BorrowerName == null)
-                return Failure(HttpStatusCode.Conflict, "This book is borrowed by a member and can't be marked returned here.");
-
             var someoneElses = IsSomeoneElses(book, actorId);
             if (someoneElses && string.IsNullOrWhiteSpace(reason))
                 return Failure(HttpStatusCode.BadRequest, ReasonMessage);
+
+            // #85: a friend's loan is confirmed with the date they reported, unless the owner gives another.
+            // Without a report the owner's word is enough: returned today.
+            var isMemberLoan = loan.UserId != null;
+            returnedOn ??= loan.ReportedReturnedDate is { } reported ? DateOnly.FromDateTime(reported) : null;
 
             if (returnedOn > DateOnly.FromDateTime(DateTime.UtcNow))
                 return Failure(HttpStatusCode.BadRequest, "The return date can't be in the future.");
@@ -155,19 +184,27 @@ namespace NyriaNest.Application.Loans
                 return Failure(HttpStatusCode.BadRequest, "The return date can't be before the book was lent.");
 
             var now = DateTime.UtcNow;
+            var borrower = loan.BorrowerName ?? loan.User?.UserName ?? "";
+            var borrowerId = loan.UserId;
             _dbContext.CheckOutItems.Remove(loan);
             book.CheckedOutBy = null;
             book.BookStatus = BookStatusEnum.Available;
             book.AvailabilityDate = now; // available from now, as when a book is added
 
-            // #85: friends waiting for it: the first in line is asked for (and the book is Reserved)
+            // #85: friends waiting for it: the queue opens from now, when the owner knows it's back
             await _queue.HandOnAsync(book);
 
-            // One row: "Returned" already says it's back on the shelf
-            var notes = $"Returned by {loan.BorrowerName}" + OnDate(returnedOn) + ByAnAdmin(someoneElses, reason);
-            AddHistory(book, actorId, BookStatusEnum.Returned, notes, now);
+            // One row: "Returned" already says it's back on the shelf. A friend's loan is recorded
+            // on the confirmed date (#85); a name loan keeps the time it was marked, as in #83.
+            var notes = $"Returned by {borrower}" + OnDate(returnedOn) + ByAnAdmin(someoneElses, reason);
+            var recordedAt = isMemberLoan && returnedOn is { } confirmed && confirmed < DateOnly.FromDateTime(now)
+                ? confirmed.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+                : now;
+            AddHistory(book, actorId, BookStatusEnum.Returned, notes, recordedAt);
             if (someoneElses)
-                _notifications.NotifyOwnerOfAdminReturn(book, loan.BorrowerName, reason!.Trim());
+                _notifications.NotifyOwnerOfAdminReturn(book, borrower, reason!.Trim());
+            if (borrowerId != null)
+                _notifications.NotifyReturnConfirmed(borrowerId, book, book.Owner?.UserName ?? "");
 
             return await SaveAsync(book, "marked returned");
         }

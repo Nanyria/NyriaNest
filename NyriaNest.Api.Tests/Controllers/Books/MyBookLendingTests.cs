@@ -212,9 +212,10 @@ public class MyBookLendingTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Return_ABookLentToAMember_Returns409_AndKeepsTheLoan()
+    public async Task Return_ABookLentToAMember_ConfirmsTheReturn()
     {
-        // Member loans only come from the old borrow flow; #85 decides how they end
+        // #85: was 409 ("#85 decides how they end"). The owner's word is enough, with or without
+        // the friend's report; the details are in FriendReturnTests.
         var (client, me) = await factory.LoginAsAsync();
         var member = await factory.CreateUserAsync();
         var bookId = await AddBookAsync(me.Id, BookStatusEnum.CheckedOut);
@@ -222,8 +223,8 @@ public class MyBookLendingTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         var response = await ReturnAsync(client, bookId, new { });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await LoanOf(bookId)).UserId.Should().Be(member.Id);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        (await LoanCountOf(bookId)).Should().Be(0);
     }
 
     // ---- Not mine: someone else's book or a shared-library book looks missing ----
