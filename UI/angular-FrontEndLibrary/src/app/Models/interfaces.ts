@@ -118,6 +118,7 @@ export interface LibraryBook {
 
   // Friends' books (#85)
   ownerName: string | null;        // whose book it is; null for the shared library
+  ownerProfilePictureUrl: string | null; // the owner's avatar; null = show the default picture
   myQueuePosition: number | null;  // 1 = next in line; null when I haven't reserved it
   myRequestId: number | null;      // my open request to borrow it; null when I haven't asked or it was answered
 }

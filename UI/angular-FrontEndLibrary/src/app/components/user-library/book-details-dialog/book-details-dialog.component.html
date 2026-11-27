@@ -37,6 +37,11 @@
       <div class="book-dialog__details">
         @if (b.isMine) {
           <span class="nn-tag book-dialog__mine">Mine</span>
+        } @else if (b.ownerName) {
+          <span class="book-dialog__owner" [title]="'Owned by ' + b.ownerName">
+            <img class="book-dialog__owner-avatar" [src]="b.ownerProfilePictureUrl || defaultPicture" alt="" />
+            <span class="book-dialog__owner-name"><span class="visually-hidden">Owned by </span>{{ b.ownerName }}</span>
+          </span>
         }
         <h2 id="book-dialog-title" class="book-dialog__title">{{ b.title }}</h2>
         <p class="book-dialog__author">{{ b.author }}</p>

@@ -12,6 +12,7 @@ import {
 import { BookReview, LibraryBook } from '../../../Models/interfaces';
 import { BookTypeEnums, LanguageDisplayNames, LanguageEnums } from '../../../Helpers/Enums/enum';
 import { BookTypeOptions, GenreOptions } from '../../../Helpers/Helper';
+import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
 import { formatMoment } from '../../../Helpers/loan-dates';
 
 /** An icon button under the cover; the label is its hover text and accessible name */
@@ -54,6 +55,7 @@ export class BookDetailsDialogComponent {
   private dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly allReviewsShown = signal(false);
   readonly fallbackCover = 'assets/images/book-covers/BrownBook.svg';
+  readonly defaultPicture = DEFAULT_PROFILE_PICTURE;
 
   readonly meta = computed(() => {
     const b = this.book();

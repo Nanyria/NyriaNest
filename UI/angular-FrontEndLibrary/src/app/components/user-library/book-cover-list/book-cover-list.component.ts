@@ -9,6 +9,7 @@ import {
 import { LibraryBook, ILoggedInUser } from '../../../Models/interfaces';
 import { BookStatusEnum } from '../../../Helpers/Enums/enum';
 import { BookStatusOptions, GenreOptions } from '../../../Helpers/Helper';
+import { DEFAULT_PROFILE_PICTURE } from '../../../Helpers/profile-pictures';
 
 @Component({
   selector: 'app-book-cover-list',
@@ -28,6 +29,7 @@ export class BookCoverListComponent {
 
   genreOptions = GenreOptions;
   readonly fallbackCover = 'assets/images/book-covers/BrownBook.svg';
+  readonly defaultPicture = DEFAULT_PROFILE_PICTURE;
 
   isInReadList(book: LibraryBook): boolean {
     return this.user?.readList?.some((item) => +item.bookId === +book.bookId) ?? false;

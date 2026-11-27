@@ -245,3 +245,29 @@
     font-size: 1.6rem;
   }
 }
+
+/* A friend's book: the owner's picture and name, where "Mine" goes */
+.book-dialog__owner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nn-space-2);
+  max-width: 100%;
+  color: var(--nn-ink-muted);
+  font-size: 0.9rem;
+}
+
+.book-dialog__owner-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--nn-border);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.book-dialog__owner-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

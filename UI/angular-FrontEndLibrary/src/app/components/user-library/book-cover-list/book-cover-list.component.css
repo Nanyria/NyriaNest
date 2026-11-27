@@ -262,3 +262,26 @@
     display: none;
   }
 }
+
+/* A friend's book: the owner's picture (the name shows on hover) */
+.book__owner-avatar {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  align-self: center;
+  border: 1px solid var(--nn-border);
+  border-radius: 50%;
+  background-color: var(--nn-surface);
+  object-fit: cover;
+}
+
+/* On shelves it sits on the cover, where "Mine" goes */
+.book__owner-avatar--cover {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--nn-surface);
+  box-shadow: 0 1px 3px rgba(42, 22, 14, 0.35);
+}

@@ -14,9 +14,17 @@
           [alt]="''"
           loading="lazy"
         />
-        <!-- Shelves have no tags, so my own books get a badge on the cover -->
+        <!-- Shelves have no tags, so my own books get a badge on the cover and
+             friends' books their owner's picture -->
         @if (shelf && book.isMine) {
           <span class="book__mine-badge">Mine</span>
+        } @else if (shelf && book.ownerName) {
+          <img
+            class="book__owner-avatar book__owner-avatar--cover"
+            [src]="book.ownerProfilePictureUrl || defaultPicture"
+            [alt]="'Owned by ' + book.ownerName"
+            [title]="'Owned by ' + book.ownerName"
+          />
         }
         <button
           type="button"
@@ -40,6 +48,13 @@
           <div class="book__tags">
             @if (book.isMine) {
               <span class="nn-tag book__mine-tag">Mine</span>
+            } @else if (book.ownerName) {
+              <img
+                class="book__owner-avatar"
+                [src]="book.ownerProfilePictureUrl || defaultPicture"
+                [alt]="'Owned by ' + book.ownerName"
+                [title]="'Owned by ' + book.ownerName"
+              />
             }
             <span class="nn-tag">{{ genreOptions.displayNames[book.genre] }}</span>
             @if (statusBadge(book); as status) {
